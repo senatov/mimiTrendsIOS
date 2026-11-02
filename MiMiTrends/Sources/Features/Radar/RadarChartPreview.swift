@@ -154,6 +154,10 @@ struct RadarChartPreview: View {
             guard !Task.isCancelled else { return }
             allBars = []
             errorMessage = error.localizedDescription
+            AppDiagnostics.shared.record(
+                .error, "RadarChart", "bars-load-failed",
+                "symbol=\(requestedSymbol) error=\(String(describing: type(of: error)))"
+            )
         }
         isLoading = false
     }

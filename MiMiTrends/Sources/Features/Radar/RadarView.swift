@@ -13,6 +13,7 @@ struct RadarView: View {
     @State private var historyError: String?
     @State private var chartRefreshID = 0
     @State private var isPreparingFeed = false
+    @State private var watchlistPreview: [WatchlistEntry] = []
     @State private var discoveryController = DiscoveryPoolController()
     @State private var lsCandidatePool = LSCandidatePool()
     @State private var lsStatus: LSCandidateStatus?
@@ -29,7 +30,8 @@ struct RadarView: View {
                 RadarHeader(
                     symbol: $symbol, scanWatchlist: $scanWatchlist,
                     session: session, setupMessage: setupMessage,
-                    isPreparingFeed: isPreparingFeed
+                    isPreparingFeed: isPreparingFeed,
+                    watchlist: watchlistPreview
                 ) {
                     if session.isScanning { session.stop() } else { startFeed() }
                 }
@@ -68,6 +70,14 @@ struct RadarView: View {
             .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
             .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
+            .task(id: scenePhase) { await loadWatchlistPreview() }
+            .onChange(of: scanWatchlist) { _, includeWatchlist in
+                AppDiagnostics.shared.record(
+                    .info, "Radar", "feed-scope-changed",
+                    "scope=\(includeWatchlist ? "selected-and-watchlist" : "selected") appliesOnStart=true"
+                )
+                if includeWatchlist { Task { await loadWatchlistPreview() } }
+            }
             .onChange(of: session.lastSignal) { _, latest in
                 if latest != nil { Task { await refreshSignals(selectNewest: true) } }
             }
@@ -221,6 +231,20 @@ struct RadarView: View {
         Task { await prepareFeed() }
     }
 
+    private func loadWatchlistPreview() async {
+        do {
+            watchlistPreview = try await Task.detached(priority: .utility) {
+                let store = try WatchlistStore(url: WatchlistStore.defaultURL())
+                return try await store.load()
+            }.value
+        } catch {
+            AppDiagnostics.shared.record(
+                .warning, "Radar", "watchlist-preview-failed",
+                "error=\(String(describing: type(of: error)))"
+            )
+        }
+    }
+
     @MainActor
     private func prepareFeed() async {
         defer { isPreparingFeed = false }
@@ -242,6 +266,11 @@ struct RadarView: View {
                 selectedSymbol: selected,
                 includeWatchlist: includeWatchlist,
                 watchlist: watchlist
+            )
+            watchlistPreview = watchlist
+            AppDiagnostics.shared.record(
+                .info, "Radar", "feed-scope-resolved",
+                "scope=\(includeWatchlist ? "selected-and-watchlist" : "selected") watchlistEntries=\(watchlist.count) symbols=\(selection.symbols.joined(separator: ","))"
             )
             guard let key = try FinnhubCredentialStore.load() else {
                 setupMessage = FinnhubStreamError.missingKey.localizedDescription

@@ -54,7 +54,7 @@ final class RadarSession {
     func markSubscribed(runID id: UUID) {
         guard isScanning, runID == id else { return }
         isSubscribed = true
-        AppDiagnostics.shared.record(.info, "Radar", "feed-subscribed", "run=\(id) symbols=\(targetSymbols.count)")
+        AppDiagnostics.shared.record(.info, "Radar", "feed-subscriptions-sent", "run=\(id) symbols=\(targetSymbols.joined(separator: ",")) awaitingTrades=true")
     }
 
     func record(_ trade: TradeTick, runID id: UUID) {

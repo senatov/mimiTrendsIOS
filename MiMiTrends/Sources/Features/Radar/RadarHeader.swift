@@ -10,6 +10,7 @@ struct RadarHeader: View {
     let session: RadarSession
     let setupMessage: String?
     let isPreparingFeed: Bool
+    let watchlist: [WatchlistEntry]
     let onToggleFeed: () -> Void
 
     var body: some View {
@@ -19,6 +20,10 @@ struct RadarHeader: View {
                 if !isCompactLayout { Spacer(minLength: 8) }
                 scopePicker
             }
+            Text(feedScopeDescription)
+                .font(.footnote)
+                .foregroundStyle(TrendsColors.supportingInk)
+                .accessibilityIdentifier("finnhubFeedScopeDescription")
             if let message = setupMessage ?? session.errorMessage {
                 Text(message).font(.footnote).foregroundStyle(.red)
             }
@@ -57,14 +62,28 @@ struct RadarHeader: View {
     }
 
     private var scopePicker: some View {
-        Picker("Scan scope", selection: $scanWatchlist) {
-            Text("Selected").tag(false)
-            Text("Selected + Watchlist").tag(true)
+        Picker("Finnhub feed scope", selection: $scanWatchlist) {
+            Text("This Symbol").tag(false)
+            Text("+ Watchlist").tag(true)
         }
         .pickerStyle(.segmented)
         .labelsHidden()
         .frame(maxWidth: 310)
         .disabled(session.isScanning || isPreparingFeed)
-        .help("Selected + Watchlist requests at most five symbols per feed.")
+        .help("Choose which symbols Finnhub subscribes to when you start the feed. Lang & Schwarz scans independently.")
+    }
+
+    private var feedScopeDescription: String {
+        if session.isScanning {
+            return "Finnhub feed: \(session.targetSymbols.joined(separator: ", ")). Lang & Schwarz scans independently."
+        }
+        guard !isPreparingFeed else { return "Preparing Finnhub feed…" }
+        guard let selection = try? FinnhubWatchlistSelection(
+            selectedSymbol: symbol, includeWatchlist: scanWatchlist, watchlist: watchlist
+        ) else { return "Enter a valid symbol to start the Finnhub feed." }
+        if scanWatchlist && selection.symbols.count == 1 {
+            return "Finnhub feed: \(selection.symbols[0]). No other supported symbols in Watchlist. Start feed to apply."
+        }
+        return "Finnhub feed: \(selection.symbols.joined(separator: ", ")). Start feed to apply; Lang & Schwarz scans independently."
     }
 }

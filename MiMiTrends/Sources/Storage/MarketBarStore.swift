@@ -20,6 +20,10 @@ actor MarketBarStore {
             try Self.migrate(connection)
             try Self.checkIntegrity(connection)
         } catch {
+            AppDiagnostics.shared.record(
+                .error, "MarketBarStore", "open-failed",
+                "error=\(String(describing: type(of: error))) sqlite=\(String(cString: sqlite3_errmsg(connection)))"
+            )
             sqlite3_close(connection)
             throw error
         }
@@ -156,7 +160,13 @@ actor MarketBarStore {
     private func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
-              let statement else { throw MarketBarStoreError.databaseUnavailable }
+              let statement else {
+            AppDiagnostics.shared.record(
+                .error, "MarketBarStore", "prepare-failed",
+                "sqlite=\(String(cString: sqlite3_errmsg(database)))"
+            )
+            throw MarketBarStoreError.databaseUnavailable
+        }
         return statement
     }
 

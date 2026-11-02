@@ -42,6 +42,8 @@ actor MarketRadarScanner {
         let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
         let nowSeconds = Int64(Date().timeIntervalSince1970)
         var storedSignals = 0
+        var firstYahooFailure: String?
+        var yahooFailuresThisCycle = 0
         for batch in stride(from: 0, to: symbols.count, by: 4) {
             try Task.checkCancellation()
             let group = Array(symbols[batch..<min(batch + 4, symbols.count)])
@@ -53,7 +55,7 @@ actor MarketRadarScanner {
                             try Task.checkCancellation()
                             guard let last = bars.last,
                                   last.minuteEpochSeconds >= nowSeconds - 600 else {
-                                return SymbolOutcome(received: bars.count, signalStored: false, failed: false)
+                                return SymbolOutcome(received: bars.count, signalStored: false, failure: nil)
                             }
                             for bar in bars { _ = try await barStore.upsert(bar) }
                             let recent = try await barStore.loadMinuteBars(
@@ -75,9 +77,12 @@ actor MarketRadarScanner {
                             } else {
                                 saved = false
                             }
-                            return SymbolOutcome(received: bars.count, signalStored: saved, failed: false)
+                            return SymbolOutcome(received: bars.count, signalStored: saved, failure: nil)
                         } catch {
-                            return SymbolOutcome(received: 0, signalStored: false, failed: true)
+                            return SymbolOutcome(
+                                received: 0, signalStored: false,
+                                failure: "symbol=\(symbol) error=\(String(describing: type(of: error)))"
+                            )
                         }
                     }
                 }
@@ -85,10 +90,20 @@ actor MarketRadarScanner {
                     yahooTotals.received += outcome.received
                     yahooTotals.valid += outcome.received
                     yahooTotals.operations += 1
-                    if outcome.failed { yahooTotals.errors += 1 }
+                    if let failure = outcome.failure {
+                        yahooTotals.errors += 1
+                        yahooFailuresThisCycle += 1
+                        if firstYahooFailure == nil { firstYahooFailure = failure }
+                    }
                     if outcome.signalStored { storedSignals += 1 }
                 }
             }
+        }
+        if let firstYahooFailure {
+            AppDiagnostics.shared.record(
+                .warning, "Yahoo", "minute-bars-failed",
+                "count=\(yahooFailuresThisCycle) first=\(firstYahooFailure)"
+            )
         }
         return MarketRadarCycle(
             yahoo: yahooTotals, traderFox: traderFoxTotals,
@@ -105,6 +120,10 @@ actor MarketRadarScanner {
         } catch {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
+            AppDiagnostics.shared.record(
+                .warning, "Yahoo", "candidate-refresh-failed",
+                "error=\(String(describing: type(of: error)))"
+            )
         }
         do {
             let symbols = try await traderFox.activeCandidates()
@@ -115,6 +134,10 @@ actor MarketRadarScanner {
         } catch {
             traderFoxTotals.operations += 1
             traderFoxTotals.errors += 1
+            AppDiagnostics.shared.record(
+                .warning, "TraderFox", "candidate-refresh-failed",
+                "error=\(String(describing: type(of: error)))"
+            )
         }
     }
 
@@ -133,5 +156,5 @@ actor MarketRadarScanner {
 private struct SymbolOutcome: Sendable {
     let received: Int
     let signalStored: Bool
-    let failed: Bool
+    let failure: String?
 }
