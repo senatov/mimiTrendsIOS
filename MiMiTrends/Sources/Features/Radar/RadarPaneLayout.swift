@@ -2,7 +2,8 @@ import Foundation
 
 enum RadarPaneLayout {
     static let handleSize: CGFloat = 14
-    static let minimumWideHeight: CGFloat = 460
+    static let minimumWideWidth: CGFloat = 880
+    static let minimumWideHeight: CGFloat = 300
     static let minimumStackedHeight: CGFloat = 548
 
     static func wideColumnWidth(totalWidth: CGFloat, ratio: Double) -> CGFloat {
@@ -13,8 +14,8 @@ enum RadarPaneLayout {
 
     static func wideTopHeight(totalHeight: CGFloat, ratio: Double) -> CGFloat {
         let available = max(0, totalHeight - handleSize)
-        return clamp(available * safeRatio(ratio, fallback: 0.72),
-                     minimum: 280, maximum: available - 180)
+        return clamp(available * safeRatio(ratio, fallback: 0.62),
+                     minimum: 180, maximum: available - 100)
     }
 
     static func stackedSignalHeight(totalHeight: CGFloat, ratio: Double) -> CGFloat {

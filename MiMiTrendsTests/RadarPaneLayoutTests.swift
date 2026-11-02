@@ -3,19 +3,27 @@ import XCTest
 
 final class RadarPaneLayoutTests: XCTestCase {
     func testWidePanelsStayReadableAtDefaultWindowSize() {
-        let width = RadarPaneLayout.wideColumnWidth(totalWidth: 1024, ratio: 0.68)
-        let height = RadarPaneLayout.wideTopHeight(totalHeight: 650, ratio: 0.72)
+        let width = RadarPaneLayout.wideColumnWidth(totalWidth: 1024, ratio: 0.72)
+        let height = RadarPaneLayout.wideTopHeight(totalHeight: 650, ratio: 0.62)
 
         XCTAssertGreaterThanOrEqual(width, 320)
         XCTAssertGreaterThanOrEqual(1024 - RadarPaneLayout.handleSize - width, 240)
-        XCTAssertGreaterThanOrEqual(height, 400)
-        XCTAssertGreaterThanOrEqual(650 - RadarPaneLayout.handleSize - height, 180)
+        XCTAssertGreaterThanOrEqual(height, 180)
+        XCTAssertGreaterThanOrEqual(650 - RadarPaneLayout.handleSize - height, 100)
+    }
+
+    func testWidePanelsAndChartFitShortIPadWorkspace() {
+        let totalHeight: CGFloat = 350
+        let panels = RadarPaneLayout.wideTopHeight(totalHeight: totalHeight, ratio: 0.62)
+
+        XCTAssertGreaterThanOrEqual(panels, 180)
+        XCTAssertGreaterThanOrEqual(totalHeight - RadarPaneLayout.handleSize - panels, 100)
     }
 
     func testDraggedAndRestoredRatiosAreClamped() {
         XCTAssertEqual(RadarPaneLayout.wideColumnWidth(totalWidth: 900, ratio: -1), 320)
         XCTAssertEqual(RadarPaneLayout.wideColumnWidth(totalWidth: 900, ratio: 2), 646)
-        XCTAssertEqual(RadarPaneLayout.wideTopHeight(totalHeight: 500, ratio: .nan), 306)
+        XCTAssertEqual(RadarPaneLayout.wideTopHeight(totalHeight: 500, ratio: .nan), 301.32, accuracy: 0.01)
     }
 
     func testStackedPanelsReserveChartAndSourceSpace() {

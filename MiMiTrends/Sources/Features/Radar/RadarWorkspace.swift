@@ -6,8 +6,8 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View>: View {
     let plot: () -> Plot
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @AppStorage("radar.wideColumnRatio.v1") private var savedColumnRatio = 0.68
-    @AppStorage("radar.wideTopRatio.v2") private var savedTopRatio = 0.72
+    @AppStorage("radar.wideColumnRatio.v1") private var savedColumnRatio = 0.72
+    @AppStorage("radar.wideTopRatio.v2") private var savedTopRatio = 0.62
     @AppStorage("radar.stackedSignalRatio.v2") private var savedSignalRatio = 0.48
     @AppStorage("radar.stackedSourceRatio.v2") private var savedSourceRatio = 0.25
     @State private var columnDrag: Double?
@@ -23,7 +23,7 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View>: View {
         GeometryReader { geometry in
             if dynamicTypeSize.isAccessibilitySize {
                 scrollingFallback
-            } else if geometry.size.width >= 850 &&
+            } else if geometry.size.width >= RadarPaneLayout.minimumWideWidth &&
                         geometry.size.height >= RadarPaneLayout.minimumWideHeight {
                 wideWorkspace(size: geometry.size)
             } else if geometry.size.height >= RadarPaneLayout.minimumStackedHeight {
