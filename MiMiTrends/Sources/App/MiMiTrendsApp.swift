@@ -7,10 +7,16 @@ struct MiMiTrendsApp: App {
 
     init() {
         let log = AppDiagnostics.shared
+        AppLogger.initialize()
         log.record(.info, "App", "launched", "version=\(AppIdentity.version) pid=\(ProcessInfo.processInfo.processIdentifier)")
         if let url = log.fileURL() {
             log.record(.info, "App", "diagnostics-ready", "file=\(url.path)")
         }
+    }
+    
+    /// App version from CFBundleShortVersionString (e.g. "0.9.4")
+    static var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0"
     }
 
     var body: some Scene {

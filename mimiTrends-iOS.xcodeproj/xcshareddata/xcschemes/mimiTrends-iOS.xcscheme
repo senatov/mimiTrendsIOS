@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2700"
-   version = "1.7">
+   LastUpgradeVersion = "2720"
+   version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -17,7 +16,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4272B0CA94A3C0C778AF8152"
                BuildableName = "mimiTrends-iOS.app"
-               BlueprintName = "mimiTrends-iOS"
+               BlueprintName = "mimiTrendsIOS"
                ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -30,8 +29,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "79EA1A7C25DA67EF1E281A0E"
-               BuildableName = "mimiTrends-iOSTests.xctest"
-               BlueprintName = "mimiTrends-iOSTests"
+               BuildableName = "mimiTrendsIOSTests.xctest"
+               BlueprintName = "mimiTrendsIOSTests"
                ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -41,14 +40,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      shouldUseLaunchSchemeArgsEnv = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4272B0CA94A3C0C778AF8152"
             BuildableName = "mimiTrends-iOS.app"
-            BlueprintName = "mimiTrends-iOS"
+            BlueprintName = "mimiTrendsIOS"
             ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -59,14 +57,12 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "79EA1A7C25DA67EF1E281A0E"
-               BuildableName = "mimiTrends-iOSTests.xctest"
-               BlueprintName = "mimiTrends-iOSTests"
+               BuildableName = "mimiTrendsIOSTests.xctest"
+               BlueprintName = "mimiTrendsIOSTests"
                ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -84,7 +80,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4272B0CA94A3C0C778AF8152"
             BuildableName = "mimiTrends-iOS.app"
-            BlueprintName = "mimiTrends-iOS"
+            BlueprintName = "mimiTrendsIOS"
             ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -101,7 +97,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4272B0CA94A3C0C778AF8152"
             BuildableName = "mimiTrends-iOS.app"
-            BlueprintName = "mimiTrends-iOS"
+            BlueprintName = "mimiTrendsIOS"
             ReferencedContainer = "container:mimiTrends-iOS.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

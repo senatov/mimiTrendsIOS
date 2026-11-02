@@ -72,6 +72,8 @@
 		8D070CC3092264B064DA1109 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4E881CEA825392F15D059019 /* Assets.xcassets */; };
 		9253B90868F0E82E007EA500 /* ProviderQuoteSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84EDAF5928C89ADE1C954B20 /* ProviderQuoteSnapshot.swift */; };
 		93EA707E06F14CB4FE940DE7 /* MarketSignalStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F95B09A04A570DD48901B5C /* MarketSignalStoreTests.swift */; };
+		97A0003730981D68009EAB51 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0003630981D68009EAB51 /* AppLogger.swift */; };
+		97A0003830981D68009EAB51 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A0003630981D68009EAB51 /* AppLogger.swift */; };
 		97FB5AA7D4B03588544C4A3C /* finnhub-trades.json in Resources */ = {isa = PBXBuildFile; fileRef = 930FFF72DAC8261D47DAF60E /* finnhub-trades.json */; };
 		9B0462558BD80589645FE08B /* FinnhubBidAskClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2272071A7DAED0072B533A6B /* FinnhubBidAskClient.swift */; };
 		9B2E1789F379A2C23E6306B5 /* RadarChartPlot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CB9BC7FCE59C13DD7A536A1 /* RadarChartPlot.swift */; };
@@ -154,7 +156,7 @@
 		328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortMoveQuoteQuality.swift; sourceTree = "<group>"; };
 		35C2E8B4DD20C94DB4457374 /* HeaderBadgeSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderBadgeSurface.swift; sourceTree = "<group>"; };
 		3777AAD0702BA7456930185D /* WatchlistEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistEntryRow.swift; sourceTree = "<group>"; };
-		38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "mimiTrends-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38CF56457F881AAE5791EED8 /* mimiTrendsIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = mimiTrendsIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		39E5AF93F5D263904111D4BA /* DiscoveryCandidateSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelectorTests.swift; sourceTree = "<group>"; };
 		3C005831238BCC317F9E97AF /* RadarSignalSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelection.swift; sourceTree = "<group>"; };
 		3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsPanel.swift; sourceTree = "<group>"; };
@@ -195,6 +197,7 @@
 		926E7B5100D9ECAD2EACFF6B /* FinnhubWatchlistSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubWatchlistSelectionTests.swift; sourceTree = "<group>"; };
 		930FFF72DAC8261D47DAF60E /* finnhub-trades.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "finnhub-trades.json"; sourceTree = "<group>"; };
 		9667B20187C693B6A88265FB /* AppDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDiagnostics.swift; sourceTree = "<group>"; };
+		97A0003630981D68009EAB51 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		9875C0F9708CB9BE887178A3 /* RadarSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSession.swift; sourceTree = "<group>"; };
 		999950D6664725733B79DD22 /* FinnhubMinuteAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubMinuteAggregator.swift; sourceTree = "<group>"; };
 		9C0D16568F846C09610A2496 /* RadarWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarWorkspace.swift; sourceTree = "<group>"; };
@@ -217,7 +220,7 @@
 		C31B280E8FA9DB0623EFBA3B /* DiscoveryCandidateSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelector.swift; sourceTree = "<group>"; };
 		C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelectionTests.swift; sourceTree = "<group>"; };
 		C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSessionTests.swift; sourceTree = "<group>"; };
-		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE947CFF4E30D853A5BBFE0 /* FinnhubRadarPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubRadarPipeline.swift; sourceTree = "<group>"; };
 		CC24B739908B22E9A686BF4C /* ScalableCLIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableCLIService.swift; sourceTree = "<group>"; };
 		D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStoreTests.swift; sourceTree = "<group>"; };
@@ -328,6 +331,7 @@
 		755847FAE20A3E615FA9722B /* App */ = {
 			isa = PBXGroup;
 			children = (
+				97A0003630981D68009EAB51 /* AppLogger.swift */,
 				9667B20187C693B6A88265FB /* AppDiagnostics.swift */,
 				70D236DEB2F4AC4BC8BE11A2 /* AppIdentity.swift */,
 				1EA765CB226C1925F760A165 /* ContentView.swift */,
@@ -473,7 +477,7 @@
 			isa = PBXGroup;
 			children = (
 				C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */,
-				38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */,
+				38CF56457F881AAE5791EED8 /* mimiTrendsIOSTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -545,9 +549,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4272B0CA94A3C0C778AF8152 /* mimiTrends-iOS */ = {
+		4272B0CA94A3C0C778AF8152 /* mimiTrendsIOS */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 514403257958A1A849944F11 /* Build configuration list for PBXNativeTarget "mimiTrends-iOS" */;
+			buildConfigurationList = 514403257958A1A849944F11 /* Build configuration list for PBXNativeTarget "mimiTrendsIOS" */;
 			buildPhases = (
 				A57147771864711269667DF8 /* Sources */,
 				FC91D9ABCD1FB97D2BCAE608 /* Resources */,
@@ -557,16 +561,16 @@
 			);
 			dependencies = (
 			);
-			name = "mimiTrends-iOS";
+			name = mimiTrendsIOS;
 			packageProductDependencies = (
 			);
 			productName = "mimiTrends-iOS";
 			productReference = C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */;
 			productType = "com.apple.product-type.application";
 		};
-		79EA1A7C25DA67EF1E281A0E /* mimiTrends-iOSTests */ = {
+		79EA1A7C25DA67EF1E281A0E /* mimiTrendsIOSTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 66FD70512D6F3B2AF58B0600 /* Build configuration list for PBXNativeTarget "mimiTrends-iOSTests" */;
+			buildConfigurationList = 66FD70512D6F3B2AF58B0600 /* Build configuration list for PBXNativeTarget "mimiTrendsIOSTests" */;
 			buildPhases = (
 				FF95F3F235C7A0BB2B684242 /* Sources */,
 				52B774F3964599B0792D8614 /* Resources */,
@@ -576,11 +580,11 @@
 			dependencies = (
 				1B5229A820AF0E1BAE10CB96 /* PBXTargetDependency */,
 			);
-			name = "mimiTrends-iOSTests";
+			name = mimiTrendsIOSTests;
 			packageProductDependencies = (
 			);
 			productName = "mimiTrends-iOSTests";
-			productReference = 38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */;
+			productReference = 38CF56457F881AAE5791EED8 /* mimiTrendsIOSTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
@@ -590,7 +594,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2700;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					4272B0CA94A3C0C778AF8152 = {
 						DevelopmentTeam = G2V9T9AD95;
@@ -611,13 +615,16 @@
 			);
 			mainGroup = 0EDB0F9A3B07FE90C50657B1;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				97A0003930981DAF009EAB51 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CCC8C5762D2D4C2EDAC351D5 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				4272B0CA94A3C0C778AF8152 /* mimiTrends-iOS */,
-				79EA1A7C25DA67EF1E281A0E /* mimiTrends-iOSTests */,
+				4272B0CA94A3C0C778AF8152 /* mimiTrendsIOS */,
+				79EA1A7C25DA67EF1E281A0E /* mimiTrendsIOSTests */,
 			);
 		};
 /* End PBXProject section */
@@ -712,6 +719,7 @@
 				9253B90868F0E82E007EA500 /* ProviderQuoteSnapshot.swift in Sources */,
 				181A1307A50166CF2A885315 /* ProviderSettingsPanel.swift in Sources */,
 				9BEFDA17CEDC56446AEEF0CC /* RadarActivityBanner.swift in Sources */,
+				97A0003830981D68009EAB51 /* AppLogger.swift in Sources */,
 				ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */,
 				9B2E1789F379A2C23E6306B5 /* RadarChartPlot.swift in Sources */,
 				B9DEC7CD282978431B054494 /* RadarChartPreview.swift in Sources */,
@@ -768,6 +776,7 @@
 				1C5C0587B818EA38CCFF8EC9 /* FinnhubCredentialStoreTests.swift in Sources */,
 				E744FC8928986AAEA31EC37B /* FinnhubMinuteAggregatorTests.swift in Sources */,
 				A9E0F6144582D0B1291D7057 /* FinnhubRadarPipelineTests.swift in Sources */,
+				97A0003730981D68009EAB51 /* AppLogger.swift in Sources */,
 				0E71337020F1BB1B62BD43F6 /* FinnhubTradeDecoderTests.swift in Sources */,
 				84A0091D780B3C0C0EBB13CF /* FinnhubWatchlistSelectionTests.swift in Sources */,
 				F1846824C6A7B629009B5B58 /* MarketBarStoreTests.swift in Sources */,
@@ -796,7 +805,7 @@
 /* Begin PBXTargetDependency section */
 		1B5229A820AF0E1BAE10CB96 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4272B0CA94A3C0C778AF8152 /* mimiTrends-iOS */;
+			target = 4272B0CA94A3C0C778AF8152 /* mimiTrendsIOS */;
 			targetProxy = 3663186B7C1F127BE59E8F23 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -838,10 +847,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -859,6 +870,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -870,11 +882,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacDebug.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
-				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = mimiTrendsIOS;
+				INFOPLIST_KEY_CFBundleName = mimiTrendsIOS;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -884,6 +898,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 0.0.1.1;
 				PRODUCT_MODULE_NAME = MiMiTrends;
 				PRODUCT_NAME = "mimiTrends-iOS";
 				SDKROOT = auto;
@@ -891,7 +906,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Debug;
 		};
@@ -901,6 +916,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -956,10 +972,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -984,6 +1002,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -995,11 +1014,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacAppStore.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
-				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
+				DEAD_CODE_STRIPPING = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = mimiTrendsIOS;
+				INFOPLIST_KEY_CFBundleName = mimiTrendsIOS;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -1009,6 +1030,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 0.0.1.1;
 				PRODUCT_MODULE_NAME = MiMiTrends;
 				PRODUCT_NAME = "mimiTrends-iOS";
 				SDKROOT = auto;
@@ -1016,7 +1038,7 @@
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 2;
 			};
 			name = Release;
 		};
@@ -1026,6 +1048,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1048,7 +1071,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		514403257958A1A849944F11 /* Build configuration list for PBXNativeTarget "mimiTrends-iOS" */ = {
+		514403257958A1A849944F11 /* Build configuration list for PBXNativeTarget "mimiTrendsIOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0933AEFCAD7B52190F5C15B0 /* Debug */,
@@ -1057,7 +1080,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		66FD70512D6F3B2AF58B0600 /* Build configuration list for PBXNativeTarget "mimiTrends-iOSTests" */ = {
+		66FD70512D6F3B2AF58B0600 /* Build configuration list for PBXNativeTarget "mimiTrendsIOSTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				F359E83C6E169E5D1038F256 /* Debug */,
@@ -1076,6 +1099,17 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		97A0003930981DAF009EAB51 /* XCRemoteSwiftPackageReference "SwiftyBeaver" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftyBeaver/SwiftyBeaver";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.1.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = 75268C9BDE3B6303ED291890 /* Project object */;
 }

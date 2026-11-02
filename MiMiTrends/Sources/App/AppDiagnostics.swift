@@ -18,10 +18,10 @@ final class AppDiagnostics: @unchecked Sendable {
 
     init(preferredURL: URL? = nil) {
         #if os(macOS)
-        self.preferredURL = preferredURL ?? URL(fileURLWithPath: "/tmp/mimiTrends-iOS.log")
+        self.preferredURL = preferredURL ?? URL(fileURLWithPath: "/tmp/mimiTrendsiOS.log")
         #else
         self.preferredURL = preferredURL ?? FileManager.default.temporaryDirectory
-            .appendingPathComponent("mimiTrends-iOS.log")
+            .appendingPathComponent("mimiTrendsiOS.log")
         #endif
     }
 
@@ -60,7 +60,7 @@ final class AppDiagnostics: @unchecked Sendable {
     }
 
     private func prepareFile() -> URL? {
-        let fallback = FileManager.default.temporaryDirectory.appendingPathComponent("mimiTrends-iOS.log")
+        let fallback = FileManager.default.temporaryDirectory.appendingPathComponent("mimiTrendsiOS.log")
         for candidate in [preferredURL, fallback] {
             do {
                 if !FileManager.default.fileExists(atPath: candidate.path) {

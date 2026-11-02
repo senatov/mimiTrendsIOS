@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppIdentity {
-    static let name = "mimiTrends-iOS"
+    static let name = "mimiTrendsiOS"
 
     private static let buildInfo: [String: String] = {
         guard let url = Bundle.main.url(forResource: "BuildInfo", withExtension: "plist"),
