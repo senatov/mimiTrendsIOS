@@ -7,7 +7,6 @@ struct MiMiTrendsApp: App {
 
     init() {
         let log = AppDiagnostics.shared
-        AppLogger.initialize()
         log.record(.info, "App", "launched", "version=\(AppIdentity.version) pid=\(ProcessInfo.processInfo.processIdentifier)")
         if let url = log.fileURL() {
             log.record(.info, "App", "diagnostics-ready", "file=\(url.path)")
