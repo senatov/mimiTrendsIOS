@@ -37,7 +37,9 @@ struct RadarSignalRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { onSelect() }
         .contextMenu {
-            Button("Copy search keyword", systemImage: "doc.on.doc") { copy(companyName) }
+            Button("Copy search keyword", systemImage: "doc.on.doc") {
+                copy(RadarSearchKeyword.from(companyName: companyName, symbol: signal.symbol))
+            }
             Button("Copy ticker", systemImage: "number") { copy(signal.symbol) }
             Button("Open Stock", systemImage: "chart.xyaxis.line", action: onSelect)
         }
@@ -46,7 +48,7 @@ struct RadarSignalRow: View {
     private var compactContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text(companyName).font(.body).lineLimit(1)
+                Text(companyName).font(.system(size: 14, weight: .light)).lineLimit(1)
                 Spacer()
                 Text(formattedPrice).monospacedDigit()
             }
@@ -88,7 +90,7 @@ struct RadarSignalRow: View {
                 .padding(.horizontal, 6)
                 .frame(width: 50, alignment: .trailing)
         }
-        .font(.body)
+        .font(.system(size: 14, weight: .light))
     }
 
     private var eventBadge: some View {
@@ -103,7 +105,7 @@ struct RadarSignalRow: View {
 
     private var movement: some View {
         Text("\(signal.windowChangePercent.formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))))% / \(signal.signalWindowLabel)")
-            .font(.body.monospacedDigit())
+            .font(.system(size: 12).monospacedDigit())
             .foregroundStyle(signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise))
             .lineLimit(1)
     }
@@ -139,7 +141,7 @@ struct RadarSignalRow: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let seconds = max(0, Int(context.date.timeIntervalSince(savedAt)))
             Text(String(format: "%02d:%02d", seconds / 60, seconds % 60))
-                .font(.body.monospacedDigit())
+                .font(.system(size: 12).monospacedDigit())
                 .foregroundStyle(tableColor(.mutedText))
         }
     }
@@ -165,6 +167,54 @@ struct RadarSignalRow: View {
         UIPasteboard.general.string = value
         #endif
     }
+}
+
+enum RadarSearchKeyword {
+    static func from(companyName: String, symbol: String) -> String {
+        displayName(companyName, symbol: symbol) ??
+            String(symbol.prefix(while: { $0 != "." })).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func displayName(_ companyName: String, symbol: String) -> String? {
+        let source = companyName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !source.isEmpty,
+              source.caseInsensitiveCompare(symbol.trimmingCharacters(in: .whitespacesAndNewlines)) != .orderedSame else {
+            return nil
+        }
+
+        var words = source
+            .replacingOccurrences(of: "[,.;:()\\[\\]]+", with: " ", options: .regularExpression)
+            .split(whereSeparator: \.isWhitespace)
+            .map(String.init)
+            .filter { $0.unicodeScalars.contains(where: CharacterSet.alphanumerics.contains) }
+
+        while words.first?.caseInsensitiveCompare("The") == .orderedSame { words.removeFirst() }
+        while words.last?.caseInsensitiveCompare("The") == .orderedSame { words.removeLast() }
+        while let last = words.last, isRemovableSuffix(last) || last == "&" { words.removeLast() }
+
+        let cleaned = words.joined(separator: " ")
+        guard !cleaned.isEmpty else { return nil }
+        if cleaned.contains(where: \.isLowercase) { return cleaned }
+
+        return words.map { word in
+            let letters = word.filter(\.isLetter)
+            guard letters.count > 3 else { return word }
+            let lowercased = word.lowercased()
+            return lowercased.prefix(1).uppercased() + lowercased.dropFirst()
+        }.joined(separator: " ")
+    }
+
+    private static func isRemovableSuffix(_ word: String) -> Bool {
+        let normalized = word.filter { $0.isLetter || $0.isNumber }.uppercased()
+        return legalSuffixes.contains(normalized) ||
+            normalized.range(of: "^[A-Z0-9]$", options: .regularExpression) != nil ||
+            normalized.range(of: "^(ACT|ACTION|ORD|ORDINARY)[A-Z0-9]?$", options: .regularExpression) != nil
+    }
+
+    private static let legalSuffixes: Set<String> = [
+        "AG", "SE", "INC", "INCORPORATED", "CORP", "CORPORATION", "PLC", "LTD", "LIMITED",
+        "SA", "SAS", "SPA", "NV", "BV", "GMBH", "KG", "KGAA", "CO", "COMPANY"
+    ]
 }
 
 struct RadarSignalColumnLines: View {

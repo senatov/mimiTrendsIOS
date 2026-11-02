@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 struct RadarSignalList: View {
     @Environment(RadarTableColorStore.self) private var tableColors
@@ -13,6 +16,13 @@ struct RadarSignalList: View {
     let onRefresh: () -> Void
     @State private var sortColumn: RadarSortColumn = .movement
     @State private var ascending = false
+    private var scrollbarGutter: CGFloat {
+        #if os(macOS)
+        CGFloat(NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy))
+        #else
+        0
+        #endif
+    }
 
     private var sortedSignals: [ScanResult] {
         signals.sorted { left, right in
@@ -93,19 +103,25 @@ struct RadarSignalList: View {
             } else if !signals.isEmpty {
                 if !compact {
                     HStack(spacing: 0) {
-                        sortButton(.company).frame(maxWidth: .infinity, alignment: .leading)
-                        sortButton(.event).frame(width: 285, alignment: .leading)
-                        sortButton(.movement).frame(width: 115, alignment: .trailing)
-                        sortButton(.price).frame(width: 70, alignment: .trailing)
-                        sortButton(.age).frame(width: 50, alignment: .trailing)
+                        sortButton(.company).padding(.horizontal, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        sortButton(.event).padding(.horizontal, 6).frame(width: 285, alignment: .leading)
+                        sortButton(.movement).padding(.horizontal, 6).frame(width: 115, alignment: .trailing)
+                        sortButton(.price).padding(.horizontal, 6).frame(width: 70, alignment: .trailing)
+                        sortButton(.age).padding(.horizontal, 6).frame(width: 50, alignment: .trailing)
                     }
-                    .font(.subheadline)
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundStyle(tableColor(.headerText))
                     .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 8)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 8 + scrollbarGutter)
                     .padding(.vertical, 6)
                     .background(tableColor(.headerFill))
-                    .overlay(RadarSignalColumnLines(color: tableColor(.grid), horizontalInset: 8))
+                    .overlay {
+                        RadarSignalColumnLines(color: tableColor(.grid), horizontalInset: 8)
+                            .frame(maxWidth: .infinity)
+                            .padding(.trailing, scrollbarGutter)
+                    }
                     .overlay(alignment: .bottom) { tableSeparator }
                 }
                 ScrollView {
