@@ -1,6 +1,11 @@
 import SwiftUI
 
 struct RadarSourcePanel: View {
+    @ScaledMetric(relativeTo: .caption) private var sourceWidth: CGFloat = 145
+    @ScaledMetric(relativeTo: .caption) private var metricWidth: CGFloat = 62
+    @ScaledMetric(relativeTo: .caption) private var statusWidth: CGFloat = 124
+    @ScaledMetric(relativeTo: .caption) private var actionWidth: CGFloat = 58
+
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
     let lsStatus: LSCandidateStatus?
@@ -16,59 +21,63 @@ struct RadarSourcePanel: View {
     #endif
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Source telemetry")
                 .font(.title3.weight(.light))
             Divider()
-            ScrollView {
-                VStack(spacing: 7) {
-                    sourceCard(
-                        name: "Yahoo", status: marketStatus(marketCycle?.yahoo),
-                        color: marketColor(marketCycle?.yahoo),
-                        received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
-                        operations: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors
-                    )
-                    sourceCard(
-                        name: "Finnhub", status: feedStatus, color: feedColor,
-                        received: session.tradeCount, valid: session.completedBarsStored,
-                        operations: nil, errors: session.errorCount
-                    )
-                    ForEach(["Tradegate", "Euronext"], id: \.self) { name in
-                        sourceCard(name: name, status: "NOT CONNECTED", color: .secondary,
-                                   received: nil, valid: nil, operations: nil, errors: nil)
-                    }
-                    scalableCard
-                    sourceCard(
-                        name: "Lang & Schwarz",
-                        status: lsStatus == nil ? "CONNECTING" :
-                            lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
-                        color: lsFreshCount > 0 ? .green : .secondary,
-                        received: lsStatus?.quotes.count,
-                        valid: lsStatus.map { _ in lsFreshCount },
-                        operations: lsStatus?.requestCount,
-                        errors: lsStatus?.errorCount
-                    )
-                    sourceCard(
-                        name: "wallstreetONLINE", status: discoveryLabel, color: discoveryColor,
-                        received: discoveryStatus?.snapshot?.candidates.count,
-                        valid: nil, operations: discoveryRequests, errors: discoveryErrors
-                    ) {
-                        if let snapshot = discoveryStatus?.snapshot {
-                            NavigationLink {
-                                DiscoveryCandidateList(snapshot: snapshot)
-                            } label: {
-                                Image(systemName: "list.number")
-                            }
-                            .buttonStyle(TrendsActionButtonStyle(compact: true))
-                            .accessibilityLabel("View ranking candidates")
+            GeometryReader { geometry in
+                ScrollView([.horizontal, .vertical]) {
+                    VStack(spacing: 0) {
+                        columnHeadings
+                        sourceCard(
+                            name: "Yahoo", status: marketStatus(marketCycle?.yahoo),
+                            color: marketColor(marketCycle?.yahoo),
+                            received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
+                            operations: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors
+                        )
+                        sourceCard(
+                            name: "Finnhub", status: feedStatus, color: feedColor,
+                            received: session.tradeCount, valid: session.completedBarsStored,
+                            operations: nil, errors: session.errorCount
+                        )
+                        ForEach(["Tradegate", "Euronext"], id: \.self) { name in
+                            sourceCard(name: name, status: "NOT CONNECTED", color: .secondary,
+                                       received: nil, valid: nil, operations: nil, errors: nil)
                         }
+                        scalableCard
+                        sourceCard(
+                            name: "Lang & Schwarz",
+                            status: lsStatus == nil ? "CONNECTING" :
+                                lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
+                            color: lsFreshCount > 0 ? .green : .secondary,
+                            received: lsStatus?.quotes.count,
+                            valid: lsStatus.map { _ in lsFreshCount },
+                            operations: lsStatus?.requestCount,
+                            errors: lsStatus?.errorCount
+                        )
+                        sourceCard(
+                            name: "wallstreetONLINE", status: discoveryLabel, color: discoveryColor,
+                            received: discoveryStatus?.snapshot?.candidates.count,
+                            valid: nil, operations: discoveryRequests, errors: discoveryErrors
+                        ) {
+                            if let snapshot = discoveryStatus?.snapshot {
+                                NavigationLink {
+                                    DiscoveryCandidateList(snapshot: snapshot)
+                                } label: {
+                                    Image(systemName: "list.number")
+                                }
+                                .buttonStyle(TrendsActionButtonStyle(compact: true))
+                                .accessibilityLabel("View ranking candidates")
+                            }
+                        }
+                        sourceCard(name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
+                                   color: marketColor(marketCycle?.traderFox),
+                                   received: marketCycle?.traderFox.received,
+                                   valid: marketCycle?.traderFox.valid,
+                                   operations: marketCycle?.traderFox.operations,
+                                   errors: marketCycle?.traderFox.errors)
                     }
-                    sourceCard(name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
-                               color: marketColor(marketCycle?.traderFox),
-                               received: marketCycle?.traderFox.received,
-                               valid: marketCycle?.traderFox.valid,
-                               operations: marketCycle?.traderFox.operations,
-                               errors: marketCycle?.traderFox.errors)
+                    .frame(width: max(geometry.size.width, minimumTableWidth), alignment: .leading)
                 }
             }
         }
@@ -105,31 +114,36 @@ struct RadarSourcePanel: View {
         received: Int?, valid: Int?, operations: Int?, errors: Int?,
         @ViewBuilder accessory: () -> Accessory
     ) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack(spacing: 7) {
-                Circle().fill(color).frame(width: 8, height: 8)
-                    .accessibilityHidden(true)
-                Text(name).font(.body.weight(.light)).lineLimit(1)
-                Spacer(minLength: 4)
-                accessory()
-                Text(status).font(.subheadline.weight(.light))
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                HStack(spacing: 6) {
+                    Circle().fill(color).frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(name).lineLimit(1)
+                }
+                .font(.caption)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                metric("Received", received)
+                metric("Valid", valid)
+                metric("Requests", operations)
+                metric("Errors", errors)
+                Text(status)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(status == "NOT CONNECTED" || status == "STOPPED" || status == "CLI READY"
                                      ? TrendsColors.supportingInk : color)
                     .lineLimit(1)
+                    .frame(width: statusWidth, alignment: .trailing)
+                ZStack(alignment: .trailing) {
+                    Color.clear
+                    accessory()
+                }
+                .frame(width: actionWidth, height: 28)
             }
-            HStack(spacing: 0) {
-                metric("RECEIVED", received)
-                metric("VALID", valid)
-                metric("REQUESTS", operations)
-                metric("ERRORS", errors)
-            }
+            .frame(maxWidth: .infinity, minHeight: 28)
+            .padding(.horizontal, 7)
+            paleSeparator
         }
-        .padding(9)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(TrendsColors.canvas.opacity(0.65), in: RoundedRectangle(cornerRadius: 8))
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 3)
-        }
+        .accessibilityIdentifier("source-\(name)")
     }
 
     private func sourceCard(
@@ -143,13 +157,44 @@ struct RadarSourcePanel: View {
     }
 
     private func metric(_ title: String, _ value: Int?) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.caption.weight(.light)).foregroundStyle(TrendsColors.supportingInk)
-            Text(value.map { $0.formatted() } ?? "—")
-                .font(.body.weight(.light)).monospacedDigit()
+        Text(value.map { $0.formatted() } ?? "—")
+            .font(.caption.monospacedDigit())
+            .frame(width: metricWidth, alignment: .trailing)
+            .accessibilityLabel("\(title): \(value.map(String.init) ?? "unavailable")")
+    }
+
+    private var minimumTableWidth: CGFloat {
+        sourceWidth + metricWidth * 4 + statusWidth + actionWidth + 14
+    }
+
+    private var columnHeadings: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Text("SOURCE").frame(maxWidth: .infinity, alignment: .leading)
+                heading("RECEIVED")
+                heading("VALID")
+                heading("REQUESTS")
+                heading("ERRORS")
+                Text("STATUS").frame(width: statusWidth, alignment: .trailing)
+                Color.clear.frame(width: actionWidth, height: 1)
+            }
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(TrendsColors.supportingInk)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            paleSeparator
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+    }
+
+    private func heading(_ title: String) -> some View {
+        Text(title).frame(width: metricWidth, alignment: .trailing)
+    }
+
+    private var paleSeparator: some View {
+        Rectangle()
+            .fill(Color.blue.opacity(0.16))
+            .frame(height: 1)
+            .accessibilityHidden(true)
     }
 
     private var discoveryLabel: String {
