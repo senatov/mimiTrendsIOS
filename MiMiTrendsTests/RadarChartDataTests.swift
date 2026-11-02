@@ -46,6 +46,16 @@ final class RadarChartDataTests: XCTestCase {
         XCTAssertTrue(old.fastEMA.isEmpty)
     }
 
+    func testNearestBarSnapsCursorToActualCandle() {
+        let bars = [bar(minute: 1, close: 10), bar(minute: 3, close: 12)]
+        let selected = RadarChartData.nearestBar(
+            to: Date(timeIntervalSince1970: 170), in: bars
+        )
+
+        XCTAssertEqual(selected?.minuteEpochSeconds, 180)
+        XCTAssertNil(RadarChartData.nearestBar(to: Date(), in: []))
+    }
+
     private func bar(minute: Int64, close: Double) -> MinuteBar {
         MinuteBar(
             symbol: "TEST", minuteEpochSeconds: minute * 60,

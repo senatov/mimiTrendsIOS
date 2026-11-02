@@ -9,6 +9,7 @@ struct RadarChartPreview: View {
     @AppStorage("chart.range.v1") private var rangeRaw = RadarChartRange.oneDay.rawValue
     @State private var errorMessage: String?
     @State private var isLoading = false
+    @State private var cursorInspection: RadarChartInspection?
 
     private var chartData: RadarChartData {
         RadarChartData(
@@ -75,6 +76,7 @@ struct RadarChartPreview: View {
                         .foregroundStyle(TrendsColors.supportingInk)
                 }
             }
+            cursorDetails
             if isLoading {
                 ProgressView("Loading saved minute bars")
                     .frame(maxWidth: .infinity, minHeight: 180)
@@ -92,7 +94,8 @@ struct RadarChartPreview: View {
                 RadarChartPlot(
                     data: chartData, symbol: symbol,
                     priceHeight: max(140, availableHeight - 240),
-                    volumeHeight: 60
+                    volumeHeight: 60,
+                    inspection: $cursorInspection
                 )
                 if let last = chartData.bars.last {
                     Text("\(chartData.bars.count) saved bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · source currency · gaps are not filled")
@@ -102,6 +105,48 @@ struct RadarChartPreview: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var cursorDetails: some View {
+        if let cursorInspection {
+            let bar = cursorInspection.bar
+            let change = (bar.close / bar.open - 1) * 100
+            let candleRange = (bar.high - bar.low) / bar.open * 100
+            VStack(alignment: .leading, spacing: 2) {
+                Text("\(Date(timeIntervalSince1970: TimeInterval(bar.minuteEpochSeconds)).formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute())) · \(direction(for: change)) \(signedPercent(change)) · Range \(candleRange.formatted(.number.precision(.fractionLength(2))))%")
+                Text("O \(formattedPrice(bar.open))  H \(formattedPrice(bar.high))  L \(formattedPrice(bar.low))  C \(formattedPrice(bar.close))  ·  Volume \(compactVolume(bar.volume))  ·  \(cursorInspection.isPinned ? "PINNED" : "LIVE")")
+            }
+            .font(.caption.monospacedDigit())
+            .foregroundStyle(TrendsColors.supportingInk)
+            .accessibilityElement(children: .combine)
+        } else {
+            Text("Move cursor or drag over a candle · click to pin")
+                .font(.caption)
+                .foregroundStyle(TrendsColors.supportingInk)
+        }
+    }
+
+    private func direction(for change: Double) -> String {
+        change > 0 ? "UP" : change < 0 ? "DOWN" : "FLAT"
+    }
+
+    private func signedPercent(_ value: Double) -> String {
+        "\(value > 0 ? "+" : "")\(value.formatted(.number.precision(.fractionLength(2))))%"
+    }
+
+    private func compactVolume(_ volume: Double) -> String {
+        volume >= 1_000
+            ? "\((volume / 1_000).formatted(.number.precision(.fractionLength(1))))k"
+            : volume.formatted(.number.precision(.fractionLength(0)))
+    }
+
+    private func formattedPrice(_ value: Double) -> String {
+        value.formatted(.currency(code: chartCurrency).precision(.fractionLength(2)))
+    }
+
+    private var chartCurrency: String {
+        [".DE", ".F", ".PA", ".AS", ".MI", ".HE"].contains(where: symbol.hasSuffix) ? "EUR" : "USD"
     }
 
     private func loadBars() async {

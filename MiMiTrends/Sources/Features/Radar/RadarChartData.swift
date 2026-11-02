@@ -36,6 +36,12 @@ struct RadarChartPoint: Identifiable {
     var date: Date { Date(timeIntervalSince1970: TimeInterval(minuteEpochSeconds)) }
 }
 
+struct RadarChartInspection {
+    let bar: MinuteBar
+    let price: Double
+    let isPinned: Bool
+}
+
 struct RadarChartData {
     let bars: [MinuteBar]
     let fastEMA: [RadarChartPoint]
@@ -54,6 +60,14 @@ struct RadarChartData {
         bars = selected
         fastEMA = Self.ema(allBars, visibleFrom: selected.first?.minuteEpochSeconds, period: 9)
         slowEMA = Self.ema(allBars, visibleFrom: selected.first?.minuteEpochSeconds, period: 21)
+    }
+
+    static func nearestBar(to date: Date, in bars: [MinuteBar]) -> MinuteBar? {
+        let timestamp = date.timeIntervalSince1970
+        return bars.min {
+            abs(TimeInterval($0.minuteEpochSeconds) - timestamp) <
+                abs(TimeInterval($1.minuteEpochSeconds) - timestamp)
+        }
     }
 
     // Match the desktop TrendSeriesCalculator seed and smoothing rule.
