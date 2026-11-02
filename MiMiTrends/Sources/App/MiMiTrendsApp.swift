@@ -6,6 +6,9 @@ struct MiMiTrendsApp: App {
     @State private var radarSession = RadarSession()
 
     init() {
+        #if os(macOS)
+        LocalAccountInstanceGuard.activateExistingInstanceOrExit()
+        #endif
         let log = AppDiagnostics.shared
         log.record(.info, "App", "launched", "version=\(AppIdentity.version) pid=\(ProcessInfo.processInfo.processIdentifier)")
         if let url = log.fileURL() {

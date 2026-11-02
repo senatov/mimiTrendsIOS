@@ -27,17 +27,6 @@ struct RadarView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 6) {
-                RadarHeader(
-                    symbol: $symbol, scanWatchlist: $scanWatchlist,
-                    session: session, setupMessage: setupMessage,
-                    isPreparingFeed: isPreparingFeed,
-                    watchlist: watchlistPreview
-                ) {
-                    if session.isScanning { session.stop() } else { startFeed() }
-                }
-                if let activity = currentActivity {
-                    RadarActivityBanner(activity: activity)
-                }
                 RadarWorkspace(
                     signals: { compact in signalList(compact: compact) },
                     sources: {
@@ -54,6 +43,21 @@ struct RadarView: View {
                             signal: selectedSignal,
                             refreshID: chartRefreshID
                         )
+                    },
+                    controls: {
+                        VStack(spacing: 6) {
+                            RadarHeader(
+                                symbol: $symbol, scanWatchlist: $scanWatchlist,
+                                session: session, setupMessage: setupMessage,
+                                isPreparingFeed: isPreparingFeed,
+                                watchlist: watchlistPreview
+                            ) {
+                                if session.isScanning { session.stop() } else { startFeed() }
+                            }
+                            if let activity = currentActivity {
+                                RadarActivityBanner(activity: activity)
+                            }
+                        }
                     }
                 )
                 .frame(maxHeight: .infinity)

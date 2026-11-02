@@ -5,11 +5,13 @@ enum RadarPaneLayout {
     static let minimumWideWidth: CGFloat = 880
     static let minimumWideHeight: CGFloat = 300
     static let minimumStackedHeight: CGFloat = 548
+    static let minimumRightPaneWidth: CGFloat = 620
+    static let paneSpacing: CGFloat = 8
 
     static func wideColumnWidth(totalWidth: CGFloat, ratio: Double) -> CGFloat {
-        let available = max(0, totalWidth - handleSize)
+        let available = max(0, totalWidth - paneSpacing)
         return clamp(available * safeRatio(ratio, fallback: 0.68),
-                     minimum: 320, maximum: available - 240)
+                     minimum: 220, maximum: available - minimumRightPaneWidth)
     }
 
     static func wideTopHeight(totalHeight: CGFloat, ratio: Double) -> CGFloat {

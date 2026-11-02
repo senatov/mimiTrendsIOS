@@ -1,12 +1,14 @@
 #if os(macOS)
+import AppKit
 import SwiftUI
 
 struct HeaderBuildBadge: View {
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "chart.xyaxis.line")
-                .font(.body)
-                .foregroundStyle(.blue)
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 20, height: 20)
             Text(AppIdentity.name)
                 .font(.body.weight(.light))
             Text("v. \(AppIdentity.version)")
