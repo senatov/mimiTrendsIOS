@@ -61,9 +61,9 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
         let chartAndSignalHeight = max(0, size.height - sourceHeight - controlsHeight)
         let signalHeight = RadarPaneLayout.clamp(chartAndSignalHeight * 0.43, minimum: 140, maximum: chartAndSignalHeight - 150)
         return VStack(spacing: 6) {
-            signals(true).frame(height: signalHeight)
             sources().frame(height: sourceHeight, alignment: .top)
             controls().frame(height: controlsHeight, alignment: .topLeading)
+            signals(true).frame(height: signalHeight)
             plot().frame(maxHeight: .infinity)
         }
     }
@@ -95,9 +95,9 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
     private var scrollingFallback: some View {
         ScrollView {
             VStack(spacing: 10) {
-                signals(true).frame(minHeight: 170)
                 sources().frame(height: sourcePanelHeight, alignment: .top)
                 controls()
+                signals(true).frame(minHeight: 170)
                 plot().frame(height: 420)
             }
         }

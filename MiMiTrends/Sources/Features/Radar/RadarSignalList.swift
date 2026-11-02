@@ -137,7 +137,7 @@ struct RadarSignalList: View {
     }
 
     private var header: some View {
-        let widths = fittedWidths(availableWidth: max(availableWidth - 16, 584))
+        let widths = fittedWidths(availableWidth: max(0, availableWidth - 16))
         return HStack(spacing: 0) {
             ForEach(RadarSortColumn.allCases, id: \.self) { column in
                 headerCell(column, width: widths.width(for: column))
@@ -278,21 +278,39 @@ struct RadarSignalColumnWidths {
         availableWidth: CGFloat,
         overrides: [RadarSortColumn: CGFloat]
     ) -> Self {
-        let fitted: [RadarSortColumn: CGFloat] = [
-            .event: max(205, measuredWidth(signals.map(eventLabel)) + 100),
-            .movement: max(100, measuredWidth(signals.map { String(format: "%+.2f%% / %@", $0.windowChangePercent, $0.signalWindowLabel) }) + 34),
-            .price: max(78, measuredWidth(signals.map { $0.price.formatted(.number.precision(.fractionLength(0...2))) }) + 30),
-            .age: 70
+        let preferred: [RadarSortColumn: CGFloat] = [
+            .company: overrides[.company] ?? 100,
+            .event: overrides[.event] ?? max(205, measuredWidth(signals.map(eventLabel)) + 100),
+            .movement: overrides[.movement] ?? max(100, measuredWidth(signals.map { String(format: "%+.2f%% / %@", $0.windowChangePercent, $0.signalWindowLabel) }) + 34),
+            .price: overrides[.price] ?? max(78, measuredWidth(signals.map { $0.price.formatted(.number.precision(.fractionLength(0...2))) }) + 30),
+            .age: overrides[.age] ?? 70
         ]
-        func width(_ column: RadarSortColumn) -> CGFloat {
-            min(max(overrides[column] ?? fitted[column] ?? column.minimumWidth, column.minimumWidth), 520)
+        var widths = Dictionary(uniqueKeysWithValues: RadarSortColumn.allCases.map { column in
+            (column, min(max(preferred[column] ?? column.minimumWidth, column.minimumWidth), 520))
+        })
+        let otherColumns: [RadarSortColumn] = [.event, .movement, .price, .age]
+        let otherWidth = otherColumns.reduce(CGFloat.zero) { $0 + (widths[$1] ?? $1.minimumWidth) }
+        if overrides[.company] == nil {
+            widths[.company] = max(RadarSortColumn.company.minimumWidth, availableWidth - otherWidth)
         }
-        let eventWidth = width(.event)
-        let movementWidth = width(.movement)
-        let priceWidth = width(.price)
-        let ageWidth = width(.age)
-        let companyWidth = overrides[.company] ?? max(100, availableWidth - eventWidth - movementWidth - priceWidth - ageWidth)
-        return Self(company: max(companyWidth, 100), event: eventWidth, movement: movementWidth, price: priceWidth, age: ageWidth)
+
+        let minimumTableWidth = RadarSortColumn.allCases.reduce(CGFloat.zero) { $0 + $1.minimumWidth }
+        var overflow = max(0, widths.values.reduce(0, +) - max(availableWidth, minimumTableWidth))
+        for column in RadarSortColumn.allCases {
+            guard overflow > 0 else { break }
+            let current = widths[column] ?? column.minimumWidth
+            let reduction = min(overflow, current - column.minimumWidth)
+            widths[column] = current - reduction
+            overflow -= reduction
+        }
+
+        return Self(
+            company: widths[.company] ?? RadarSortColumn.company.minimumWidth,
+            event: widths[.event] ?? RadarSortColumn.event.minimumWidth,
+            movement: widths[.movement] ?? RadarSortColumn.movement.minimumWidth,
+            price: widths[.price] ?? RadarSortColumn.price.minimumWidth,
+            age: widths[.age] ?? RadarSortColumn.age.minimumWidth
+        )
     }
 
     private static func measuredWidth(_ values: [String]) -> CGFloat {
