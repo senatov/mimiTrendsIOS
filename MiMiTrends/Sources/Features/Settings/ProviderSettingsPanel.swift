@@ -34,16 +34,6 @@ struct ProviderSettingsPanel: View {
                 ],
                 detail: "Foreground EUR quote observations; scanner integration pending"
             )
-            group(
-                "Tradegate",
-                endpoints: [.tradegate],
-                detail: "Public quote collector · quote adapter pending"
-            )
-            group(
-                "Euronext",
-                endpoints: [.euronext],
-                detail: "Public quote collector · quote adapter pending"
-            )
             group("Yahoo Finance", endpoints: [.yahooPrimary, .yahooAlternate])
             group("Discovery", endpoints: [.wallstreetOnline, .traderFox])
             ScalableSettingsCard()

@@ -29,7 +29,7 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
 
     var defaultHexLight: String {
         switch self {
-        case .headerFill: "FFF6D0"
+        case .headerFill: "EAF4FC"
         case .headerText: "233A55"
         case .grid: "C5D9ED"
         case .bodyText: "17365F"
@@ -47,7 +47,7 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
 
     var defaultHexDark: String {
         switch self {
-        case .headerFill: "50451F"
+        case .headerFill: "30465B"
         case .headerText: "FFF1BE"
         case .grid: "4A6077"
         case .bodyText: "F1F7FF"

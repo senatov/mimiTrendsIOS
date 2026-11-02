@@ -3,7 +3,7 @@ import Foundation
 enum ProviderEndpoint: String, CaseIterable, Identifiable {
     case finnhubProfiles, finnhubTrades
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope
-    case tradegate, euronext, yahooPrimary, yahooAlternate
+    case yahooPrimary, yahooAlternate
     case wallstreetOnline, traderFox
 
     var id: String { rawValue }
@@ -15,7 +15,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzGermany: "Germany"
         case .langSchwarzStoxx: "STOXX 50"
         case .langSchwarzEurope: "Europe"
-        case .tradegate, .euronext: "Quote collector"
         case .yahooPrimary: "Primary"
         case .yahooAlternate: "Alternate"
         case .wallstreetOnline: "Discovery"
@@ -30,8 +29,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzGermany: "https://www.ls-tc.de/de/aktien/deutschland"
         case .langSchwarzStoxx: "https://www.ls-tc.de/de/aktien/europa/stoxx50"
         case .langSchwarzEurope: "https://www.ls-tc.de/de/aktien/europa"
-        case .tradegate: "https://www.tradegatebsx.com"
-        case .euronext: "https://live.euronext.com"
         case .yahooPrimary: "https://query1.finance.yahoo.com"
         case .yahooAlternate: "https://query2.finance.yahoo.com"
         case .wallstreetOnline: "https://www.wallstreet-online.de"
@@ -53,8 +50,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .finnhubProfiles: "/api/v1/stock/profile2?symbol=ASML"
         case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: ""
-        case .tradegate: "/kurssuche.php?suche=ASML&lang=en"
-        case .euronext: "/en/instrumentSearch/searchJSON?q=ASML"
         case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
         case .traderFox: "dax-bestandteile"
@@ -126,8 +121,6 @@ struct ProviderEndpointChecker: Sendable {
         switch endpoint {
         case .finnhubProfiles: expected = "name"
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: expected = "bidWithCurrencySymbol"
-        case .tradegate: expected = "ASML"
-        case .euronext: expected = "ASML"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"
         case .wallstreetOnline: expected = "ASML"
         case .traderFox: expected = "equities"

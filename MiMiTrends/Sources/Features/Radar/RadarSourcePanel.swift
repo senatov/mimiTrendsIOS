@@ -3,9 +3,6 @@ import SwiftUI
 struct RadarSourcePanel: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(\.colorScheme) private var colorScheme
-    @ScaledMetric(relativeTo: .body) private var sourceWidth: CGFloat = 190
-    @ScaledMetric(relativeTo: .body) private var metricWidth: CGFloat = 62
-    @ScaledMetric(relativeTo: .body) private var statusWidth: CGFloat = 124
 
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
@@ -20,6 +17,7 @@ struct RadarSourcePanel: View {
     @State private var scalableErrors = 0
     @State private var loginTask: Task<Void, Never>?
     #endif
+    @State private var showingCandidates = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -27,200 +25,102 @@ struct RadarSourcePanel: View {
                 .font(.title3.weight(.light))
             Divider()
             GeometryReader { geometry in
-                ScrollView([.horizontal, .vertical]) {
-                    VStack(spacing: 0) {
-                        columnHeadings
-                        sourceCard(
-                            name: "Yahoo", status: marketStatus(marketCycle?.yahoo),
-                            color: marketColor(marketCycle?.yahoo),
-                            received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
-                            operations: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors
-                        )
-                        sourceCard(
-                            name: "Finnhub", status: feedStatus, color: feedColor,
-                            received: session.tradeCount, valid: session.completedBarsStored,
-                            operations: nil, errors: session.errorCount
-                        )
-                        ForEach(["Tradegate", "Euronext"], id: \.self) { name in
-                            sourceCard(name: name, status: "NOT CONNECTED", color: tableColor(.sourceInactive),
-                                       received: nil, valid: nil, operations: nil, errors: nil)
-                        }
-                        scalableCard
-                        sourceCard(
-                            name: "Lang & Schwarz",
-                            status: lsStatus == nil ? "CONNECTING" :
-                                lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
-                        color: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
-                            received: lsStatus?.quotes.count,
-                            valid: lsStatus.map { _ in lsFreshCount },
-                            operations: lsStatus?.requestCount,
-                            errors: lsStatus?.errorCount
-                        )
-                        sourceCard(
-                            name: "wallstreetONLINE", status: discoveryLabel, color: discoveryColor,
-                            received: discoveryStatus?.snapshot?.candidates.count,
-                            valid: nil, operations: discoveryRequests, errors: discoveryErrors
-                        ) {
-                            if let snapshot = discoveryStatus?.snapshot {
-                                NavigationLink {
-                                    DiscoveryCandidateList(snapshot: snapshot)
-                                } label: {
-                                    Image(systemName: "list.number")
-                                }
-                                .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
-                                .accessibilityLabel("View ranking candidates")
-                            }
-                        }
-                        sourceCard(name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
-                                   color: marketColor(marketCycle?.traderFox),
-                                   received: marketCycle?.traderFox.received,
-                                   valid: marketCycle?.traderFox.valid,
-                                   operations: marketCycle?.traderFox.operations,
-                                   errors: marketCycle?.traderFox.errors)
-                    }
-                    .frame(width: max(geometry.size.width, minimumTableWidth), alignment: .leading)
-                }
+                telemetryTable(availableWidth: geometry.size.width)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .foregroundStyle(tableColor(.bodyText))
         .trendsPanel()
+        .navigationDestination(isPresented: $showingCandidates) {
+            if let snapshot = discoveryStatus?.snapshot {
+                DiscoveryCandidateList(snapshot: snapshot)
+            }
+        }
         #if os(macOS)
         .task { await checkScalable() }
         .onDisappear { loginTask?.cancel() }
         #endif
     }
 
-    @ViewBuilder
-    private var scalableCard: some View {
+    private func telemetryTable(availableWidth: CGFloat) -> some View {
+        RadarSourceTable(
+            sources: telemetrySources,
+            availableWidth: availableWidth,
+            onLogin: loginAction,
+            onShowCandidates: { showingCandidates = true }
+        )
+    }
+
+    private var loginAction: () -> Void {
         #if os(macOS)
-        sourceCard(
-            name: "Scalable", status: scalableStatus,
-            color: tableColor(.sourceInactive),
-            received: nil, valid: nil, operations: scalableChecks, errors: scalableErrors
-        ) {
-            if scalableStatus == "LOGIN NEEDED" {
-                Button("Login") { startScalableLogin() }
-                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
-            }
-        }
+        { startScalableLogin() }
         #else
-        sourceCard(name: "Scalable", status: "NOT CONNECTED", color: tableColor(.sourceInactive),
-                   received: nil, valid: nil, operations: nil, errors: nil)
+        {}
         #endif
     }
 
-    private func sourceCard<Accessory: View>(
-        name: String, status: String, color: Color,
-        received: Int?, valid: Int?, operations: Int?, errors: Int?,
-        @ViewBuilder accessory: () -> Accessory
-    ) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                HStack(spacing: 7) {
-                    HStack(spacing: 6) {
-                        Circle().fill(color).frame(width: 7, height: 7)
-                            .accessibilityHidden(true)
-                        Text(name)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .layoutPriority(-1)
-                    }
-                    accessory()
-                        .fixedSize(horizontal: true, vertical: false)
-                        .layoutPriority(1)
-                }
-                .font(.body)
-                .frame(width: sourceWidth, alignment: .leading)
-                .clipped()
-                metric("Received", received)
-                metric("Valid", valid)
-                metric("Requests", operations)
-                metric("Errors", errors)
-                Text(status)
-                    .font(.body)
-                    .foregroundStyle(status == "NOT CONNECTED" || status == "STOPPED" || status == "CLI READY"
-                                     ? tableColor(.sourceInactive) : color)
-                    .lineLimit(1)
-                    .frame(width: statusWidth, alignment: .trailing)
-            }
-            .frame(maxWidth: .infinity, minHeight: 30)
-            .padding(.horizontal, 7)
-            .overlay(sourceColumnLines)
-            paleSeparator
-        }
-        .accessibilityIdentifier("source-\(name)")
-    }
-
-    private func sourceCard(
-        name: String, status: String, color: Color,
-        received: Int?, valid: Int?, operations: Int?, errors: Int?
-    ) -> some View {
-        sourceCard(name: name, status: status, color: color,
-                   received: received, valid: valid, operations: operations, errors: errors) {
-            EmptyView()
-        }
-    }
-
-    private func metric(_ title: String, _ value: Int?) -> some View {
-        Text(value.map { $0.formatted() } ?? "—")
-            .font(.body.monospacedDigit())
-            .frame(width: metricWidth, alignment: .trailing)
-            .accessibilityLabel("\(title): \(value.map(String.init) ?? "unavailable")")
-    }
-
-    private var minimumTableWidth: CGFloat {
-        sourceWidth + metricWidth * 4 + statusWidth + 14
-    }
-
-    private var columnHeadings: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                Text("SOURCE").frame(width: sourceWidth, alignment: .leading)
-                heading("RECV", fullTitle: "Received")
-                heading("VALID", fullTitle: "Valid")
-                heading("REQ", fullTitle: "Requests")
-                heading("ERR", fullTitle: "Errors")
-                Text("STATUS").frame(width: statusWidth, alignment: .trailing)
-            }
-            .font(.subheadline.weight(.medium))
-            .foregroundStyle(tableColor(.headerText))
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .overlay(sourceColumnLines)
-            .background(tableColor(.headerFill))
-            paleSeparator
-        }
-    }
-
-    private func heading(_ title: String, fullTitle: String) -> some View {
-        Text(title)
-            .lineLimit(1)
-            .frame(width: metricWidth, alignment: .trailing)
-            .help(fullTitle)
-            .accessibilityLabel(fullTitle)
-    }
-
-    private var paleSeparator: some View {
-        Rectangle()
-            .fill(tableColor(.grid))
-            .frame(height: 1)
-            .accessibilityHidden(true)
-    }
-
-    private var sourceColumnLines: some View {
-        GeometryReader { geometry in
-            Path { path in
-                for index in 0...4 {
-                    let x = 7 + sourceWidth + metricWidth * CGFloat(index)
-                    path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x, y: geometry.size.height))
-                }
-            }
-            .stroke(tableColor(.grid), lineWidth: 1)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+    private var telemetrySources: [RadarTelemetrySource] {
+        var rows = [
+            RadarTelemetrySource(
+                name: "Yahoo", status: marketStatus(marketCycle?.yahoo),
+                statusColor: marketColor(marketCycle?.yahoo), dotColor: marketColor(marketCycle?.yahoo),
+                received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
+                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
+                canLogin: false, canShowCandidates: false
+            ),
+            RadarTelemetrySource(
+                name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
+                received: session.tradeCount, valid: session.completedBarsStored,
+                requests: nil, errors: session.errorCount,
+                canLogin: false, canShowCandidates: false
+            ),
+            RadarTelemetrySource(
+                name: "Lang & Schwarz",
+                status: lsStatus == nil ? "CONNECTING" : lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
+                statusColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
+                dotColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
+                received: lsStatus?.quotes.count, valid: lsStatus.map { _ in lsFreshCount },
+                requests: lsStatus?.requestCount, errors: lsStatus?.errorCount,
+                canLogin: false, canShowCandidates: false
+            ),
+            RadarTelemetrySource(
+                name: "wallstreetONLINE", status: discoveryLabel,
+                statusColor: discoveryColor, dotColor: discoveryColor,
+                received: discoveryStatus?.snapshot?.candidates.count, valid: nil,
+                requests: discoveryRequests, errors: discoveryErrors,
+                canLogin: false, canShowCandidates: discoveryStatus?.snapshot != nil
+            ),
+            RadarTelemetrySource(
+                name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
+                statusColor: marketColor(marketCycle?.traderFox), dotColor: marketColor(marketCycle?.traderFox),
+                received: marketCycle?.traderFox.received, valid: marketCycle?.traderFox.valid,
+                requests: marketCycle?.traderFox.operations, errors: marketCycle?.traderFox.errors,
+                canLogin: false, canShowCandidates: false
+            )
+        ]
+        #if os(macOS)
+        rows.insert(
+            RadarTelemetrySource(
+                name: "Scalable", status: scalableStatus,
+                statusColor: tableColor(scalableStatus == "LOGIN NEEDED" ? .sourceAttention : .sourceInactive),
+                dotColor: tableColor(scalableStatus == "LOGIN NEEDED" ? .sourceAttention : .sourceInactive),
+                received: nil, valid: nil, requests: scalableChecks, errors: scalableErrors,
+                canLogin: scalableStatus == "LOGIN NEEDED", canShowCandidates: false
+            ),
+            at: 2
+        )
+        #else
+        rows.insert(
+            RadarTelemetrySource(
+                name: "Scalable", status: "NOT CONNECTED",
+                statusColor: tableColor(.sourceInactive), dotColor: tableColor(.sourceInactive),
+                received: nil, valid: nil, requests: nil, errors: nil,
+                canLogin: false, canShowCandidates: false
+            ),
+            at: 2
+        )
+        #endif
+        return rows
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {

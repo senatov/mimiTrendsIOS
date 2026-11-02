@@ -12,6 +12,7 @@ struct RadarSignalRow: View {
     let companyName: String
     let compact: Bool
     let isSelected: Bool
+    let widths: RadarSignalColumnWidths
     let onSelect: () -> Void
 
     var body: some View {
@@ -28,7 +29,7 @@ struct RadarSignalRow: View {
         .background(backgroundColor)
         .overlay {
             if !compact {
-                RadarSignalColumnLines(color: tableColor(.grid), horizontalInset: 8)
+                RadarSignalColumnLines(widths: widths, color: tableColor(.grid), horizontalInset: 8)
             }
         }
         .contentShape(Rectangle())
@@ -68,7 +69,7 @@ struct RadarSignalRow: View {
                 Text("🇺🇸").accessibilityLabel("United States")
             }
             .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(width: widths.company, alignment: .leading)
             HStack(spacing: 6) {
                 eventBadge
                 Spacer(minLength: 4)
@@ -78,17 +79,17 @@ struct RadarSignalRow: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 6)
-            .frame(width: 285)
+            .frame(width: widths.event)
             movement
                 .padding(.horizontal, 6)
-                .frame(width: 115, alignment: .trailing)
+                .frame(width: widths.movement, alignment: .trailing)
             Text(formattedPrice)
                 .monospacedDigit()
                 .padding(.horizontal, 6)
-                .frame(width: 70, alignment: .trailing)
+                .frame(width: widths.price, alignment: .trailing)
             ageText
                 .padding(.horizontal, 6)
-                .frame(width: 50, alignment: .trailing)
+                .frame(width: widths.age, alignment: .trailing)
         }
         .font(.system(size: 14, weight: .light))
     }
@@ -218,17 +219,18 @@ enum RadarSearchKeyword {
 }
 
 struct RadarSignalColumnLines: View {
+    let widths: RadarSignalColumnWidths
     let color: Color
     let horizontalInset: CGFloat
 
     var body: some View {
         GeometryReader { geometry in
             Path { path in
-                for trailingWidth in [520.0, 235.0, 120.0, 50.0] {
-                    let x = geometry.size.width - horizontalInset - CGFloat(trailingWidth)
-                    guard x > horizontalInset else { continue }
+                var x = horizontalInset + widths.company
+                for width in [widths.event, widths.movement, widths.price] {
                     path.move(to: CGPoint(x: x, y: 0))
                     path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                    x += width
                 }
             }
             .stroke(color, lineWidth: 1)
