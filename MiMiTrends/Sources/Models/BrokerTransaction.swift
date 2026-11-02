@@ -17,6 +17,33 @@ struct BrokerTransaction: Sendable, Equatable {
     let currency: String
 }
 
+struct BrokerTradeExecution: Sendable, Equatable {
+    let id: Int64
+    let occurredAtEpochSeconds: Int64
+    let description: String
+    let type: String
+    let isin: String?
+    let shares: Double
+    let price: Double
+    let amount: Double
+    let fee: Double
+    let tax: Double
+    let currency: String
+}
+
+struct BrokerTradePosition: Identifiable, Sendable, Equatable {
+    let id: String
+    let symbol: String
+    let quantity: Double
+    let entryEpochSeconds: Int64
+    let entryPrice: Double
+    let exitEpochSeconds: Int64?
+    let exitPrice: Double?
+    let profitAmount: Double?
+    let profitPercent: Double?
+    let currency: String
+}
+
 struct ScalableCSVParseResult: Sendable {
     let inputRows: Int
     let cancelledRows: Int

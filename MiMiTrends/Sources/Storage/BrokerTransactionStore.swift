@@ -89,6 +89,35 @@ actor BrokerTransactionStore {
         }
     }
 
+    func loadExecutedTransactions() throws -> [BrokerTradeExecution] {
+        let statement = try prepare("""
+            SELECT id, occurred_at, description, type, isin, shares, price, amount, fee, tax, currency
+            FROM broker_transactions
+            WHERE lower(trim(status))='executed' AND lower(trim(type)) IN ('buy', 'sell')
+            ORDER BY occurred_at, id
+            """)
+        defer { sqlite3_finalize(statement) }
+        var transactions: [BrokerTradeExecution] = []
+        while true {
+            let result = sqlite3_step(statement)
+            if result == SQLITE_DONE { return transactions }
+            guard result == SQLITE_ROW else { throw BrokerTransactionStoreError.databaseUnavailable }
+            transactions.append(BrokerTradeExecution(
+                id: sqlite3_column_int64(statement, 0),
+                occurredAtEpochSeconds: sqlite3_column_int64(statement, 1),
+                description: Self.text(statement, 2),
+                type: Self.text(statement, 3),
+                isin: Self.optionalText(statement, 4),
+                shares: sqlite3_column_double(statement, 5),
+                price: sqlite3_column_double(statement, 6),
+                amount: sqlite3_column_double(statement, 7),
+                fee: sqlite3_column_double(statement, 8),
+                tax: sqlite3_column_double(statement, 9),
+                currency: Self.text(statement, 10)
+            ))
+        }
+    }
+
     private func prepare(_ sql: String) throws -> OpaquePointer {
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK,
@@ -104,6 +133,15 @@ actor BrokerTransactionStore {
             result = sqlite3_bind_null(statement, index)
         }
         guard result == SQLITE_OK else { throw BrokerTransactionStoreError.databaseUnavailable }
+    }
+
+    private static func text(_ statement: OpaquePointer, _ column: Int32) -> String {
+        optionalText(statement, column) ?? ""
+    }
+
+    private static func optionalText(_ statement: OpaquePointer, _ column: Int32) -> String? {
+        guard let value = sqlite3_column_text(statement, column) else { return nil }
+        return String(cString: value)
     }
 
     private static func migrate(_ connection: OpaquePointer) throws {

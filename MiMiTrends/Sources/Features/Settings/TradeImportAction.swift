@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct TradeImportAction: View {
     let title: String
+    var onImport: () -> Void = {}
     @State private var showingImporter = false
     @State private var isImporting = false
     @State private var report: BrokerImportReport?
@@ -43,6 +44,7 @@ struct TradeImportAction: View {
             defer { isImporting = false }
             do {
                 report = try await TradeImportCoordinator.importScalableCSV(at: url)
+                onImport()
             } catch {
                 errorMessage = error.localizedDescription
             }

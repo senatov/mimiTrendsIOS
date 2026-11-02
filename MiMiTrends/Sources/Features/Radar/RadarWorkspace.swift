@@ -42,6 +42,7 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
             HStack(alignment: .top, spacing: 8) {
                 signals(leftWidth < 620)
                     .frame(width: leftWidth, height: topHeight)
+                    .clipped()
                 VStack(spacing: 6) {
                     sources()
                         .frame(height: sourcePanelHeight, alignment: .top)
@@ -49,7 +50,11 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 .frame(width: rightWidth, height: topHeight, alignment: .top)
+                .clipped()
+                .layoutPriority(1)
             }
+            .frame(width: size.width, alignment: .leading)
+            .clipped()
             chartSplitHandle(topHeight: topHeight, availableHeight: availableHeight, totalHeight: size.height)
             plot().frame(height: max(100, availableHeight - topHeight))
         }

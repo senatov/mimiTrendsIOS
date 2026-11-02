@@ -39,7 +39,8 @@ struct RadarView: View {
                     },
                     plot: {
                         RadarChartPreview(
-                            symbol: selectedSignal?.symbol ?? symbol,
+                            symbol: chartSymbol,
+                            companyName: chartCompanyName,
                             signal: selectedSignal,
                             refreshID: chartRefreshID
                         )
@@ -89,6 +90,14 @@ struct RadarView: View {
                 }
             }
         }
+    }
+
+    private var chartSymbol: String {
+        selectedSignal?.symbol ?? symbol
+    }
+
+    private var chartCompanyName: String {
+        marketCycle?.companyNames[chartSymbol] ?? chartSymbol
     }
 
     private func refreshDiscoveryWhileActive() async {

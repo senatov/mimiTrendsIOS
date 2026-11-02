@@ -4,6 +4,7 @@ import SwiftUI
 struct RadarChartPlot: View {
     let data: RadarChartData
     let symbol: String
+    let trades: [BrokerTradePosition]
     var priceHeight: CGFloat = 300
     var volumeHeight: CGFloat = 90
     @Binding var inspection: RadarChartInspection?
@@ -14,6 +15,15 @@ struct RadarChartPlot: View {
     private var selectedBar: MinuteBar? {
         guard let selectedMinute else { return nil }
         return data.bars.first { $0.minuteEpochSeconds == selectedMinute }
+    }
+
+    private var visibleTrades: [BrokerTradePosition] {
+        guard let first = data.bars.first?.minuteEpochSeconds,
+              let last = data.bars.last?.minuteEpochSeconds else { return [] }
+        return trades.filter { trade in
+            (first...last).contains(trade.entryEpochSeconds) ||
+                trade.exitEpochSeconds.map { (first...last).contains($0) } == true
+        }.suffix(100).map { $0 }
     }
 
     var body: some View {
@@ -53,6 +63,9 @@ struct RadarChartPlot: View {
                     )
                     .foregroundStyle(.orange)
                     .lineStyle(StrokeStyle(lineWidth: 1.5))
+                }
+                ForEach(visibleTrades) { trade in
+                    tradeMarks(for: trade)
                 }
                 if let selectedBar, let selectedPrice {
                     RuleMark(x: .value("Selected time", selectedBar.chartDate))
@@ -153,10 +166,116 @@ struct RadarChartPlot: View {
 
     private var priceDomain: ClosedRange<Double> {
         let overlayValues = data.fastEMA.map(\.value) + data.slowEMA.map(\.value)
-        let low = (data.bars.map(\.low) + overlayValues).min() ?? 0
-        let high = (data.bars.map(\.high) + overlayValues).max() ?? 1
+        let first = data.bars.first?.minuteEpochSeconds ?? 0
+        let last = data.bars.last?.minuteEpochSeconds ?? 0
+        let tradePrices = visibleTrades.flatMap { trade -> [Double] in
+            var prices: [Double] = []
+            if (first...last).contains(trade.entryEpochSeconds) { prices.append(trade.entryPrice) }
+            if let exitEpoch = trade.exitEpochSeconds,
+               (first...last).contains(exitEpoch), let exitPrice = trade.exitPrice {
+                prices.append(exitPrice)
+            }
+            return prices
+        }
+        let low = (data.bars.map(\.low) + overlayValues + tradePrices).min() ?? 0
+        let high = (data.bars.map(\.high) + overlayValues + tradePrices).max() ?? 1
         let padding = max((high - low) * 0.08, high * 0.002)
         return max(0, low - padding)...(high + padding)
+    }
+
+    @ChartContentBuilder
+    private func tradeMarks(for trade: BrokerTradePosition) -> some ChartContent {
+        let entryDate = Date(timeIntervalSince1970: TimeInterval(trade.entryEpochSeconds))
+        let first = data.bars.first?.minuteEpochSeconds ?? 0
+        let last = data.bars.last?.minuteEpochSeconds ?? 0
+        let entryVisible = (first...last).contains(trade.entryEpochSeconds)
+        let exitVisible = trade.exitEpochSeconds.map { (first...last).contains($0) } == true
+        if let exitEpoch = trade.exitEpochSeconds,
+           let exitPrice = trade.exitPrice,
+           entryVisible,
+           exitVisible {
+            LineMark(
+                x: .value("Buy time", entryDate), y: .value("Buy price", trade.entryPrice),
+                series: .value("Imported trade", trade.id)
+            )
+            .foregroundStyle(tradeColor(trade))
+            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+            LineMark(
+                x: .value("Sell time", Date(timeIntervalSince1970: TimeInterval(exitEpoch))),
+                y: .value("Sell price", exitPrice), series: .value("Imported trade", trade.id)
+            )
+            .foregroundStyle(tradeColor(trade))
+            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+        }
+        if entryVisible {
+            PointMark(x: .value("Buy time", entryDate), y: .value("Buy price", trade.entryPrice))
+                .symbolSize(72)
+                .foregroundStyle(.orange)
+                .annotation(position: .top, alignment: .leading, spacing: 4) {
+                    RadarChartTradeCard(trade: trade, chartCurrency: chartCurrency)
+                }
+        }
+        if let exitEpoch = trade.exitEpochSeconds,
+           let exitPrice = trade.exitPrice,
+           exitVisible {
+            PointMark(
+                x: .value("Sell time", Date(timeIntervalSince1970: TimeInterval(exitEpoch))),
+                y: .value("Sell price", exitPrice)
+            )
+            .symbolSize(72)
+            .foregroundStyle(tradeColor(trade))
+            .annotation(position: .top, alignment: .leading, spacing: 4) {
+                if !entryVisible { RadarChartTradeCard(trade: trade, chartCurrency: chartCurrency) }
+            }
+        }
+    }
+
+    private func tradeColor(_ trade: BrokerTradePosition) -> Color {
+        guard let profit = trade.profitAmount else { return .orange }
+        return profit >= 0 ? .green : .red
+    }
+
+    private var chartCurrency: String {
+        [".DE", ".F", ".PA", ".AS", ".MI", ".HE"].contains(where: symbol.hasSuffix) ? "EUR" : "USD"
+    }
+}
+
+private struct RadarChartTradeCard: View {
+    let trade: BrokerTradePosition
+    let chartCurrency: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(trade.symbol) · BUY \(price(trade.entryPrice)) · \(time(trade.entryEpochSeconds))")
+            if let exitPrice = trade.exitPrice, let exitEpoch = trade.exitEpochSeconds {
+                Text("SELL \(price(exitPrice)) · \(time(exitEpoch))")
+                if let profit = trade.profitAmount {
+                    let profitText = "\(profit >= 0 ? "+" : "−")\(abs(profit).formatted(.currency(code: chartCurrency).precision(.fractionLength(2))))"
+                    let percentText = trade.profitPercent.map {
+                        " · \($0 >= 0 ? "+" : "−")\(abs($0).formatted(.number.precision(.fractionLength(2))))%"
+                    } ?? ""
+                    Text(profitText + percentText)
+                        .foregroundStyle(profit >= 0 ? .green : .red)
+                }
+            } else {
+                Text("OPEN · \(trade.quantity.formatted(.number.precision(.fractionLength(0...4)))) shares")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .font(.caption2.monospacedDigit())
+        .padding(6)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.orange.opacity(0.75), lineWidth: 1))
+        .fixedSize()
+    }
+
+    private func price(_ value: Double) -> String {
+        value.formatted(.currency(code: chartCurrency).precision(.fractionLength(2)))
+    }
+
+    private func time(_ epochSeconds: Int64) -> String {
+        Date(timeIntervalSince1970: TimeInterval(epochSeconds))
+            .formatted(.dateTime.day().month(.twoDigits).hour().minute())
     }
 }
 

@@ -40,10 +40,16 @@ struct RadarHeader: View {
     }
 
     private func headerLayout<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        let layout = isCompactLayout
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 7))
-            : AnyLayout(HStackLayout(spacing: 10))
-        return layout { content() }
+        Group {
+            if isCompactLayout {
+                VStack(alignment: .leading, spacing: 7) { content() }
+            } else {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 10) { content() }
+                    VStack(alignment: .leading, spacing: 7) { content() }
+                }
+            }
+        }
     }
 
     @ViewBuilder

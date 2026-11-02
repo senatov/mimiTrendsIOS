@@ -2,14 +2,17 @@ import SwiftUI
 
 struct RadarChartPreview: View {
     let symbol: String
+    let companyName: String
     let signal: ScanResult?
     let refreshID: Int
 
     @State private var allBars: [MinuteBar] = []
+    @State private var importedTrades: [BrokerTradePosition] = []
     @AppStorage("chart.range.v1") private var rangeRaw = RadarChartRange.oneDay.rawValue
     @State private var errorMessage: String?
     @State private var isLoading = false
     @State private var cursorInspection: RadarChartInspection?
+    @State private var showingTrades = true
 
     private var chartData: RadarChartData {
         RadarChartData(
@@ -34,6 +37,7 @@ struct RadarChartPreview: View {
         }
         .trendsPanel()
         .task(id: "\(symbol)|\(refreshID)") { await loadBars() }
+        .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
     }
 
     private func chartContent(availableHeight: CGFloat) -> some View {
@@ -41,13 +45,25 @@ struct RadarChartPreview: View {
             HStack {
                 Text("Selected alert chart").font(.headline.weight(.regular))
                 Spacer()
-                TradeImportAction(title: "Import trades")
+                if !chartTrades.isEmpty {
+                    Toggle("Trades", isOn: $showingTrades)
+                        .toggleStyle(.button)
+                        .help("Show imported trades on the chart")
+                }
+                TradeImportAction(title: "Import trades") {
+                    Task { await loadImportedTrades() }
+                }
                 if let signal {
                     Text(signal.signalSource.replacingOccurrences(of: "_", with: " "))
                         .font(.caption.weight(.regular))
                         .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
                 }
             }
+        if chartTrades.count < importedTrades.count {
+            Text("Imported trades in another currency are hidden from this chart.")
+                .font(.caption)
+                .foregroundStyle(TrendsColors.supportingInk)
+        }
             Divider()
             HStack {
                 Picker("Range", selection: rangeSelection) {
@@ -94,6 +110,7 @@ struct RadarChartPreview: View {
             } else {
                 RadarChartPlot(
                     data: chartData, symbol: symbol,
+                    trades: showingTrades ? chartTrades : [],
                     priceHeight: max(140, availableHeight - 240),
                     volumeHeight: 60,
                     inspection: $cursorInspection
@@ -106,6 +123,10 @@ struct RadarChartPreview: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var chartTrades: [BrokerTradePosition] {
+        importedTrades.filter { $0.currency.caseInsensitiveCompare(chartCurrency) == .orderedSame }
     }
 
     @ViewBuilder
@@ -180,5 +201,32 @@ struct RadarChartPreview: View {
             )
         }
         isLoading = false
+    }
+
+    private func loadImportedTrades() async {
+        let requestedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !requestedSymbol.isEmpty else {
+            importedTrades = []
+            return
+        }
+        do {
+            let requestedName = companyName
+            let positions = try await Task.detached(priority: .utility) {
+                let store = try BrokerTransactionStore(url: BrokerTransactionStore.defaultURL())
+                let executions = try await store.loadExecutedTransactions()
+                return BrokerTradeChartMatcher.positions(
+                    symbol: requestedSymbol, companyName: requestedName, executions: executions
+                )
+            }.value
+            guard !Task.isCancelled else { return }
+            importedTrades = positions
+        } catch {
+            guard !Task.isCancelled else { return }
+            importedTrades = []
+            AppDiagnostics.shared.record(
+                .warning, "RadarChart", "trades-load-failed",
+                "symbol=\(requestedSymbol) error=\(String(describing: type(of: error)))"
+            )
+        }
     }
 }

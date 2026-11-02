@@ -29,6 +29,8 @@ targets:
         showEnvVars: false
     sources:
       - path: MiMiTrends/Sources
+        excludes:
+          - LogKit/**
       - path: MiMiTrends/Resources
     settings:
       base:
