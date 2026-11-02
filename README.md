@@ -54,7 +54,7 @@ To bring a small part of the desktop history to iPad or Mac, first create a snap
 python3 Scripts/export_desktop_bars.py AAPL ~/Desktop/AAPL-bars.sqlite
 ```
 
-The script opens `~/.mimi/trends/mimitrends.db` read-only, selects at most the latest 360 completed bars for one symbol in a consistent SQLite read transaction, and creates a new file without overwriting an existing one. Pass `--source /path/to/mimitrends.db` to choose another desktop database. Transfer the resulting `.sqlite` file to the device using Files or AirDrop, then choose **Import desktop snapshot** on Charts. The app verifies the snapshot and imports it transactionally; choose **Latest** to view saved bars even when they are older than 24 hours. Do not select the live desktop `mimitrends.db` in the app. Broker trades, settings, credentials, and other desktop tables are never included in this export.
+The script opens `~/.mimi/trends/mimitrends.db` read-only, selects at most the latest 360 completed bars for one symbol in a consistent SQLite read transaction, and creates a new file without overwriting an existing one. Pass `--source /path/to/mimitrends.db` to choose another desktop database. Transfer the resulting `.sqlite` file to the device using Files or AirDrop, then choose **Import desktop snapshot** on Radar's chart. The app verifies the snapshot and imports it transactionally; choose **Latest** to view saved bars even when they are older than 24 hours. Do not select the live desktop `mimitrends.db` in the app. Broker trades, settings, credentials, and other desktop tables are never included in this export.
 
 ## Run from the command line
 

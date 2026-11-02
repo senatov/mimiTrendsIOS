@@ -8,10 +8,6 @@ struct ContentView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Charts", systemImage: "chart.xyaxis.line", value: "charts") {
-                MarketChartView()
-            }
-                
             Tab("Radar", systemImage: "waveform.path.ecg", value: "radar") {
                 RadarView(symbol: $radarSymbol)
             }
