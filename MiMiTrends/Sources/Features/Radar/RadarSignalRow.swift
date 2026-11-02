@@ -11,6 +11,7 @@ struct RadarSignalRow: View {
     @Environment(\.colorScheme) private var colorScheme
     let signal: ScanResult
     let companyName: String
+    let companyMetadata: RadarCompanyMetadata?
     let compact: Bool
     let isSelected: Bool
     let widths: RadarSignalColumnWidths
@@ -50,7 +51,8 @@ struct RadarSignalRow: View {
     private var compactContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text(companyName).lineLimit(1)
+                companyIdentity
+                    .layoutPriority(1)
                 Spacer()
                 Text(formattedPrice).monospacedDigit()
             }
@@ -65,10 +67,7 @@ struct RadarSignalRow: View {
 
     private var wideContent: some View {
         HStack(spacing: 0) {
-            HStack(spacing: 5) {
-                Text(companyName).lineLimit(1)
-                Text("🇺🇸").accessibilityLabel("United States")
-            }
+            companyIdentity
             .padding(.horizontal, 6)
             .frame(width: widths.company, alignment: .leading)
             HStack(spacing: 6) {
@@ -93,6 +92,38 @@ struct RadarSignalRow: View {
                 .frame(width: widths.age, alignment: .trailing)
         }
         .font(tableTypography.font(size: tableTypography.size))
+    }
+
+    private var companyIdentity: some View {
+        HStack(spacing: 5) {
+            companyMark
+            Text(companyName).lineLimit(1)
+            if let flag = RadarCompanyMetadata.flag(for: companyMetadata?.countryCode ?? RadarCompanyMetadata.countryFallback(for: signal.symbol)) {
+                Text(flag).accessibilityLabel("Issuer country")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var companyMark: some View {
+        if let data = companyMetadata?.logoData, let image = decodedLogo(data) {
+            image
+                .resizable()
+                .scaledToFit()
+                .frame(width: 18, height: 18)
+                .clipShape(RoundedRectangle(cornerRadius: 3))
+                .accessibilityLabel("\(companyName) logo")
+        }
+    }
+
+    private func decodedLogo(_ data: Data) -> Image? {
+        #if os(macOS)
+        guard let image = NSImage(data: data) else { return nil }
+        return Image(nsImage: image)
+        #else
+        guard let image = UIImage(data: data) else { return nil }
+        return Image(uiImage: image)
+        #endif
     }
 
     private var eventBadge: some View {

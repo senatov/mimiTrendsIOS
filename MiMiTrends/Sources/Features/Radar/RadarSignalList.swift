@@ -10,6 +10,7 @@ struct RadarSignalList: View {
     let signals: [ScanResult]
     let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
+    let companyMetadata: [String: RadarCompanyMetadata]
     let selected: ScanResult?
     let compact: Bool
     let errorMessage: String?
@@ -116,6 +117,7 @@ struct RadarSignalList: View {
                                 RadarSignalRow(
                                     signal: item.signal,
                                     companyName: companyNames[item.signal.symbol] ?? item.signal.symbol,
+                                    companyMetadata: companyMetadata[item.signal.symbol],
                                     compact: compact,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
@@ -128,7 +130,11 @@ struct RadarSignalList: View {
                     }
                     .frame(width: contentWidth + (compact ? 0 : scrollbarGutter), alignment: .leading)
                     .onAppear { availableWidth = contentWidth }
-                    .onChange(of: contentWidth) { _, newValue in availableWidth = newValue }
+                    .onChange(of: contentWidth) { oldValue, newValue in
+                        guard abs(newValue - oldValue) > 1 else { return }
+                        availableWidth = newValue
+                        columnWidthOverrides = [:]
+                    }
                 }
             }
         }
@@ -145,6 +151,7 @@ struct RadarSignalList: View {
                 headerCell(column, width: widths.width(for: column))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .font(tableTypography.font(size: tableTypography.size))
         .foregroundStyle(tableColor(.signalHeaderText))
         .padding(.leading, 8)
@@ -162,6 +169,7 @@ struct RadarSignalList: View {
         HStack(spacing: 4) {
             Text(column.title)
                 .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
                 .frame(maxWidth: .infinity, alignment: column.isNumeric ? .trailing : .leading)
             Button { toggleSort(column) } label: {
                 Image(systemName: sortColumn == column ? (ascending ? "chevron.up" : "chevron.down") : "arrow.up.arrow.down")
@@ -187,8 +195,8 @@ struct RadarSignalList: View {
                 .gesture(DragGesture(minimumDistance: 2).onEnded { value in
                     setWidth(width + value.translation.width, for: column)
                 })
-                .onTapGesture(count: 2) { columnWidthOverrides[column] = nil }
-                .help("Drag to resize · double-click to auto-fit")
+                .onTapGesture(count: 2) { autoFit(column) }
+                .help("Drag to resize · double-click to fit content")
         }
     }
 
@@ -202,15 +210,25 @@ struct RadarSignalList: View {
 
     private func setWidth(_ width: CGFloat, for column: RadarSortColumn) {
         var updated = columnWidthOverrides
-        updated[column] = min(max(width, column.minimumWidth), 520)
+        updated[column] = min(max(width, column.minimumWidth), column.maximumWidth)
         columnWidthOverrides = updated
+    }
+
+    private func autoFit(_ column: RadarSortColumn) {
+        let names = signals.map { companyNames[$0.symbol] ?? $0.symbol }
+        let contentWidths = RadarSignalColumnWidths.contentWidths(
+            signals: signals, companyNames: names, fontSize: tableTypography.size
+        )
+        setWidth(contentWidths[column] ?? column.minimumWidth, for: column)
     }
 
     private func fittedWidths(availableWidth: CGFloat) -> RadarSignalColumnWidths {
         RadarSignalColumnWidths.fit(
             signals: signals,
+            companyNames: signals.map { companyNames[$0.symbol] ?? $0.symbol },
             availableWidth: availableWidth,
-            overrides: columnWidthOverrides
+            overrides: columnWidthOverrides,
+            fontSize: tableTypography.size
         )
     }
 
@@ -251,9 +269,19 @@ enum RadarSortColumn: CaseIterable {
         switch self {
         case .company: 100
         case .event: 180
-        case .movement: 100
-        case .price: 78
-        case .age: 70
+        case .movement: 116
+        case .price: 88
+        case .age: 84
+        }
+    }
+
+    var maximumWidth: CGFloat {
+        switch self {
+        case .company: 300
+        case .event: 280
+        case .movement: 190
+        case .price: 140
+        case .age: 110
         }
     }
 }
@@ -277,24 +305,19 @@ struct RadarSignalColumnWidths {
 
     static func fit(
         signals: [ScanResult],
+        companyNames: [String],
         availableWidth: CGFloat,
-        overrides: [RadarSortColumn: CGFloat]
+        overrides: [RadarSortColumn: CGFloat],
+        fontSize: Double
     ) -> Self {
-        let preferred: [RadarSortColumn: CGFloat] = [
-            .company: overrides[.company] ?? 100,
-            .event: overrides[.event] ?? max(205, measuredWidth(signals.map(eventLabel)) + 100),
-            .movement: overrides[.movement] ?? max(100, measuredWidth(signals.map { String(format: "%+.2f%% / %@", $0.windowChangePercent, $0.signalWindowLabel) }) + 34),
-            .price: overrides[.price] ?? max(78, measuredWidth(signals.map { $0.price.formatted(.number.precision(.fractionLength(0...2))) }) + 30),
-            .age: overrides[.age] ?? 70
-        ]
+        let contentWidths = Self.contentWidths(
+            signals: signals, companyNames: companyNames, fontSize: fontSize
+        )
         var widths = Dictionary(uniqueKeysWithValues: RadarSortColumn.allCases.map { column in
-            (column, min(max(preferred[column] ?? column.minimumWidth, column.minimumWidth), 520))
+            let fitted = min(max(contentWidths[column] ?? column.minimumWidth, column.minimumWidth), column.maximumWidth)
+            let requested = overrides[column] ?? fitted
+            return (column, min(max(requested, column.minimumWidth), column.maximumWidth))
         })
-        let otherColumns: [RadarSortColumn] = [.event, .movement, .price, .age]
-        let otherWidth = otherColumns.reduce(CGFloat.zero) { $0 + (widths[$1] ?? $1.minimumWidth) }
-        if overrides[.company] == nil {
-            widths[.company] = max(RadarSortColumn.company.minimumWidth, availableWidth - otherWidth)
-        }
 
         let minimumTableWidth = RadarSortColumn.allCases.reduce(CGFloat.zero) { $0 + $1.minimumWidth }
         var overflow = max(0, widths.values.reduce(0, +) - max(availableWidth, minimumTableWidth))
@@ -315,11 +338,27 @@ struct RadarSignalColumnWidths {
         )
     }
 
-    private static func measuredWidth(_ values: [String]) -> CGFloat {
+    static func contentWidths(
+        signals: [ScanResult], companyNames: [String], fontSize: Double
+    ) -> [RadarSortColumn: CGFloat] {
+        [
+            .company: measuredWidth(companyNames, fontSize: fontSize) + 50,
+            .event: max(205, measuredWidth(signals.map(eventLabel), fontSize: fontSize) + 108),
+            .movement: measuredWidth(signals.map {
+                String(format: "%+.2f%% / %@", $0.windowChangePercent, $0.signalWindowLabel)
+            }, fontSize: fontSize) + 24,
+            .price: measuredWidth(signals.map {
+                $0.price.formatted(.number.precision(.fractionLength(0...2)))
+            }, fontSize: fontSize) + 30,
+            .age: 70
+        ]
+    }
+
+    private static func measuredWidth(_ values: [String], fontSize: Double) -> CGFloat {
         #if os(macOS)
-        let font = NSFont.systemFont(ofSize: 13)
+        let font = NSFont.systemFont(ofSize: fontSize)
         #else
-        let font = UIFont.systemFont(ofSize: 13)
+        let font = UIFont.systemFont(ofSize: fontSize)
         #endif
         return values.prefix(200).map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
     }

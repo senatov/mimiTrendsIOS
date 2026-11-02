@@ -17,6 +17,9 @@
 		F00000000000000000000005 /* MarketPageQuoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* MarketPageQuoteTests.swift */; };
 		F00000000000000000000006 /* MarketQuoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* MarketQuoteStore.swift */; };
 		F00000000000000000000007 /* MarketQuoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* MarketQuoteStoreTests.swift */; };
+		F10000000000000000000001 /* RadarCompanyMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* RadarCompanyMetadata.swift */; };
+		F10000000000000000000002 /* RadarCompanyMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* RadarCompanyMetadataStore.swift */; };
+		F10000000000000000000003 /* RadarCompanyMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* RadarCompanyMetadataService.swift */; };
 		A99D089CBA6E4FFD82F19E7E /* ScalableCSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758C2D94840548A1B0632EFA /* ScalableCSVImporter.swift */; };
 		CF837D24F69C4457AA39BD6C /* TradeImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02995F152299416D9DF1ED0E /* TradeImportCoordinator.swift */; };
 		89ADEE94B20B43AB843E94AB /* BrokerTransactionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BDBBBE464E4EDF9D056AAB /* BrokerTransactionStore.swift */; };
@@ -157,6 +160,9 @@
 		F00000000000000000000015 /* MarketPageQuoteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketPageQuoteTests.swift; sourceTree = "<group>"; };
 		F00000000000000000000016 /* MarketQuoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStore.swift; sourceTree = "<group>"; };
 		F00000000000000000000017 /* MarketQuoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStoreTests.swift; sourceTree = "<group>"; };
+		F10000000000000000000011 /* RadarCompanyMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadata.swift; sourceTree = "<group>"; };
+		F10000000000000000000012 /* RadarCompanyMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadataStore.swift; sourceTree = "<group>"; };
+		F10000000000000000000013 /* RadarCompanyMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadataService.swift; sourceTree = "<group>"; };
 		05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingBatchTests.swift; sourceTree = "<group>"; };
 		0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalRow.swift; sourceTree = "<group>"; };
 		06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCredentialStore.swift; sourceTree = "<group>"; };
@@ -396,6 +402,7 @@
 		9150DE9B8D5D31ED4987F053 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000013 /* RadarCompanyMetadataService.swift */,
 				A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */,
 				06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */,
 				DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */,
@@ -502,6 +509,7 @@
 		C426EA777FF0597C7937DE4B /* Storage */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000012 /* RadarCompanyMetadataStore.swift */,
 				17BDBBBE464E4EDF9D056AAB /* BrokerTransactionStore.swift */,
 				17BA9EF663371153E075CCA3 /* MarketBarStore.swift */,
 				F00000000000000000000016 /* MarketQuoteStore.swift */,
@@ -595,6 +603,7 @@
 		EABBA066243D9EA78AC1C527 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				F10000000000000000000011 /* RadarCompanyMetadata.swift */,
 				77C0F103FD5CC7F11981916F /* MinuteBar.swift */,
 				1C9BD8C85A054AD7AB3C74B2 /* BrokerTransaction.swift */,
 				6ABD71D692C066C6F70FD7DA /* ProviderInstrument.swift */,
@@ -770,6 +779,7 @@
 				9B0462558BD80589645FE08B /* FinnhubBidAskClient.swift in Sources */,
 				03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */,
 				BBF88726F1EC08B77602F2E6 /* FinnhubCredentialStore.swift in Sources */,
+				F10000000000000000000003 /* RadarCompanyMetadataService.swift in Sources */,
 				3936D9169F7B63A1C80846B1 /* FinnhubMinuteAggregator.swift in Sources */,
 				886E88920162B6DA3199D90A /* FinnhubRadarPipeline.swift in Sources */,
 				CD519C4250E3EC674E8F699A /* FinnhubTradeDecoder.swift in Sources */,
@@ -783,6 +793,7 @@
 				6184C352E9EF0D6AE8168EAC /* MarketRadarScanner.swift in Sources */,
 				7E52120B483E1AAF73A29A76 /* MarketSignalFactory.swift in Sources */,
 				4B1A6D2BF95116348B8361D3 /* MarketSignalStore.swift in Sources */,
+				F10000000000000000000002 /* RadarCompanyMetadataStore.swift in Sources */,
 				AD39BFB17C64FC27CE5EFFD4 /* MiMiTrendsApp.swift in Sources */,
 				81E90818F50CBAF7A44E469F /* MiminaviInfo1Decoder.swift in Sources */,
 				E600D8D5DA566771C38473CC /* MiminaviInfo1Source.swift in Sources */,
@@ -824,6 +835,7 @@
 				FEF8C8CD52FF04FF8EBDAAEC /* RapidRiseDetector.swift in Sources */,
 				D5727C08299654E6291E4A7F /* ScalableCLIService.swift in Sources */,
 				E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */,
+				F10000000000000000000001 /* RadarCompanyMetadata.swift in Sources */,
 				AD6C456C4C15471D7D60FDE1 /* ScannerSettingsView.swift in Sources */,
 				7E233D8A837FC4D2A6227757 /* SecretEntryField.swift in Sources */,
 				3C1706DD11B2555C344D4DD5 /* SettingsLayout.swift in Sources */,

@@ -9,6 +9,8 @@ struct RadarView: View {
     @Binding var symbol: String
     @State private var setupMessage: String?
     @State private var recentSignals: [ScanResult] = []
+    @State private var companyMetadata: [String: RadarCompanyMetadata] = [:]
+    @State private var companyMetadataService = RadarCompanyMetadataService()
     @State private var selectedSignal: ScanResult?
     @State private var historyError: String?
     @State private var chartRefreshID = 0
@@ -67,6 +69,7 @@ struct RadarView: View {
             .background(TrendsColors.canvas)
             .navigationTitle("Radar")
             .task(id: "\(maxResults)|\(maxAgeHours)") { await refreshSignals() }
+            .task(id: companyMetadataRequestKey) { await refreshCompanyMetadata() }
             .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
             .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
@@ -98,6 +101,19 @@ struct RadarView: View {
 
     private var chartCompanyName: String {
         marketCycle?.companyNames[chartSymbol] ?? chartSymbol
+    }
+
+    private var companyMetadataRequestKey: String {
+        let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
+        return symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
+    }
+
+    private func refreshCompanyMetadata() async {
+        let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
+        guard !symbols.isEmpty else { companyMetadata = [:]; return }
+        companyMetadata = await companyMetadataService.load(
+            symbols: Array(symbols), names: marketCycle?.companyNames ?? [:]
+        )
     }
 
     private func refreshDiscoveryWhileActive() async {
@@ -186,6 +202,7 @@ struct RadarView: View {
             signals: recentSignals,
             quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
+            companyMetadata: companyMetadata,
             selected: selectedSignal,
             compact: compact,
             errorMessage: historyError,
