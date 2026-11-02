@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct RadarSourcePanel: View {
-    @ScaledMetric(relativeTo: .caption) private var sourceWidth: CGFloat = 145
-    @ScaledMetric(relativeTo: .caption) private var metricWidth: CGFloat = 62
-    @ScaledMetric(relativeTo: .caption) private var statusWidth: CGFloat = 124
-    @ScaledMetric(relativeTo: .caption) private var actionWidth: CGFloat = 58
+    @ScaledMetric(relativeTo: .body) private var sourceWidth: CGFloat = 190
+    @ScaledMetric(relativeTo: .body) private var metricWidth: CGFloat = 62
+    @ScaledMetric(relativeTo: .body) private var statusWidth: CGFloat = 124
 
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
@@ -116,30 +115,34 @@ struct RadarSourcePanel: View {
     ) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                HStack(spacing: 6) {
-                    Circle().fill(color).frame(width: 7, height: 7)
-                        .accessibilityHidden(true)
-                    Text(name).lineLimit(1)
+                HStack(spacing: 7) {
+                    HStack(spacing: 6) {
+                        Circle().fill(color).frame(width: 7, height: 7)
+                            .accessibilityHidden(true)
+                        Text(name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .layoutPriority(-1)
+                    }
+                    accessory()
+                        .fixedSize(horizontal: true, vertical: false)
+                        .layoutPriority(1)
                 }
-                .font(.caption)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.body)
+                .frame(width: sourceWidth, alignment: .leading)
+                .clipped()
                 metric("Received", received)
                 metric("Valid", valid)
                 metric("Requests", operations)
                 metric("Errors", errors)
                 Text(status)
-                    .font(.caption.weight(.medium))
+                    .font(.body)
                     .foregroundStyle(status == "NOT CONNECTED" || status == "STOPPED" || status == "CLI READY"
                                      ? TrendsColors.supportingInk : color)
                     .lineLimit(1)
                     .frame(width: statusWidth, alignment: .trailing)
-                ZStack(alignment: .trailing) {
-                    Color.clear
-                    accessory()
-                }
-                .frame(width: actionWidth, height: 28)
             }
-            .frame(maxWidth: .infinity, minHeight: 28)
+            .frame(maxWidth: .infinity, minHeight: 30)
             .padding(.horizontal, 7)
             paleSeparator
         }
@@ -158,27 +161,26 @@ struct RadarSourcePanel: View {
 
     private func metric(_ title: String, _ value: Int?) -> some View {
         Text(value.map { $0.formatted() } ?? "—")
-            .font(.caption.monospacedDigit())
+            .font(.body.monospacedDigit())
             .frame(width: metricWidth, alignment: .trailing)
             .accessibilityLabel("\(title): \(value.map(String.init) ?? "unavailable")")
     }
 
     private var minimumTableWidth: CGFloat {
-        sourceWidth + metricWidth * 4 + statusWidth + actionWidth + 14
+        sourceWidth + metricWidth * 4 + statusWidth + 14
     }
 
     private var columnHeadings: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                Text("SOURCE").frame(maxWidth: .infinity, alignment: .leading)
-                heading("RECEIVED")
-                heading("VALID")
-                heading("REQUESTS")
-                heading("ERRORS")
+                Text("SOURCE").frame(width: sourceWidth, alignment: .leading)
+                heading("RECV", fullTitle: "Received")
+                heading("VALID", fullTitle: "Valid")
+                heading("REQ", fullTitle: "Requests")
+                heading("ERR", fullTitle: "Errors")
                 Text("STATUS").frame(width: statusWidth, alignment: .trailing)
-                Color.clear.frame(width: actionWidth, height: 1)
             }
-            .font(.caption2.weight(.medium))
+            .font(.subheadline.weight(.medium))
             .foregroundStyle(TrendsColors.supportingInk)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
@@ -186,8 +188,12 @@ struct RadarSourcePanel: View {
         }
     }
 
-    private func heading(_ title: String) -> some View {
-        Text(title).frame(width: metricWidth, alignment: .trailing)
+    private func heading(_ title: String, fullTitle: String) -> some View {
+        Text(title)
+            .lineLimit(1)
+            .frame(width: metricWidth, alignment: .trailing)
+            .help(fullTitle)
+            .accessibilityLabel(fullTitle)
     }
 
     private var paleSeparator: some View {

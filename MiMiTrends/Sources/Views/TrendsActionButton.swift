@@ -22,7 +22,7 @@ struct TrendsActionButton: View {
 
 struct TrendsActionButtonStyle: ButtonStyle {
     var tint: Color = .blue
-    var compact = false
+    var compact = true
 
     func makeBody(configuration: Configuration) -> some View {
         TrendsActionButtonBody(configuration: configuration, tint: tint, compact: compact)
@@ -44,9 +44,9 @@ private struct TrendsActionButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.body.weight(.light))
-            .padding(.horizontal, compact ? 10 : 13)
-            .frame(minHeight: minimumHeight)
+            .font(.body)
+            .padding(.horizontal, compact ? 10 : 12)
+            .frame(minWidth: minimumWidth, minHeight: minimumHeight)
             .background {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(.regularMaterial)
@@ -93,7 +93,15 @@ private struct TrendsActionButtonBody: View {
         #if os(iOS)
         44
         #else
-        34
+        compact ? 24 : 30
+        #endif
+    }
+
+    private var minimumWidth: CGFloat {
+        #if os(iOS)
+        44
+        #else
+        0
         #endif
     }
 
