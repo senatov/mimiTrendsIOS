@@ -41,6 +41,7 @@ struct RadarChartPreview: View {
             HStack {
                 Text("Selected alert chart").font(.headline.weight(.regular))
                 Spacer()
+                TradeImportAction(title: "Import trades")
                 if let signal {
                     Text(signal.signalSource.replacingOccurrences(of: "_", with: " "))
                         .font(.caption.weight(.regular))

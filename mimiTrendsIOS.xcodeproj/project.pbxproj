@@ -20,6 +20,7 @@
 		520EE95D23AD4083B54505B3 /* BrokerTransaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C9BD8C85A054AD7AB3C74B2 /* BrokerTransaction.swift */; };
 		098900BB34D04DD693DE939A /* TradeImportReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B0ABEA96CA44574BE59F304 /* TradeImportReportView.swift */; };
 		A43C5110E25A44EEA0146CC1 /* TradeImportSettingsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB8893E9A35490D8F58A50C /* TradeImportSettingsSection.swift */; };
+		BBD841B807694419B2D04115 /* TradeImportAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEBB69526F544936B0D0B43F /* TradeImportAction.swift */; };
 		A0E0C8F966794A2EB0E57286 /* ScalableCSVImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 503414C5525B4660BC623BA5 /* ScalableCSVImporterTests.swift */; };
 		01BF49AC6898BB89FA512BE2 /* VolumeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3401A2ABC36F2EF150C888 /* VolumeStatus.swift */; };
 		03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA34FE30071EAA96606E33C8 /* FinnhubBidAskSampler.swift */; };
@@ -266,6 +267,7 @@
 		1C9BD8C85A054AD7AB3C74B2 /* BrokerTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransaction.swift; sourceTree = "<group>"; };
 		6B0ABEA96CA44574BE59F304 /* TradeImportReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportReportView.swift; sourceTree = "<group>"; };
 		6FB8893E9A35490D8F58A50C /* TradeImportSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportSettingsSection.swift; sourceTree = "<group>"; };
+		CEBB69526F544936B0D0B43F /* TradeImportAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportAction.swift; sourceTree = "<group>"; };
 		503414C5525B4660BC623BA5 /* ScalableCSVImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableCSVImporterTests.swift; sourceTree = "<group>"; };
 		F6C749680DE8767BA8EF22DE /* MiMiTrendsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiMiTrendsApp.swift; sourceTree = "<group>"; };
 		F738D3015D67A0FEB94F7C80 /* RapidCrashDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RapidCrashDetector.swift; sourceTree = "<group>"; };
@@ -343,6 +345,7 @@
 				4E50A443FA1C1379C2394D87 /* CredentialEditor.swift */,
 				3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */,
 				6B0ABEA96CA44574BE59F304 /* TradeImportReportView.swift */,
+				CEBB69526F544936B0D0B43F /* TradeImportAction.swift */,
 				6FB8893E9A35490D8F58A50C /* TradeImportSettingsSection.swift */,
 				5E38BCFD81AAF82949FAA498 /* RadarScanSettingsView.swift */,
 				C27CE5296E45D2A7374F6FA2 /* ScannerSettingsView.swift */,
@@ -780,6 +783,7 @@
 				A99D089CBA6E4FFD82F19E7E /* ScalableCSVImporter.swift in Sources */,
 				CF837D24F69C4457AA39BD6C /* TradeImportCoordinator.swift in Sources */,
 				098900BB34D04DD693DE939A /* TradeImportReportView.swift in Sources */,
+				BBD841B807694419B2D04115 /* TradeImportAction.swift in Sources */,
 				A43C5110E25A44EEA0146CC1 /* TradeImportSettingsSection.swift in Sources */,
 				9BEFDA17CEDC56446AEEF0CC /* RadarActivityBanner.swift in Sources */,
 				ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */,
