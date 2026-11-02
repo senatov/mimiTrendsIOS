@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 struct RadarSignalRow: View {
     @Environment(RadarTableColorStore.self) private var tableColors
@@ -31,12 +36,17 @@ struct RadarSignalRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { onSelect() }
+        .contextMenu {
+            Button("Copy search keyword", systemImage: "doc.on.doc") { copy(companyName) }
+            Button("Copy ticker", systemImage: "number") { copy(signal.symbol) }
+            Button("Open Stock", systemImage: "chart.xyaxis.line", action: onSelect)
+        }
     }
 
     private var compactContent: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text(companyName).font(.body.weight(.light)).lineLimit(1)
+                Text(companyName).font(.body).lineLimit(1)
                 Spacer()
                 Text(formattedPrice).monospacedDigit()
             }
@@ -78,12 +88,12 @@ struct RadarSignalRow: View {
                 .padding(.horizontal, 6)
                 .frame(width: 50, alignment: .trailing)
         }
-        .font(.body.weight(.light))
+        .font(.body)
     }
 
     private var eventBadge: some View {
         Text(eventLabel)
-            .font(.subheadline.weight(.light))
+            .font(.subheadline)
             .foregroundStyle(eventColor)
             .lineLimit(1)
             .padding(.horizontal, 7)
@@ -93,7 +103,7 @@ struct RadarSignalRow: View {
 
     private var movement: some View {
         Text("\(signal.windowChangePercent.formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))))% / \(signal.signalWindowLabel)")
-            .font(.body.weight(.light).monospacedDigit())
+            .font(.body.monospacedDigit())
             .foregroundStyle(signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise))
             .lineLimit(1)
     }
@@ -129,7 +139,7 @@ struct RadarSignalRow: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let seconds = max(0, Int(context.date.timeIntervalSince(savedAt)))
             Text(String(format: "%02d:%02d", seconds / 60, seconds % 60))
-                .font(.subheadline.weight(.light).monospacedDigit())
+                .font(.body.monospacedDigit())
                 .foregroundStyle(tableColor(.mutedText))
         }
     }
@@ -145,6 +155,15 @@ struct RadarSignalRow: View {
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {
         tableColors.color(role, dark: colorScheme == .dark)
+    }
+
+    private func copy(_ value: String) {
+        #if os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(value, forType: .string)
+        #else
+        UIPasteboard.general.string = value
+        #endif
     }
 }
 

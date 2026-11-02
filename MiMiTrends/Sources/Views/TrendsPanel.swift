@@ -31,9 +31,9 @@ struct TrendsPanel: ViewModifier {
             .background(TrendsColors.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(.primary.opacity(contrast == .increased ? 0.28 : 0.12), lineWidth: 1)
+                    .strokeBorder(.primary.opacity(contrast == .increased ? 0.32 : 0.18), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(colorScheme == .dark ? 0.12 : 0.035), radius: 3, y: 1)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.20 : 0.075), radius: 6, y: 2)
     }
 }
 

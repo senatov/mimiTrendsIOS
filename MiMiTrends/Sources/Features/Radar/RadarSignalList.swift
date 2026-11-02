@@ -11,6 +11,33 @@ struct RadarSignalList: View {
     let errorMessage: String?
     let onSelect: (ScanResult) -> Void
     let onRefresh: () -> Void
+    @State private var sortColumn: RadarSortColumn = .movement
+    @State private var ascending = false
+
+    private var sortedSignals: [ScanResult] {
+        signals.sorted { left, right in
+            let comparison: ComparisonResult
+            switch sortColumn {
+            case .company:
+                comparison = (companyNames[left.symbol] ?? left.symbol)
+                    .localizedStandardCompare(companyNames[right.symbol] ?? right.symbol)
+            case .event:
+                comparison = left.signalSource.localizedStandardCompare(right.signalSource)
+            case .movement:
+                comparison = left.windowChangePercent == right.windowChangePercent ? .orderedSame
+                    : left.windowChangePercent < right.windowChangePercent ? .orderedAscending : .orderedDescending
+            case .price:
+                comparison = left.price == right.price ? .orderedSame
+                    : left.price < right.price ? .orderedAscending : .orderedDescending
+            case .age:
+                // A smaller age means a newer signal, so compare timestamps in reverse.
+                comparison = left.signalEpochMillis == right.signalEpochMillis ? .orderedSame
+                    : left.signalEpochMillis > right.signalEpochMillis ? .orderedAscending : .orderedDescending
+            }
+            if comparison == .orderedSame { return left.symbol < right.symbol }
+            return ascending ? comparison == .orderedAscending : comparison == .orderedDescending
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -66,13 +93,13 @@ struct RadarSignalList: View {
             } else if !signals.isEmpty {
                 if !compact {
                     HStack(spacing: 0) {
-                        Text("Company").padding(.horizontal, 6).frame(maxWidth: .infinity, alignment: .leading)
-                        Text("Event").padding(.horizontal, 6).frame(width: 285, alignment: .leading)
-                        Text("Movement").padding(.horizontal, 6).frame(width: 115, alignment: .trailing)
-                        Text("Price").padding(.horizontal, 6).frame(width: 70, alignment: .trailing)
-                        Text("Age").padding(.horizontal, 6).frame(width: 50, alignment: .trailing)
+                        sortButton(.company).frame(maxWidth: .infinity, alignment: .leading)
+                        sortButton(.event).frame(width: 285, alignment: .leading)
+                        sortButton(.movement).frame(width: 115, alignment: .trailing)
+                        sortButton(.price).frame(width: 70, alignment: .trailing)
+                        sortButton(.age).frame(width: 50, alignment: .trailing)
                     }
-                    .font(.subheadline.weight(.medium))
+                    .font(.subheadline)
                     .foregroundStyle(tableColor(.headerText))
                     .frame(maxWidth: .infinity)
                     .padding(.horizontal, 8)
@@ -83,7 +110,7 @@ struct RadarSignalList: View {
                 }
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(signals.map(RadarSignalItem.init)) { item in
+                        ForEach(sortedSignals.map(RadarSignalItem.init)) { item in
                             RadarSignalRow(
                                 signal: item.signal,
                                 companyName: companyNames[item.signal.symbol] ?? item.signal.symbol,
@@ -103,6 +130,29 @@ struct RadarSignalList: View {
         .trendsPanel()
     }
 
+    private func sortButton(_ column: RadarSortColumn) -> some View {
+        Button {
+            if sortColumn == column { ascending.toggle() }
+            else {
+                sortColumn = column
+                ascending = column == .company || column == .event
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(column.title)
+                if sortColumn == column {
+                    Image(systemName: ascending ? "chevron.up" : "chevron.down")
+                        .font(.caption2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: column == .company || column == .event ? .leading : .trailing)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Sort by \(column.title)")
+        .accessibilityValue(sortColumn == column ? (ascending ? "Ascending" : "Descending") : "Unsorted")
+    }
+
     private var tableSeparator: some View {
         Rectangle()
             .fill(tableColor(.grid))
@@ -118,6 +168,20 @@ struct RadarSignalList: View {
         signal.symbol == selected?.symbol &&
             signal.signalSource == selected?.signalSource &&
             signal.signalEpochMillis == selected?.signalEpochMillis
+    }
+}
+
+private enum RadarSortColumn {
+    case company, event, movement, price, age
+
+    var title: String {
+        switch self {
+        case .company: "Company"
+        case .event: "Event"
+        case .movement: "Movement"
+        case .price: "Price"
+        case .age: "Age"
+        }
     }
 }
 
