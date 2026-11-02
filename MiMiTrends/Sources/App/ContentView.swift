@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(RadarSession.self) private var radarSession
     @State private var selectedTab = "radar"
+    @State private var tableColors = RadarTableColorStore()
     @AppStorage("selected.symbol.v1") private var radarSymbol = "ORCL"
     @AppStorage("appearance.theme.v1") private var theme = "light"
 
@@ -24,6 +25,7 @@ struct ContentView: View {
                 SettingsView()
             }
         }
+        .environment(tableColors)
         .preferredColorScheme(theme == "dark" ? .dark : theme == "light" ? .light : nil)
         .toolbar {
             #if os(macOS)

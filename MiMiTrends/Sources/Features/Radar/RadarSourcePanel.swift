@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct RadarSourcePanel: View {
+    @Environment(RadarTableColorStore.self) private var tableColors
+    @Environment(\.colorScheme) private var colorScheme
     @ScaledMetric(relativeTo: .body) private var sourceWidth: CGFloat = 190
     @ScaledMetric(relativeTo: .body) private var metricWidth: CGFloat = 62
     @ScaledMetric(relativeTo: .body) private var statusWidth: CGFloat = 124
@@ -40,7 +42,7 @@ struct RadarSourcePanel: View {
                             operations: nil, errors: session.errorCount
                         )
                         ForEach(["Tradegate", "Euronext"], id: \.self) { name in
-                            sourceCard(name: name, status: "NOT CONNECTED", color: .secondary,
+                            sourceCard(name: name, status: "NOT CONNECTED", color: tableColor(.sourceInactive),
                                        received: nil, valid: nil, operations: nil, errors: nil)
                         }
                         scalableCard
@@ -48,7 +50,7 @@ struct RadarSourcePanel: View {
                             name: "Lang & Schwarz",
                             status: lsStatus == nil ? "CONNECTING" :
                                 lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
-                            color: lsFreshCount > 0 ? .green : .secondary,
+                        color: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
                             received: lsStatus?.quotes.count,
                             valid: lsStatus.map { _ in lsFreshCount },
                             operations: lsStatus?.requestCount,
@@ -65,7 +67,7 @@ struct RadarSourcePanel: View {
                                 } label: {
                                     Image(systemName: "list.number")
                                 }
-                                .buttonStyle(TrendsActionButtonStyle(compact: true))
+                                .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
                                 .accessibilityLabel("View ranking candidates")
                             }
                         }
@@ -81,7 +83,7 @@ struct RadarSourcePanel: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .foregroundStyle(TrendsColors.ink)
+        .foregroundStyle(tableColor(.bodyText))
         .trendsPanel()
         #if os(macOS)
         .task { await checkScalable() }
@@ -94,16 +96,16 @@ struct RadarSourcePanel: View {
         #if os(macOS)
         sourceCard(
             name: "Scalable", status: scalableStatus,
-            color: .secondary,
+            color: tableColor(.sourceInactive),
             received: nil, valid: nil, operations: scalableChecks, errors: scalableErrors
         ) {
             if scalableStatus == "LOGIN NEEDED" {
                 Button("Login") { startScalableLogin() }
-                    .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
             }
         }
         #else
-        sourceCard(name: "Scalable", status: "NOT CONNECTED", color: .secondary,
+        sourceCard(name: "Scalable", status: "NOT CONNECTED", color: tableColor(.sourceInactive),
                    received: nil, valid: nil, operations: nil, errors: nil)
         #endif
     }
@@ -138,12 +140,13 @@ struct RadarSourcePanel: View {
                 Text(status)
                     .font(.body)
                     .foregroundStyle(status == "NOT CONNECTED" || status == "STOPPED" || status == "CLI READY"
-                                     ? TrendsColors.supportingInk : color)
+                                     ? tableColor(.sourceInactive) : color)
                     .lineLimit(1)
                     .frame(width: statusWidth, alignment: .trailing)
             }
             .frame(maxWidth: .infinity, minHeight: 30)
             .padding(.horizontal, 7)
+            .overlay(sourceColumnLines)
             paleSeparator
         }
         .accessibilityIdentifier("source-\(name)")
@@ -181,9 +184,11 @@ struct RadarSourcePanel: View {
                 Text("STATUS").frame(width: statusWidth, alignment: .trailing)
             }
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(TrendsColors.supportingInk)
+            .foregroundStyle(tableColor(.headerText))
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
+            .overlay(sourceColumnLines)
+            .background(tableColor(.headerFill))
             paleSeparator
         }
     }
@@ -198,9 +203,28 @@ struct RadarSourcePanel: View {
 
     private var paleSeparator: some View {
         Rectangle()
-            .fill(Color.blue.opacity(0.16))
+            .fill(tableColor(.grid))
             .frame(height: 1)
             .accessibilityHidden(true)
+    }
+
+    private var sourceColumnLines: some View {
+        GeometryReader { geometry in
+            Path { path in
+                for index in 0...4 {
+                    let x = 7 + sourceWidth + metricWidth * CGFloat(index)
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                }
+            }
+            .stroke(tableColor(.grid), lineWidth: 1)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func tableColor(_ role: RadarTableColorRole) -> Color {
+        tableColors.color(role, dark: colorScheme == .dark)
     }
 
     private var discoveryLabel: String {
@@ -218,13 +242,13 @@ struct RadarSourcePanel: View {
     }
 
     private func marketColor(_ totals: RadarSourceTotals?) -> Color {
-        guard let totals else { return .secondary }
-        if totals.errors > 0, totals.valid == 0 { return .orange }
-        return totals.valid > 0 ? .green : .secondary
+        guard let totals else { return tableColor(.sourceInactive) }
+        if totals.errors > 0, totals.valid == 0 { return tableColor(.sourceAttention) }
+        return totals.valid > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive)
     }
 
     private var discoveryColor: Color {
-        discoveryLabel == "RANKING + LINKS" ? .green : .secondary
+        discoveryLabel == "RANKING + LINKS" ? tableColor(.sourceActive) : tableColor(.sourceInactive)
     }
 
     private var lsFreshCount: Int {
@@ -239,9 +263,9 @@ struct RadarSourcePanel: View {
     }
 
     private var feedColor: Color {
-        if session.isSubscribed { return .green }
-        if session.errorMessage != nil { return .orange }
-        return .secondary
+        if session.isSubscribed { return tableColor(.sourceActive) }
+        if session.errorMessage != nil { return tableColor(.sourceAttention) }
+        return tableColor(.sourceInactive)
     }
 
     #if os(macOS)

@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct RadarSignalRow: View {
+    @Environment(RadarTableColorStore.self) private var tableColors
+    @Environment(\.colorScheme) private var colorScheme
     let signal: ScanResult
     let companyName: String
     let compact: Bool
@@ -19,6 +21,11 @@ struct RadarSignalRow: View {
         .padding(.vertical, 7)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
+        .overlay {
+            if !compact {
+                RadarSignalColumnLines(color: tableColor(.grid), horizontalInset: 8)
+            }
+        }
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
         .accessibilityElement(children: .combine)
@@ -43,25 +50,33 @@ struct RadarSignalRow: View {
     }
 
     private var wideContent: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             HStack(spacing: 5) {
                 Text(companyName).lineLimit(1)
                 Text("🇺🇸").accessibilityLabel("United States")
             }
+            .padding(.horizontal, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 6) {
                 eventBadge
+                Spacer(minLength: 4)
                 Link("Rumors", destination: rumorsURL)
-                    .font(.subheadline.weight(.light))
-                    .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    .font(.subheadline)
+                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
+                    .fixedSize(horizontal: true, vertical: false)
             }
-            .frame(width: 285, alignment: .leading)
+            .padding(.horizontal, 6)
+            .frame(width: 285)
             movement
+                .padding(.horizontal, 6)
                 .frame(width: 115, alignment: .trailing)
             Text(formattedPrice)
                 .monospacedDigit()
+                .padding(.horizontal, 6)
                 .frame(width: 70, alignment: .trailing)
-            ageText.frame(width: 50, alignment: .trailing)
+            ageText
+                .padding(.horizontal, 6)
+                .frame(width: 50, alignment: .trailing)
         }
         .font(.body.weight(.light))
     }
@@ -79,7 +94,7 @@ struct RadarSignalRow: View {
     private var movement: some View {
         Text("\(signal.windowChangePercent.formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))))% / \(signal.signalWindowLabel)")
             .font(.body.weight(.light).monospacedDigit())
-            .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
+            .foregroundStyle(signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise))
             .lineLimit(1)
     }
 
@@ -97,13 +112,13 @@ struct RadarSignalRow: View {
     }
 
     private var eventColor: Color {
-        if signal.signalSource.lowercased() == "tradable corridor" { return .blue }
-        return signal.windowChangePercent < 0 ? .red : .green
+        if signal.signalSource.lowercased() == "tradable corridor" { return tableColor(.actionAccent) }
+        return signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise)
     }
 
     private var backgroundColor: Color {
-        if signal.signalSource.lowercased() == "rapid crash" { return .yellow.opacity(0.17) }
-        return isSelected ? Color.accentColor.opacity(0.10) : Color.clear
+        if signal.signalSource.lowercased() == "rapid crash" { return tableColor(.criticalRow) }
+        return isSelected ? tableColor(.selectedRow) : Color.clear
     }
 
     private var savedAt: Date {
@@ -115,7 +130,7 @@ struct RadarSignalRow: View {
             let seconds = max(0, Int(context.date.timeIntervalSince(savedAt)))
             Text(String(format: "%02d:%02d", seconds / 60, seconds % 60))
                 .font(.subheadline.weight(.light).monospacedDigit())
-                .foregroundStyle(TrendsColors.supportingInk)
+                .foregroundStyle(tableColor(.mutedText))
         }
     }
 
@@ -126,5 +141,30 @@ struct RadarSignalRow: View {
 
     private var formattedPrice: String {
         signal.price.formatted(.number.precision(.fractionLength(0...2)))
+    }
+
+    private func tableColor(_ role: RadarTableColorRole) -> Color {
+        tableColors.color(role, dark: colorScheme == .dark)
+    }
+}
+
+struct RadarSignalColumnLines: View {
+    let color: Color
+    let horizontalInset: CGFloat
+
+    var body: some View {
+        GeometryReader { geometry in
+            Path { path in
+                for trailingWidth in [520.0, 235.0, 120.0, 50.0] {
+                    let x = geometry.size.width - horizontalInset - CGFloat(trailingWidth)
+                    guard x > horizontalInset else { continue }
+                    path.move(to: CGPoint(x: x, y: 0))
+                    path.addLine(to: CGPoint(x: x, y: geometry.size.height))
+                }
+            }
+            .stroke(color, lineWidth: 1)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
