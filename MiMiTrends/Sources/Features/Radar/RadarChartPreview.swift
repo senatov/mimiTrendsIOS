@@ -1,19 +1,14 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct RadarChartPreview: View {
     let symbol: String
     let signal: ScanResult?
     let refreshID: Int
-    let onImportSymbol: (String) -> Void
 
     @State private var allBars: [MinuteBar] = []
     @AppStorage("chart.range.v1") private var rangeRaw = RadarChartRange.oneDay.rawValue
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var isImporting = false
-    @State private var showingImporter = false
-    @State private var importMessage: String?
 
     private var chartData: RadarChartData {
         RadarChartData(
@@ -38,17 +33,6 @@ struct RadarChartPreview: View {
         }
         .trendsPanel()
         .task(id: "\(symbol)|\(refreshID)") { await loadBars() }
-        .fileImporter(
-            isPresented: $showingImporter,
-            allowedContentTypes: [UTType(filenameExtension: "sqlite") ?? .data]
-        ) { result in
-            switch result {
-            case .success(let url):
-                Task { await importSnapshot(at: url) }
-            case .failure(let error):
-                importMessage = error.localizedDescription
-            }
-        }
     }
 
     private func chartContent(availableHeight: CGFloat) -> some View {
@@ -56,12 +40,6 @@ struct RadarChartPreview: View {
             HStack {
                 Text("Selected alert chart").font(.headline.weight(.regular))
                 Spacer()
-                TrendsActionButton(
-                    title: "Import desktop snapshot",
-                    systemImage: "square.and.arrow.down",
-                    tint: .teal
-                ) { showingImporter = true }
-                .disabled(isImporting)
                 if let signal {
                     Text(signal.signalSource.replacingOccurrences(of: "_", with: " "))
                         .font(.caption.weight(.regular))
@@ -69,10 +47,6 @@ struct RadarChartPreview: View {
                 }
             }
             Divider()
-            if isImporting { ProgressView("Importing minute bars") }
-            if let importMessage {
-                Text(importMessage).font(.footnote).foregroundStyle(.secondary)
-            }
             HStack {
                 Picker("Range", selection: rangeSelection) {
                     ForEach(RadarChartRange.allCases) { option in
@@ -111,7 +85,7 @@ struct RadarChartPreview: View {
                 ContentUnavailableView(
                     "No saved bars in \(range.title)",
                     systemImage: "chart.xyaxis.line",
-                    description: Text("Start a live feed, import a desktop snapshot here, or choose Latest for older saved bars.")
+                    description: Text("Start a live feed to collect bars, or choose Latest to view older saved bars.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 180)
             } else {
@@ -161,21 +135,4 @@ struct RadarChartPreview: View {
         }
         isLoading = false
     }
-
-    private func importSnapshot(at url: URL) async {
-        isImporting = true
-        importMessage = nil
-        do {
-            let summary = try await DesktopBarSnapshotImporter.importSnapshot(
-                at: url, into: MarketBarStore.defaultURL()
-            )
-            rangeRaw = RadarChartRange.latest.rawValue
-            onImportSymbol(summary.symbol)
-            importMessage = "Imported \(summary.barCount) bars for \(summary.symbol); \(summary.changedCount) saved or updated."
-        } catch {
-            importMessage = error.localizedDescription
-        }
-        isImporting = false
-    }
-
 }

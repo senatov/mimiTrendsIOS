@@ -52,12 +52,7 @@ struct RadarView: View {
                         RadarChartPreview(
                             symbol: selectedSignal?.symbol ?? symbol,
                             signal: selectedSignal,
-                            refreshID: chartRefreshID,
-                            onImportSymbol: { importedSymbol in
-                                selectedSignal = nil
-                                symbol = importedSymbol
-                                chartRefreshID += 1
-                            }
+                            refreshID: chartRefreshID
                         )
                     }
                 )

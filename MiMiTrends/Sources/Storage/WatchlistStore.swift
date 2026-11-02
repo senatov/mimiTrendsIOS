@@ -92,28 +92,6 @@ actor WatchlistStore {
         }
     }
 
-    func importEntries(_ entries: [WatchlistEntry]) throws -> Int {
-        guard entries.count <= 500,
-              entries.allSatisfy({
-                  $0.addedAtMillis > 0 && (try? Self.normalize($0.symbol)) == $0.symbol
-              }),
-              Set(entries.map(\.symbol)).count == entries.count else {
-            throw WatchlistStoreError.invalidImport
-        }
-        try Self.execute("BEGIN IMMEDIATE", on: database)
-        do {
-            var inserted = 0
-            for entry in entries {
-                if try add(entry.symbol, atMillis: entry.addedAtMillis) { inserted += 1 }
-            }
-            try Self.execute("COMMIT", on: database)
-            return inserted
-        } catch {
-            try? Self.execute("ROLLBACK", on: database)
-            throw error
-        }
-    }
-
     static func normalize(_ symbol: String) throws -> String {
         let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-_")
@@ -197,7 +175,6 @@ enum WatchlistStoreError: LocalizedError {
     case invalidSymbol
     case unsupportedSchema
     case integrityCheckFailed
-    case invalidImport
 
     var errorDescription: String? {
         switch self {
@@ -205,7 +182,6 @@ enum WatchlistStoreError: LocalizedError {
         case .invalidSymbol: "Enter a symbol using letters, numbers, dots, dashes, underscores, or colons."
         case .unsupportedSchema: "This watchlist database was created by a newer app version."
         case .integrityCheckFailed: "Watchlist database integrity check failed."
-        case .invalidImport: "The watchlist snapshot contains invalid entries."
         }
     }
 }

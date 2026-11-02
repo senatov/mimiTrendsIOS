@@ -11,16 +11,18 @@ Settings follows the prototype's Scanner, Rapid moves, Market data providers, an
 ## Current scope
 
 - A shared SwiftUI app target for iPad, iPhone, and Mac, with a connected iPad selected by the local command-line scripts.
-- An adaptive Radar dashboard with recent saved signals, actual Finnhub feed status, and a selectable 1H, 3H, 1D, or Latest saved-minute candlestick view with EMA 9/21 and reported volume; a full Charts tab, a locally saved watchlist with desktop snapshot import, and a local API key setting.
+- An adaptive Radar dashboard with recent saved signals, actual Finnhub feed status, and a selectable 1H, 3H, 1D, or Latest saved-minute candlestick view with EMA 9/21 and reported volume; a locally saved watchlist and a Scalable transaction CSV importer with an itemized result report.
 - A radar session lifecycle hook that stops scanning whenever the app leaves the foreground.
 - Shared market models for provider instruments, quotes, minute bars, and scan results.
 - An XcodeGen project specification and GitHub Actions build workflow.
 
-The app can receive Finnhub trades while it is active, save completed minute bars and detected signals, and detect close-confirmed rapid rises, crashes, liquid sustained moves, and stable intraday corridors. Charts opens first on each launch, followed by Radar, Watchlist, and Settings. The Charts tab uses [Swift Charts](https://developer.apple.com/documentation/charts/creating-a-chart-using-swift-charts) to display up to 360 saved OHLC candles, EMA 9/21, and reported trade volumes for one symbol. It does not fetch historical prices, fill gaps, or convert currencies. A bounded snapshot of one symbol's desktop bars can be imported into the chart. For simple US stock symbols, Radar also requests [Finnhub's separate last bid/ask endpoint](https://finnhub.io/docs/api/stock-bidask) at most once per minute and uses a fresh quote to reject poor execution prices. This endpoint may require additional account access; if the account cannot use it, trade scanning continues without bid/ask validation. European bid/ask and currency conversion remain unported; see [the porting plan](Docs/PortingPlan.md) for the source and licensing boundary. The watchlist stores symbols on this device; tapping one opens Radar with that symbol but does not start a feed. The full desktop scanner and broker import remain unported. No provider credentials or production data are included.
+The app can receive Finnhub trades while it is active, save completed minute bars and detected signals, and detect close-confirmed rapid rises, crashes, liquid sustained moves, and stable intraday corridors. Charts opens first on each launch, followed by Radar, Watchlist, and Settings. The Charts tab uses [Swift Charts](https://developer.apple.com/documentation/charts/creating-a-chart-using-swift-charts) to display up to 360 saved OHLC candles, EMA 9/21, and reported trade volumes for one symbol. It does not fetch historical prices, fill gaps, or convert currencies. Scalable transaction CSV files can be imported from Settings; each import reports new trades by type, cancelled rows, and duplicates both within the file and already stored locally. Imports are saved in a separate native database; desktop position reconciliation and trade chart overlays remain unported. For simple US stock symbols, Radar also requests [Finnhub's separate last bid/ask endpoint](https://finnhub.io/docs/api/stock-bidask) at most once per minute and uses a fresh quote to reject poor execution prices. This endpoint may require additional account access; if the account cannot use it, trade scanning continues without bid/ask validation. European bid/ask and currency conversion remain unported; see [the porting plan](Docs/PortingPlan.md) for the source and licensing boundary. The watchlist stores symbols on this device; tapping one opens Radar with that symbol but does not start a feed. No provider credentials or production data are included.
 
-To try the feed, enter your own Finnhub API key under **Settings → Market data providers**, then enter a symbol on Radar and tap **Start feed**. On iPad the key stays in Keychain; on Mac it stays in the app's local preferences. It can be revealed, changed, or removed in Settings. The same screen stores a Finnhub webhook secret or additional named keys and tokens for future adapters; those entries are not used by the current feed. Completed minute bars are stored in the app container; the current unfinished minute is discarded when the feed stops. The feed stops when the app leaves the foreground. Availability of symbols and trade updates depends on the Finnhub account, exchange coverage, and market hours.
+To try the feed, enter your own Finnhub API key under **Settings → Market data providers**, then enter a symbol on Radar and tap **Start feed**. On iPad the key stays in Keychain; on Mac it stays in the app's local preferences. It can be revealed, changed, or removed in Settings. Completed minute bars are stored in the app container; the current unfinished minute is discarded when the feed stops. The feed stops when the app leaves the foreground. Availability of symbols and trade updates depends on the Finnhub account, exchange coverage, and market hours.
 
-To view collected bars, open Charts, enter the same symbol, select a rolling 1H, 3H, or 1D range, and tap **Load chart**. Switching the range reloads it automatically. Empty periods remain empty; choose **Latest** for older imported bars. Reported trade volume is drawn only for bars whose volume status is `REPORTED`. The chart uses the source price unit; it does not claim a converted currency.
+To import Scalable history, open **Settings → Market data providers → Scalable trade history** and choose a CSV export. The importer follows the desktop semicolon-separated format, reads German decimal values and Europe/Berlin timestamps, and ignores cancelled rows and duplicate trades. The completion report lists imported buy/sell/other entries, cancelled rows, duplicates in the file, and trades already imported. Invalid files stop with a row-specific error and are not partially saved.
+
+To view collected bars, open Charts, enter the same symbol, select a rolling 1H, 3H, or 1D range, and tap **Load chart**. Switching the range reloads it automatically. Empty periods remain empty; choose **Latest** for older saved bars. Reported trade volume is drawn only for bars whose volume status is `REPORTED`. The chart uses the source price unit; it does not claim a converted currency.
 
 ## Diagnostics
 
@@ -42,22 +44,6 @@ Lang & Schwarz now has a foreground quote adapter for its Germany, STOXX 50, and
 
 To save a symbol, open Watchlist, enter its ticker, and tap **Add**. Its native list shows saved symbols and their insertion dates in a card-style layout. Select a saved symbol to put it on Radar; a running feed stops before the selection changes. Use the row's trash button, or swipe the row on iPad, to delete it. These symbols stay in the app's local SQLite container and are not synchronized between devices.
 
-To transfer the desktop watchlist, create a small snapshot on the desktop Mac:
-
-```zsh
-python3 Scripts/export_desktop_watchlist.py ~/Desktop/watchlist.json
-```
-
-The script opens `~/.mimi/trends/mimitrends.db` read-only and exports only the ordered `user_watchlist` symbols and insertion times, with a 500-entry limit. It creates a new file without overwriting an existing one; `--source /path/to/mimitrends.db` selects another database. Transfer the JSON file with Files or AirDrop, then choose **Import desktop watchlist** in the native Watchlist tab. The import validates the complete snapshot, adds missing symbols transactionally, and keeps existing native entries and their insertion times. The snapshot contains no credentials, broker data, or market history.
-
-To bring a small part of the desktop history to iPad or Mac, first create a snapshot on the desktop Mac:
-
-```zsh
-python3 Scripts/export_desktop_bars.py AAPL ~/Desktop/AAPL-bars.sqlite
-```
-
-The script opens `~/.mimi/trends/mimitrends.db` read-only, selects at most the latest 360 completed bars for one symbol in a consistent SQLite read transaction, and creates a new file without overwriting an existing one. Pass `--source /path/to/mimitrends.db` to choose another desktop database. Transfer the resulting `.sqlite` file to the device using Files or AirDrop, then choose **Import desktop snapshot** on Radar's chart. The app verifies the snapshot and imports it transactionally; choose **Latest** to view saved bars even when they are older than 24 hours. Do not select the live desktop `mimitrends.db` in the app. Broker trades, settings, credentials, and other desktop tables are never included in this export.
-
 ## Run from the command line
 
 Requires Xcode 27. To run on a connected iPad, enable Developer Mode on the device and configure Apple Development signing for the project team. An iPadOS 27 Simulator runtime is needed for simulator testing and CI. XcodeGen is needed only to regenerate the checked-in Xcode project (`brew install xcodegen`). Run the commands below from the repository root:
@@ -78,14 +64,12 @@ This builds, installs, and launches the app on the single paired iPad running iP
 | `zsh Scripts/run_macos.zsh` | Stop the existing app from this checkout, build, sign with this Mac's stable Developer ID Application identity and the Mac App Sandbox entitlements, then launch one `mimiTrends-iOS.app` instance on macOS 27 or newer; verify its path, bundle ID, display name, and PID. Set `MIMITRENDS_MAC_SIGN_IDENTITY` to select another installed identity for the configured team. |
 | `zsh Scripts/check_macos_sandbox.zsh` | Check the Mac target's sandbox entitlement file and Xcode build settings. |
 | `Scripts/write_build_info.zsh` | Xcode build phase that records the local build date and compiling Mac's Computer Name in the app bundle for the window title. It runs automatically during each app build. |
-| `python3 Scripts/export_desktop_bars.py SYMBOL OUTPUT` | Create a read-only, bounded minute-bar snapshot for one symbol from the desktop SQLite database. |
-| `python3 Scripts/export_desktop_watchlist.py OUTPUT` | Export up to 500 desktop watchlist symbols to a new JSON file for native import. |
 
 All builds use this repository's ignored `DerivedData/` directory. They do not clear shared Xcode caches, modify other repositories, sign an App Store distribution binary, or upload one. Connected-iPad builds use the configured Apple Development team; simulator builds use local ad hoc signing so Keychain works during development. On Mac, the app attempts a single silent import of existing Keychain values into local preferences. If macOS denies that read, re-enter the value once in Settings; no Keychain password dialog is requested. The generated Xcode project is committed so it can also be opened directly in Xcode.
 
 ## App Store preparation
 
-The current app is a development skeleton and is **not ready for App Review**: desktop watchlist migration, broker imports, broader scanner behavior, and provider data rights remain incomplete. Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) require a complete, useful app, and the Mac App Store also requires sandboxing and Xcode-based packaging.
+The current app is a development skeleton and is **not ready for App Review**: position reconciliation, broader scanner behavior, and provider data rights remain incomplete; Scalable CSV transaction import is available in Settings. Apple's [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/) require a complete, useful app, and the Mac App Store also requires sandboxing and Xcode-based packaging.
 
 - The macOS Release target uses [App Sandbox](https://developer.apple.com/documentation/xcode/configuring-the-macos-app-sandbox) with outgoing network access and read-only access to user-selected import files. It requests no unrestricted folder or incoming network access. The local Mac Debug build omits sandboxing so its diagnostic log can use `/tmp`; test Release separately for sandbox behavior. See [Storage and desktop data migration](Docs/DataStorage.md) for the planned container layout and migration rules.
 - The iOS and macOS apps use SwiftUI and system APIs; the former JVM/JavaFX runtime is not bundled.
@@ -100,7 +84,7 @@ Progress and completion gates are tracked in [the porting plan](Docs/PortingPlan
 1. Define shared models for instruments, quotes, and signals, with tests against representative desktop outputs.
 2. Port one provider adapter and its decoding, with secure credential storage where applicable.
 3. Port scanner rules and SQLite persistence incrementally.
-4. Build adaptive radar and chart views, then add watchlists and broker imports.
+4. Complete position reconciliation and signal linking for imported Scalable trades.
 5. Validate signed iOS and macOS archives, provider data rights, privacy disclosures, and sandbox behavior before App Store submission.
 
 Scanning runs only while the app is active. `MiMiTrendsApp` stops the radar session when the scene becomes inactive or enters the background, cancelling the current Finnhub subscriptions and scan task.

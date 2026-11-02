@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct WatchlistView: View {
     let onSelect: (String) -> Void
@@ -13,8 +12,6 @@ struct WatchlistView: View {
     @State private var newSymbol = ""
     @State private var errorMessage: String?
     @State private var isWorking = false
-    @State private var showingImporter = false
-    @State private var importMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -48,13 +45,6 @@ struct WatchlistView: View {
             .background(TrendsColors.canvas)
             .navigationTitle("Watchlist")
             .task { await load() }
-            .fileImporter(isPresented: $showingImporter, allowedContentTypes: [.json]) { result in
-                if case .success(let url) = result {
-                    Task { await importSnapshot(at: url) }
-                } else if case .failure(let error) = result {
-                    importMessage = error.localizedDescription
-                }
-            }
         }
     }
 
@@ -66,15 +56,6 @@ struct WatchlistView: View {
             controlLayout { addControls }
             Text("Selecting a symbol opens Radar. The feed starts only when you tap Start there.")
                 .font(.footnote).foregroundStyle(.secondary)
-            TrendsActionButton(
-                title: "Import desktop watchlist",
-                systemImage: "square.and.arrow.down",
-                tint: .teal
-            ) { showingImporter = true }
-            .disabled(isWorking || store == nil)
-            if let importMessage {
-                Text(importMessage).font(.footnote).foregroundStyle(.secondary)
-            }
             if let errorMessage {
                 Text(errorMessage).font(.footnote).foregroundStyle(.red)
             }
@@ -154,18 +135,4 @@ struct WatchlistView: View {
         }
     }
 
-    private func importSnapshot(at url: URL) async {
-        guard let store, !isWorking else { return }
-        isWorking = true
-        importMessage = nil
-        defer { isWorking = false }
-        do {
-            let summary = try await DesktopWatchlistImporter.importSnapshot(at: url, into: store)
-            entries = try await store.load()
-            importMessage = "Imported \(summary.entryCount) symbols; \(summary.insertedCount) added. Existing symbols were kept."
-            errorMessage = nil
-        } catch {
-            importMessage = error.localizedDescription
-        }
-    }
 }

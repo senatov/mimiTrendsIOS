@@ -1,7 +1,7 @@
 import Foundation
 
 enum ProviderEndpoint: String, CaseIterable, Identifiable {
-    case finnhubProfiles, finnhubTrades
+    case finnhubTrades
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope
     case yahooPrimary, yahooAlternate
     case wallstreetOnline, traderFox
@@ -10,7 +10,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .finnhubProfiles: "Company profiles"
         case .finnhubTrades: "Live trades"
         case .langSchwarzGermany: "Germany"
         case .langSchwarzStoxx: "STOXX 50"
@@ -24,7 +23,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var defaultURL: String {
         switch self {
-        case .finnhubProfiles: "https://finnhub.io"
         case .finnhubTrades: "wss://ws.finnhub.io"
         case .langSchwarzGermany: "https://www.ls-tc.de/de/aktien/deutschland"
         case .langSchwarzStoxx: "https://www.ls-tc.de/de/aktien/europa/stoxx50"
@@ -36,18 +34,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         }
     }
 
-    var isUsedByNativeAdapter: Bool {
-        switch self {
-        case .finnhubTrades, .yahooPrimary, .yahooAlternate, .traderFox,
-             .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope,
-             .wallstreetOnline: true
-        default: false
-        }
-    }
-
     var probePath: String {
         switch self {
-        case .finnhubProfiles: "/api/v1/stock/profile2?symbol=ASML"
         case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: ""
         case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
@@ -58,13 +46,12 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 }
 
 enum ProviderEndpointError: LocalizedError {
-    case invalidURL, checkFailed, missingFinnhubKey
+    case invalidURL, checkFailed
 
     var errorDescription: String? {
         switch self {
         case .invalidURL: "Enter a secure URL without credentials or a query."
         case .checkFailed: "The provider did not return expected market data."
-        case .missingFinnhubKey: "Save a Finnhub API key before checking this endpoint."
         }
     }
 }
@@ -78,6 +65,10 @@ enum ProviderEndpointStore {
     static func save(_ value: String, for endpoint: ProviderEndpoint) throws {
         let url = try validate(value, for: endpoint)
         UserDefaults.standard.set(url.absoluteString, forKey: key(endpoint))
+    }
+
+    static func removeUnusedLegacyValues() {
+        UserDefaults.standard.removeObject(forKey: "provider.endpoint.finnhubProfiles.v1")
     }
 
     static func validate(_ value: String, for endpoint: ProviderEndpoint) throws -> URL {
@@ -107,24 +98,17 @@ struct ProviderEndpointChecker: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = 12
         request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        if endpoint == .finnhubProfiles {
-            guard let key = try FinnhubCredentialStore.load(), !key.isEmpty else {
-                throw ProviderEndpointError.missingFinnhubKey
-            }
-            request.setValue(key, forHTTPHeaderField: "X-Finnhub-Token")
-        }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let response = response as? HTTPURLResponse, response.statusCode == 200,
               data.count < 3_000_000 else { throw ProviderEndpointError.checkFailed }
         let body = String(decoding: data, as: UTF8.self)
         let expected: String
         switch endpoint {
-        case .finnhubProfiles: expected = "name"
+        case .finnhubTrades: expected = ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: expected = "bidWithCurrencySymbol"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"
         case .wallstreetOnline: expected = "ASML"
         case .traderFox: expected = "equities"
-        case .finnhubTrades: expected = ""
         }
         guard body.localizedCaseInsensitiveContains(expected) else {
             throw ProviderEndpointError.checkFailed
