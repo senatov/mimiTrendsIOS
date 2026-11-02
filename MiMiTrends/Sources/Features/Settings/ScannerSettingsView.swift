@@ -37,10 +37,11 @@ struct ScannerSettingsView: View {
 
     private var scopePanel: some View {
         SettingsGroup(title: "Current scan scope") {
-            SettingsValueRow(title: "Sources", value: "Yahoo candles, Yahoo and TraderFox discovery; optional Finnhub trades")
+            SettingsValueRow(title: "Confirmed signals", value: "Yahoo minute bars; optional Finnhub trades")
+            SettingsValueRow(title: "Preliminary quotes", value: "Lang & Schwarz; linked wallstreetONLINE prices on demand")
             SettingsValueRow(title: "Symbols", value: scanWatchlist ? "Selected + Watchlist, up to 5" : "Selected symbol")
             SettingsValueRow(title: "Activity", value: "Foreground only")
-            Text("The market scan runs in the foreground. Other desktop quote providers still require native adapters.")
+            Text("Quote movements have no verified trade volume. Existing source-currency minute bars remain separate from EUR quote observations.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
         }

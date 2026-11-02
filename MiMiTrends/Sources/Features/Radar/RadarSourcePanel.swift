@@ -3,6 +3,7 @@ import SwiftUI
 struct RadarSourcePanel: View {
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
+    let lsStatus: LSCandidateStatus?
     let discoveryRequests: Int
     let discoveryErrors: Int
     let marketCycle: MarketRadarCycle?
@@ -37,8 +38,16 @@ struct RadarSourcePanel: View {
                                    received: nil, valid: nil, operations: nil, errors: nil)
                     }
                     scalableCard
-                    sourceCard(name: "Lang & Schwarz", status: "NOT CONNECTED", color: .secondary,
-                               received: nil, valid: nil, operations: nil, errors: nil)
+                    sourceCard(
+                        name: "Lang & Schwarz",
+                        status: lsStatus == nil ? "CONNECTING" :
+                            lsFreshCount > 0 ? "EUR QUOTES" : "NO FRESH QUOTES",
+                        color: lsFreshCount > 0 ? .green : .secondary,
+                        received: lsStatus?.quotes.count,
+                        valid: lsStatus.map { _ in lsFreshCount },
+                        operations: lsStatus?.requestCount,
+                        errors: lsStatus?.errorCount
+                    )
                     sourceCard(
                         name: "wallstreetONLINE", status: discoveryLabel, color: discoveryColor,
                         received: discoveryStatus?.snapshot?.candidates.count,
@@ -146,7 +155,7 @@ struct RadarSourcePanel: View {
     private var discoveryLabel: String {
         guard let discoveryStatus else { return "CONNECTING" }
         if discoveryStatus.hasFreshSnapshot(atMillis: Int64(Date().timeIntervalSince1970 * 1_000)) {
-            return "RANKING ONLY"
+            return "RANKING + LINKS"
         }
         return discoveryStatus.isAvailable ? "SAVED" : "UNAVAILABLE"
     }
@@ -164,7 +173,11 @@ struct RadarSourcePanel: View {
     }
 
     private var discoveryColor: Color {
-        discoveryLabel == "RANKING ONLY" ? .green : .secondary
+        discoveryLabel == "RANKING + LINKS" ? .green : .secondary
+    }
+
+    private var lsFreshCount: Int {
+        lsStatus?.freshCount(atMillis: Int64(Date().timeIntervalSince1970 * 1_000)) ?? 0
     }
 
     private var feedStatus: String {

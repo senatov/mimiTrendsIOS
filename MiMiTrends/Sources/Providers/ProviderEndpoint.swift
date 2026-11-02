@@ -41,7 +41,9 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var isUsedByNativeAdapter: Bool {
         switch self {
-        case .finnhubTrades, .yahooPrimary, .yahooAlternate, .traderFox: true
+        case .finnhubTrades, .yahooPrimary, .yahooAlternate, .traderFox,
+             .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope,
+             .wallstreetOnline: true
         default: false
         }
     }

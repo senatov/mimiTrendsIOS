@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RadarSignalList: View {
     let signals: [ScanResult]
+    let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
     let selected: ScanResult?
     let compact: Bool
@@ -26,7 +27,30 @@ struct RadarSignalList: View {
             if let errorMessage {
                 Text(errorMessage).font(.footnote).foregroundStyle(.red)
             }
-            if signals.isEmpty {
+            if !quoteMoves.isEmpty {
+                Text("Preliminary Lang & Schwarz quote moves · trade volume unverified")
+                    .font(.caption)
+                    .foregroundStyle(TrendsColors.supportingInk)
+                ScrollView {
+                    LazyVStack(spacing: 5) {
+                        ForEach(quoteMoves) { move in
+                            HStack(spacing: 8) {
+                                Text(move.quote.name)
+                                    .lineLimit(1)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(String(format: "%+.2f%%", move.changePercent))
+                                    .foregroundStyle(move.changePercent < 0 ? .red : .green)
+                                Text(move.quote.midpointEUR.formatted(.currency(code: "EUR")))
+                                    .monospacedDigit()
+                            }
+                            .font(.subheadline)
+                        }
+                    }
+                }
+                .frame(maxHeight: 150)
+                Divider()
+            }
+            if signals.isEmpty && quoteMoves.isEmpty {
                 VStack {
                     Spacer(minLength: 16)
                     Text("Waiting for a confirmed rise or drop in minute candles")
@@ -37,7 +61,7 @@ struct RadarSignalList: View {
                     Spacer(minLength: 16)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
+            } else if !signals.isEmpty {
                 if !compact {
                     HStack(spacing: 8) {
                         Text("Company").frame(maxWidth: .infinity, alignment: .leading)

@@ -32,7 +32,7 @@ struct ProviderSettingsPanel: View {
                 endpoints: [
                     .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope,
                 ],
-                detail: "Personal-use fallback · quote adapter pending"
+                detail: "Foreground EUR quote observations; scanner integration pending"
             )
             group(
                 "Tradegate",

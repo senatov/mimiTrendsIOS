@@ -33,8 +33,6 @@ struct RadarRankingPreview: View {
                         Text(candidate.displayName ?? candidate.instrumentID)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(metrics.price.formatted(.number.precision(.fractionLength(2))))
-                            .monospacedDigit()
                         Text(String(format: "%+.2f%%", metrics.change1dPercent))
                             .monospacedDigit()
                             .foregroundStyle(metrics.change1dPercent < 0 ? .red : .green)

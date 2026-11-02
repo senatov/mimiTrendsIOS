@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F00000000000000000000001 /* MarketPageQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* MarketPageQuote.swift */; };
+		F00000000000000000000002 /* LangSchwarzQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* LangSchwarzQuoteSource.swift */; };
+		F00000000000000000000003 /* LSCandidatePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* LSCandidatePool.swift */; };
+		F00000000000000000000004 /* WallstreetOnlineQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* WallstreetOnlineQuoteSource.swift */; };
+		F00000000000000000000005 /* MarketPageQuoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000015 /* MarketPageQuoteTests.swift */; };
+		F00000000000000000000006 /* MarketQuoteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000016 /* MarketQuoteStore.swift */; };
+		F00000000000000000000007 /* MarketQuoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000017 /* MarketQuoteStoreTests.swift */; };
 		01BF49AC6898BB89FA512BE2 /* VolumeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3401A2ABC36F2EF150C888 /* VolumeStatus.swift */; };
 		03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA34FE30071EAA96606E33C8 /* FinnhubBidAskSampler.swift */; };
 		04281B4F531D627501117EF5 /* DesktopBarSnapshotImporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CC4DCC031EFA8805E3945E6 /* DesktopBarSnapshotImporterTests.swift */; };
@@ -132,6 +139,13 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		F00000000000000000000011 /* MarketPageQuote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketPageQuote.swift; sourceTree = "<group>"; };
+		F00000000000000000000012 /* LangSchwarzQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangSchwarzQuoteSource.swift; sourceTree = "<group>"; };
+		F00000000000000000000013 /* LSCandidatePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSCandidatePool.swift; sourceTree = "<group>"; };
+		F00000000000000000000014 /* WallstreetOnlineQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallstreetOnlineQuoteSource.swift; sourceTree = "<group>"; };
+		F00000000000000000000015 /* MarketPageQuoteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketPageQuoteTests.swift; sourceTree = "<group>"; };
+		F00000000000000000000016 /* MarketQuoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStore.swift; sourceTree = "<group>"; };
+		F00000000000000000000017 /* MarketQuoteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStoreTests.swift; sourceTree = "<group>"; };
 		05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingBatchTests.swift; sourceTree = "<group>"; };
 		0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalRow.swift; sourceTree = "<group>"; };
 		06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCredentialStore.swift; sourceTree = "<group>"; };
@@ -283,6 +297,7 @@
 				DB5743B3F01DFBD24A1F849F /* DiscoveryCandidate.swift */,
 				C31B280E8FA9DB0623EFBA3B /* DiscoveryCandidateSelector.swift */,
 				EC293CB0150CC6CB7B2EA1C1 /* DiscoveryPoolController.swift */,
+				F00000000000000000000013 /* LSCandidatePool.swift */,
 				50748F16A78F3C42B993F374 /* DiscoveryRankingBatch.swift */,
 				D5A77B0ED8931A451EB4AA09 /* DiscoveryRankingPage.swift */,
 				6DB748D1A71D77B911C33C02 /* DiscoveryRefreshCache.swift */,
@@ -354,9 +369,12 @@
 			children = (
 				06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */,
 				DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */,
+				F00000000000000000000011 /* MarketPageQuote.swift */,
 				9FAB19903F43D7F97FFADD41 /* Finnhub */,
+				F00000000000000000000021 /* LangSchwarz */,
 				4E867C16A486D8C62DF5CD73 /* Scalable */,
 				D346E039BF19ADEA870F1FB0 /* TraderFox */,
+				F00000000000000000000022 /* WallstreetOnline */,
 				A808C3F4C0A58330580E116D /* Yahoo */,
 			);
 			path = Providers;
@@ -396,6 +414,8 @@
 				D5BEDE07B7B34757E95DE94E /* FinnhubTradeDecoderTests.swift */,
 				926E7B5100D9ECAD2EACFF6B /* FinnhubWatchlistSelectionTests.swift */,
 				C03FCFB623D8910CA5B6945B /* MarketBarStoreTests.swift */,
+				F00000000000000000000015 /* MarketPageQuoteTests.swift */,
+				F00000000000000000000017 /* MarketQuoteStoreTests.swift */,
 				44371ED1585DAE0AFED41514 /* MarketModelTests.swift */,
 				14AC5179E3180B2FD43113A1 /* MarketRadarScannerTests.swift */,
 				1F95B09A04A570DD48901B5C /* MarketSignalStoreTests.swift */,
@@ -453,6 +473,7 @@
 				71B648E753D1C0367B983BB3 /* DesktopBarSnapshotImporter.swift */,
 				30711823AC7074BCF690C620 /* DesktopWatchlistImporter.swift */,
 				17BA9EF663371153E075CCA3 /* MarketBarStore.swift */,
+				F00000000000000000000016 /* MarketQuoteStore.swift */,
 				BBF387A2BA9D47DD94D78888 /* MarketSignalStore.swift */,
 				5B8AA63026829A74E3A98AC7 /* WatchlistStore.swift */,
 			);
@@ -491,6 +512,18 @@
 				E299093ABF5E3C6E0913488F /* TraderFoxRadarSource.swift */,
 			);
 			path = TraderFox;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000021 /* LangSchwarz */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000012 /* LangSchwarzQuoteSource.swift */,);
+			path = LangSchwarz;
+			sourceTree = "<group>";
+		};
+		F00000000000000000000022 /* WallstreetOnline */ = {
+			isa = PBXGroup;
+			children = (F00000000000000000000014 /* WallstreetOnlineQuoteSource.swift */,);
+			path = WallstreetOnline;
 			sourceTree = "<group>";
 		};
 		E3D5F05AE553410BDBE7E46C /* Features */ = {
@@ -680,6 +713,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F00000000000000000000001 /* MarketPageQuote.swift in Sources */,
+				F00000000000000000000002 /* LangSchwarzQuoteSource.swift in Sources */,
+				F00000000000000000000003 /* LSCandidatePool.swift in Sources */,
+				F00000000000000000000004 /* WallstreetOnlineQuoteSource.swift in Sources */,
+				F00000000000000000000006 /* MarketQuoteStore.swift in Sources */,
 				84A1B5190501BEC7A1524C7C /* AppDiagnostics.swift in Sources */,
 				E55CD1974C966F6CEC9BB616 /* AppIdentity.swift in Sources */,
 				52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */,
@@ -766,6 +804,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F00000000000000000000005 /* MarketPageQuoteTests.swift in Sources */,
+				F00000000000000000000007 /* MarketQuoteStoreTests.swift in Sources */,
 				647061B7F3233DABB3B153F3 /* AppDiagnosticsTests.swift in Sources */,
 				04281B4F531D627501117EF5 /* DesktopBarSnapshotImporterTests.swift in Sources */,
 				B45B22E48AFE43602936C12A /* DesktopWatchlistImporterTests.swift in Sources */,
@@ -805,9 +845,6 @@
 /* Begin PBXTargetDependency section */
 		1B5229A820AF0E1BAE10CB96 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilters = (
-				macos,
-			);
 			target = 4272B0CA94A3C0C778AF8152 /* mimiTrendsIOS */;
 			targetProxy = 3663186B7C1F127BE59E8F23 /* PBXContainerItemProxy */;
 		};

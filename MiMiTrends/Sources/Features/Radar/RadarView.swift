@@ -14,6 +14,8 @@ struct RadarView: View {
     @State private var chartRefreshID = 0
     @State private var isPreparingFeed = false
     @State private var discoveryController = DiscoveryPoolController()
+    @State private var lsCandidatePool = LSCandidatePool()
+    @State private var lsStatus: LSCandidateStatus?
     @State private var marketScanner = MarketRadarScanner()
     @State private var marketCycle: MarketRadarCycle?
     @State private var discoveryStatus: DiscoveryRefreshStatus?
@@ -39,6 +41,7 @@ struct RadarView: View {
                     sources: {
                         RadarSourcePanel(
                             session: session, discoveryStatus: discoveryStatus,
+                            lsStatus: lsStatus,
                             discoveryRequests: discoveryRequests, discoveryErrors: discoveryErrors,
                             marketCycle: marketCycle
                         )
@@ -63,6 +66,7 @@ struct RadarView: View {
             .navigationTitle("Radar")
             .task(id: "\(maxResults)|\(maxAgeHours)") { await refreshSignals() }
             .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
+            .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
             .onChange(of: session.lastSignal) { _, latest in
                 if latest != nil { Task { await refreshSignals(selectNewest: true) } }
@@ -109,6 +113,20 @@ struct RadarView: View {
         }
     }
 
+    private func refreshLSWhileActive() async {
+        guard scenePhase == .active else {
+            lsStatus = await lsCandidatePool.stop()
+            return
+        }
+        while !Task.isCancelled {
+            let status = await lsCandidatePool.refreshIfNeeded(settings: RadarScanPreferencesStore.load())
+            guard !Task.isCancelled else { return }
+            lsStatus = status
+            do { try await Task.sleep(for: .seconds(30)) }
+            catch { return }
+        }
+    }
+
     private func scanMarketWhileActive() async {
         guard scenePhase == .active else { return }
         while !Task.isCancelled {
@@ -148,6 +166,7 @@ struct RadarView: View {
     private func signalList(compact: Bool) -> some View {
         RadarSignalList(
             signals: recentSignals,
+            quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
             selected: selectedSignal,
             compact: compact,
