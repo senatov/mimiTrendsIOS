@@ -29,7 +29,8 @@ struct RadarSourcePanel: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .foregroundStyle(tableColor(.bodyText))
+        .foregroundStyle(tableColor(.sourceBodyText))
+        .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
         .navigationDestination(isPresented: $showingCandidates) {
             if let snapshot = discoveryStatus?.snapshot {

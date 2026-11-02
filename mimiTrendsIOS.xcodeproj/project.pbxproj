@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		F00000000000000000000001 /* MarketPageQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000011 /* MarketPageQuote.swift */; };
+		A1A1A1A1A1A1A1A1A1A1A101 /* BrokerTradeChartMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */; };
+		A1A1A1A1A1A1A1A1A1A1A103 /* TableColorSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A1A1A1A1A1A1A1A104 /* TableColorSettingsView.swift */; };
+		A1A1A1A1A1A1A1A1A1A1A105 /* RadarTableTypographyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A1A1A1A1A1A1A1A1A1A106 /* RadarTableTypographyStore.swift */; };
 		F00000000000000000000002 /* LangSchwarzQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000012 /* LangSchwarzQuoteSource.swift */; };
 		F00000000000000000000003 /* LSCandidatePool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000013 /* LSCandidatePool.swift */; };
 		F00000000000000000000004 /* WallstreetOnlineQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000014 /* WallstreetOnlineQuoteSource.swift */; };
@@ -243,6 +246,9 @@
 		CC24B739908B22E9A686BF4C /* ScalableCLIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableCLIService.swift; sourceTree = "<group>"; };
 		D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStoreTests.swift; sourceTree = "<group>"; };
 		D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
+		A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTradeChartMatcher.swift; sourceTree = "<group>"; };
+		A1A1A1A1A1A1A1A1A1A1A104 /* TableColorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColorSettingsView.swift; sourceTree = "<group>"; };
+		A1A1A1A1A1A1A1A1A1A1A106 /* RadarTableTypographyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableTypographyStore.swift; sourceTree = "<group>"; };
 		D5A77B0ED8931A451EB4AA09 /* DiscoveryRankingPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingPage.swift; sourceTree = "<group>"; };
 		D5BEDE07B7B34757E95DE94E /* FinnhubTradeDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubTradeDecoderTests.swift; sourceTree = "<group>"; };
 		D7546F11E9F21290A5D8DD5F /* RadarSignalList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalList.swift; sourceTree = "<group>"; };
@@ -343,6 +349,7 @@
 		512FFC5A94B06041BD09D503 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
+				A1A1A1A1A1A1A1A1A1A1A104 /* TableColorSettingsView.swift */,
 				D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */,
 				4E50A443FA1C1379C2394D87 /* CredentialEditor.swift */,
 				3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */,
@@ -378,6 +385,7 @@
 		7A8495080A51F8D88897C040 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A1A1A1A1A1A1A1A1A1A1A106 /* RadarTableTypographyStore.swift */,
 				7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */,
 				91FE4781F402BBF9EB8C0DFB /* TrendsActionButton.swift */,
 				E2F4937B6B24F966C3B88898 /* TrendsPanel.swift */,
@@ -388,6 +396,7 @@
 		9150DE9B8D5D31ED4987F053 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
+				A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */,
 				06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */,
 				DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */,
 				758C2D94840548A1B0632EFA /* ScalableCSVImporter.swift */,
@@ -785,6 +794,9 @@
 				9253B90868F0E82E007EA500 /* ProviderQuoteSnapshot.swift in Sources */,
 				181A1307A50166CF2A885315 /* ProviderSettingsPanel.swift in Sources */,
 				A99D089CBA6E4FFD82F19E7E /* ScalableCSVImporter.swift in Sources */,
+				A1A1A1A1A1A1A1A1A1A1A101 /* BrokerTradeChartMatcher.swift in Sources */,
+				A1A1A1A1A1A1A1A1A1A1A103 /* TableColorSettingsView.swift in Sources */,
+				A1A1A1A1A1A1A1A1A1A1A105 /* RadarTableTypographyStore.swift in Sources */,
 				CF837D24F69C4457AA39BD6C /* TradeImportCoordinator.swift in Sources */,
 				098900BB34D04DD693DE939A /* TradeImportReportView.swift in Sources */,
 				BBD841B807694419B2D04115 /* TradeImportAction.swift in Sources */,

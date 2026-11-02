@@ -4,6 +4,7 @@ struct ContentView: View {
     @Environment(RadarSession.self) private var radarSession
     @State private var selectedTab = "radar"
     @State private var tableColors = RadarTableColorStore()
+    @State private var tableTypography = RadarTableTypographyStore()
     @AppStorage("selected.symbol.v1") private var radarSymbol = "ORCL"
     @AppStorage("appearance.theme.v1") private var theme = "light"
 
@@ -26,6 +27,7 @@ struct ContentView: View {
             }
         }
         .environment(tableColors)
+        .environment(tableTypography)
         .preferredColorScheme(theme == "dark" ? .dark : theme == "light" ? .light : nil)
         .toolbar {
             #if os(macOS)

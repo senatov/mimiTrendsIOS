@@ -2,6 +2,8 @@ import Observation
 import SwiftUI
 
 enum RadarTableColorRole: String, CaseIterable, Identifiable {
+    case signalTableFill, signalHeaderFill, signalHeaderText, signalGrid, signalBodyText, signalMutedText, signalRowFill, signalActionAccent
+    case sourceTableFill, sourceHeaderFill, sourceHeaderText, sourceGrid, sourceBodyText, sourceMutedText, sourceRowFill, sourceActionAccent
     case headerFill, headerText, grid, bodyText, mutedText
     case rise, fall, selectedRow, criticalRow
     case sourceActive, sourceAttention, sourceInactive, actionAccent
@@ -11,6 +13,14 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
+        case .signalTableFill, .sourceTableFill: "Table background"
+        case .signalHeaderFill, .sourceHeaderFill: "Header background"
+        case .signalHeaderText, .sourceHeaderText: "Header text"
+        case .signalGrid, .sourceGrid: "Row and column lines"
+        case .signalBodyText, .sourceBodyText: "Table text"
+        case .signalMutedText, .sourceMutedText: "Secondary text"
+        case .signalRowFill, .sourceRowFill: "Row background"
+        case .signalActionAccent, .sourceActionAccent: "Table actions"
         case .headerFill: "Header background"
         case .headerText: "Header text"
         case .grid: "Row and column lines"
@@ -29,6 +39,14 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
 
     var defaultHexLight: String {
         switch self {
+        case .signalTableFill, .sourceTableFill: "FFFFFF"
+        case .signalHeaderFill, .sourceHeaderFill: "EAF4FC"
+        case .signalHeaderText, .sourceHeaderText: "233A55"
+        case .signalGrid, .sourceGrid: "C5D9ED"
+        case .signalBodyText, .sourceBodyText: "17365F"
+        case .signalMutedText, .sourceMutedText: "31506B"
+        case .signalRowFill, .sourceRowFill: "FFFFFF"
+        case .signalActionAccent, .sourceActionAccent: "1379B5"
         case .headerFill: "EAF4FC"
         case .headerText: "233A55"
         case .grid: "C5D9ED"
@@ -47,6 +65,14 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
 
     var defaultHexDark: String {
         switch self {
+        case .signalTableFill, .sourceTableFill: "20252B"
+        case .signalHeaderFill, .sourceHeaderFill: "30465B"
+        case .signalHeaderText, .sourceHeaderText: "FFF1BE"
+        case .signalGrid, .sourceGrid: "4A6077"
+        case .signalBodyText, .sourceBodyText: "F1F7FF"
+        case .signalMutedText, .sourceMutedText: "C7D9EB"
+        case .signalRowFill, .sourceRowFill: "20252B"
+        case .signalActionAccent, .sourceActionAccent: "6BB8EE"
         case .headerFill: "30465B"
         case .headerText: "FFF1BE"
         case .grid: "4A6077"
@@ -76,12 +102,18 @@ final class RadarTableColorStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        overrides = Dictionary(uniqueKeysWithValues: RadarTableColorRole.allCases.compactMap { role in
+        var loaded: [RadarTableColorRole: String] = Dictionary(uniqueKeysWithValues: RadarTableColorRole.allCases.compactMap { role in
             guard let hex = defaults.string(forKey: role.key), RadarColorHex.color(hex) != nil else {
                 return nil
             }
             return (role, hex)
         })
+        for role in Self.tableSpecificRoles where loaded[role] == nil {
+            guard let legacyRole = role.legacyRole, let color = loaded[legacyRole] else { continue }
+            loaded[role] = color
+            defaults.set(color, forKey: role.key)
+        }
+        overrides = loaded
     }
 
     func color(_ role: RadarTableColorRole, dark: Bool) -> Color {
@@ -90,6 +122,10 @@ final class RadarTableColorStore {
 
     func isCustomized(_ role: RadarTableColorRole) -> Bool {
         overrides[role] != nil
+    }
+
+    func hexValue(for role: RadarTableColorRole) -> String? {
+        overrides[role]
     }
 
     func set(_ color: Color, for role: RadarTableColorRole) {
@@ -105,6 +141,26 @@ final class RadarTableColorStore {
 
     func resetAll() {
         for role in RadarTableColorRole.allCases { reset(role) }
+    }
+
+    private static let tableSpecificRoles: [RadarTableColorRole] = [
+        .signalTableFill, .signalHeaderFill, .signalHeaderText, .signalGrid, .signalBodyText, .signalMutedText, .signalRowFill,
+        .signalActionAccent, .sourceTableFill, .sourceHeaderFill, .sourceHeaderText, .sourceGrid, .sourceBodyText, .sourceMutedText,
+        .sourceRowFill, .sourceActionAccent
+    ]
+}
+
+private extension RadarTableColorRole {
+    var legacyRole: Self? {
+        switch self {
+        case .signalHeaderFill, .sourceHeaderFill: .headerFill
+        case .signalHeaderText, .sourceHeaderText: .headerText
+        case .signalGrid, .sourceGrid: .grid
+        case .signalBodyText, .sourceBodyText: .bodyText
+        case .signalMutedText, .sourceMutedText: .mutedText
+        case .signalActionAccent, .sourceActionAccent: .actionAccent
+        default: nil
+        }
     }
 }
 

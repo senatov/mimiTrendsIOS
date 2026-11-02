@@ -5,6 +5,7 @@ import AppKit
 
 struct RadarSignalList: View {
     @Environment(RadarTableColorStore.self) private var tableColors
+    @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
     let quoteMoves: [LSQuoteMove]
@@ -57,7 +58,7 @@ struct RadarSignalList: View {
                 Text("Live radar").font(.title3.weight(.light))
                 Text("\(signals.count) signals")
                     .font(.subheadline)
-                    .foregroundStyle(tableColor(.mutedText))
+                    .foregroundStyle(tableColor(.signalMutedText))
                 Spacer()
                 Button("Refresh", systemImage: "arrow.clockwise", action: onRefresh)
                     .labelStyle(.iconOnly)
@@ -71,7 +72,7 @@ struct RadarSignalList: View {
             if !quoteMoves.isEmpty {
                 Text("Preliminary Lang & Schwarz quote moves · trade volume unverified")
                     .font(.caption)
-                    .foregroundStyle(tableColor(.mutedText))
+                    .foregroundStyle(tableColor(.signalMutedText))
                 ScrollView {
                     LazyVStack(spacing: 5) {
                         ForEach(quoteMoves) { move in
@@ -88,7 +89,7 @@ struct RadarSignalList: View {
                         }
                     }
                 }
-                .frame(maxHeight: 150)
+                .frame(height: min(150, CGFloat(quoteMoves.count) * 27))
                 Divider()
             }
             if signals.isEmpty && quoteMoves.isEmpty {
@@ -132,7 +133,8 @@ struct RadarSignalList: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .foregroundStyle(tableColor(.bodyText))
+        .foregroundStyle(tableColor(.signalBodyText))
+        .background(tableColor(.signalTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
     }
 
@@ -143,14 +145,14 @@ struct RadarSignalList: View {
                 headerCell(column, width: widths.width(for: column))
             }
         }
-        .font(.system(size: 13, weight: .regular))
-        .foregroundStyle(tableColor(.headerText))
+        .font(tableTypography.font(size: tableTypography.size))
+        .foregroundStyle(tableColor(.signalHeaderText))
         .padding(.leading, 8)
         .padding(.trailing, 8 + scrollbarGutter)
         .padding(.vertical, 5)
-        .background(tableColor(.headerFill))
+        .background(tableColor(.signalHeaderFill))
         .overlay {
-            RadarSignalColumnLines(widths: widths, color: tableColor(.grid), horizontalInset: 8)
+            RadarSignalColumnLines(widths: widths, color: tableColor(.signalGrid), horizontalInset: 8)
                 .padding(.trailing, scrollbarGutter)
         }
         .overlay(alignment: .bottom) { tableSeparator }
@@ -164,10 +166,10 @@ struct RadarSignalList: View {
             Button { toggleSort(column) } label: {
                 Image(systemName: sortColumn == column ? (ascending ? "chevron.up" : "chevron.down") : "arrow.up.arrow.down")
                     .font(.system(size: sortColumn == column ? 9 : 8, weight: .semibold))
-                    .foregroundStyle(sortColumn == column ? Color.white : tableColor(.headerText))
+                    .foregroundStyle(sortColumn == column ? Color.white : tableColor(.signalHeaderText))
                     .frame(width: 18, height: 18)
-                    .background(sortColumn == column ? tableColor(.actionAccent) : tableColor(.headerFill).opacity(0.72), in: Circle())
-                    .overlay { Circle().strokeBorder(tableColor(.headerText).opacity(sortColumn == column ? 0.28 : 0.32), lineWidth: 0.7) }
+                    .background(sortColumn == column ? tableColor(.signalActionAccent) : tableColor(.signalHeaderFill).opacity(0.72), in: Circle())
+                    .overlay { Circle().strokeBorder(tableColor(.signalHeaderText).opacity(sortColumn == column ? 0.28 : 0.32), lineWidth: 0.7) }
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -214,7 +216,7 @@ struct RadarSignalList: View {
 
     private var tableSeparator: some View {
         Rectangle()
-            .fill(tableColor(.grid))
+            .fill(tableColor(.signalGrid))
             .frame(height: 1)
             .accessibilityHidden(true)
     }

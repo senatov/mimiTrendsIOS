@@ -86,6 +86,7 @@ struct RadarSourceTableLayout {
 
 struct RadarSourceTable: View {
     @Environment(RadarTableColorStore.self) private var tableColors
+    @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let sources: [RadarTelemetrySource]
     let availableWidth: CGFloat
@@ -150,13 +151,13 @@ struct RadarSourceTable: View {
                     .frame(width: layout.width(for: column))
             }
         }
-        .font(.system(size: 12, weight: .regular))
-        .foregroundStyle(tableColor(.headerText))
+        .font(tableTypography.font(size: tableTypography.size))
+        .foregroundStyle(tableColor(.sourceHeaderText))
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
-        .background(tableColor(.headerFill))
+        .background(tableColor(.sourceHeaderFill))
         .overlay {
-            RadarSourceColumnLines(layout: layout, color: tableColor(.grid), inset: 7)
+            RadarSourceColumnLines(layout: layout, color: tableColor(.sourceGrid), inset: 7)
         }
         .overlay(alignment: .bottom) { separator }
     }
@@ -169,10 +170,10 @@ struct RadarSourceTable: View {
             Button { toggleSort(column) } label: {
                 Image(systemName: arrowName(for: column))
                     .font(.system(size: sortColumn == column ? 8 : 7, weight: .semibold))
-                    .foregroundStyle(sortColumn == column ? Color.white : tableColor(.headerText))
+                    .foregroundStyle(sortColumn == column ? Color.white : tableColor(.sourceHeaderText))
                     .frame(width: 16, height: 16)
-                    .background(sortColumn == column ? tableColor(.actionAccent) : tableColor(.headerFill), in: Circle())
-                    .overlay { Circle().strokeBorder(tableColor(.headerText).opacity(0.3), lineWidth: 0.6) }
+                    .background(sortColumn == column ? tableColor(.sourceActionAccent) : tableColor(.sourceHeaderFill), in: Circle())
+                    .overlay { Circle().strokeBorder(tableColor(.sourceHeaderText).opacity(0.3), lineWidth: 0.6) }
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Sort by \(column.title)")
@@ -195,7 +196,7 @@ struct RadarSourceTable: View {
     }
 
     private var separator: some View {
-        Rectangle().fill(tableColor(.grid)).frame(height: 1).accessibilityHidden(true)
+        Rectangle().fill(tableColor(.sourceGrid)).frame(height: 1).accessibilityHidden(true)
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {
@@ -205,6 +206,7 @@ struct RadarSourceTable: View {
 
 private struct RadarSourceTelemetryRow: View {
     @Environment(RadarTableColorStore.self) private var tableColors
+    @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let source: RadarTelemetrySource
     let layout: RadarSourceTableLayout
@@ -225,11 +227,11 @@ private struct RadarSourceTelemetryRow: View {
                 .minimumScaleFactor(0.82)
                 .frame(width: layout.status, alignment: .trailing)
         }
-        .font(.system(size: 12))
+        .font(tableTypography.font(size: tableTypography.size))
         .padding(.horizontal, 7)
         .padding(.vertical, 5)
-        .overlay { RadarSourceColumnLines(layout: layout, color: tableColor(.grid), inset: 7) }
-        .background(tableColor(.bodyText).opacity(0.025))
+        .overlay { RadarSourceColumnLines(layout: layout, color: tableColor(.sourceGrid), inset: 7) }
+        .background(tableColor(.sourceRowFill))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("source-\(source.name)")
     }
@@ -241,12 +243,12 @@ private struct RadarSourceTelemetryRow: View {
             Spacer(minLength: 2)
             if source.canLogin {
                 Button("Login", action: onLogin)
-                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
+                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.sourceActionAccent), compact: true))
             } else if source.canShowCandidates {
                 Button(action: onShowCandidates) {
                     Image(systemName: "list.number")
                 }
-                .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.actionAccent), compact: true))
+                .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.sourceActionAccent), compact: true))
                 .accessibilityLabel("View ranking candidates")
             }
         }
@@ -256,8 +258,8 @@ private struct RadarSourceTelemetryRow: View {
 
     private func metric(_ value: Int?) -> some View {
         Text(value.map { $0.formatted() } ?? "—")
-            .font(.system(size: 13).monospacedDigit())
-            .foregroundStyle(tableColor(.bodyText))
+            .font(tableTypography.font(size: tableTypography.size).monospacedDigit())
+            .foregroundStyle(tableColor(.sourceBodyText))
             .lineLimit(1)
             .padding(.trailing, 5)
             .accessibilityLabel(value.map(String.init) ?? "unavailable")

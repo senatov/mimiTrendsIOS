@@ -50,6 +50,8 @@
 		5022439AB9B830F9791D83BA /* DiscoveryCandidateList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68F5096101F9BE77D56984F1 /* DiscoveryCandidateList.swift */; };
 		51C913942E20E972D31F6DE9 /* RadarSignalSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */; };
 		52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */; };
+		A80342B5C3FE41988522D71 /* TableColorSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B471DD2E472347AD8660A136 /* TableColorSettingsView.swift */; };
+		BB1FEA82DF3D45DEB6BAA4F5 /* RadarTableTypographyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71A23DB2E9754C2A9A9321AB /* RadarTableTypographyStore.swift */; };
 		5A0171F5A350156537C276E2 /* WallstreetOnlineQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D5D50A3021AA14990B75EF /* WallstreetOnlineQuoteSource.swift */; };
 		5D450505D6D7625389567466 /* FinnhubTradeStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80B2E9DCDE37394950FD413 /* FinnhubTradeStream.swift */; };
 		5F44F4381DE6A442C630CB05 /* RadarSourceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5C11318DF9D01C1B379601 /* RadarSourceTable.swift */; };
@@ -252,6 +254,8 @@
 		CC24B739908B22E9A686BF4C /* ScalableCLIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableCLIService.swift; sourceTree = "<group>"; };
 		D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStoreTests.swift; sourceTree = "<group>"; };
 		D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
+		B471DD2E472347AD8660A136 /* TableColorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColorSettingsView.swift; sourceTree = "<group>"; };
+		71A23DB2E9754C2A9A9321AB /* RadarTableTypographyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableTypographyStore.swift; sourceTree = "<group>"; };
 		D5A77B0ED8931A451EB4AA09 /* DiscoveryRankingPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingPage.swift; sourceTree = "<group>"; };
 		D5BEDE07B7B34757E95DE94E /* FinnhubTradeDecoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubTradeDecoderTests.swift; sourceTree = "<group>"; };
 		D7546F11E9F21290A5D8DD5F /* RadarSignalList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalList.swift; sourceTree = "<group>"; };
@@ -352,6 +356,7 @@
 			isa = PBXGroup;
 			children = (
 				D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */,
+				B471DD2E472347AD8660A136 /* TableColorSettingsView.swift */,
 				4E50A443FA1C1379C2394D87 /* CredentialEditor.swift */,
 				3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */,
 				5E38BCFD81AAF82949FAA498 /* RadarScanSettingsView.swift */,
@@ -387,6 +392,7 @@
 			isa = PBXGroup;
 			children = (
 				7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */,
+				71A23DB2E9754C2A9A9321AB /* RadarTableTypographyStore.swift */,
 				91FE4781F402BBF9EB8C0DFB /* TrendsActionButton.swift */,
 				E2F4937B6B24F966C3B88898 /* TrendsPanel.swift */,
 			);
@@ -726,6 +732,7 @@
 				84A1B5190501BEC7A1524C7C /* AppDiagnostics.swift in Sources */,
 				E55CD1974C966F6CEC9BB616 /* AppIdentity.swift in Sources */,
 				52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */,
+				A80342B5C3FE41988522D71 /* TableColorSettingsView.swift in Sources */,
 				312E53F88D4AA95AA6C70189 /* BrokerTradeChartMatcher.swift in Sources */,
 				414A867CE79D5D495F0D8E9E /* BrokerTransaction.swift in Sources */,
 				F3B38685CA3D3039FD72A509 /* BrokerTransactionStore.swift in Sources */,
@@ -787,6 +794,7 @@
 				5F44F4381DE6A442C630CB05 /* RadarSourceTable.swift in Sources */,
 				3701470AEB2EDB79BD033937 /* RadarSplitHandle.swift in Sources */,
 				70A0FFBE9200205385C33747 /* RadarTableColorStore.swift in Sources */,
+				BB1FEA82DF3D45DEB6BAA4F5 /* RadarTableTypographyStore.swift in Sources */,
 				25D4F99CCC0FD8FE533AA9E1 /* RadarView.swift in Sources */,
 				37D78CEF629DC78C86E7ECAD /* RadarWorkspace.swift in Sources */,
 				8A32C3D5EE9D0C6051E8A84E /* RapidCrashDetector.swift in Sources */,

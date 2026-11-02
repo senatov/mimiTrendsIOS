@@ -41,6 +41,8 @@ struct SettingsView: View {
                 SourceCredentialsView()
             case .appearance:
                 AppearanceSettingsView()
+            case .tableColors:
+                TableColorSettingsView()
             }
         }
         .navigationSplitViewStyle(.balanced)
@@ -48,7 +50,7 @@ struct SettingsView: View {
 }
 
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case scanner, rapidMoves, providers, appearance
+    case scanner, rapidMoves, providers, appearance, tableColors
 
     var id: String { rawValue }
 
@@ -58,6 +60,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .rapidMoves: "Rapid moves"
         case .providers: "Market data providers"
         case .appearance: "Appearance"
+        case .tableColors: "Color Table"
         }
     }
 
@@ -67,6 +70,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .rapidMoves: "waveform.path.ecg"
         case .providers: "antenna.radiowaves.left.and.right"
         case .appearance: "paintpalette"
+        case .tableColors: "tablecells"
         }
     }
 }
