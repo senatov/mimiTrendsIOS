@@ -20,6 +20,8 @@
 		F10000000000000000000001 /* RadarCompanyMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000011 /* RadarCompanyMetadata.swift */; };
 		F10000000000000000000002 /* RadarCompanyMetadataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000012 /* RadarCompanyMetadataStore.swift */; };
 		F10000000000000000000003 /* RadarCompanyMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000013 /* RadarCompanyMetadataService.swift */; };
+		F20000000000000000000001 /* RecentCoverageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000011 /* RecentCoverageClient.swift */; };
+		F20000000000000000000002 /* RadarCoverageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20000000000000000000012 /* RadarCoverageView.swift */; };
 		A99D089CBA6E4FFD82F19E7E /* ScalableCSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 758C2D94840548A1B0632EFA /* ScalableCSVImporter.swift */; };
 		CF837D24F69C4457AA39BD6C /* TradeImportCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02995F152299416D9DF1ED0E /* TradeImportCoordinator.swift */; };
 		89ADEE94B20B43AB843E94AB /* BrokerTransactionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BDBBBE464E4EDF9D056AAB /* BrokerTransactionStore.swift */; };
@@ -163,6 +165,8 @@
 		F10000000000000000000011 /* RadarCompanyMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadata.swift; sourceTree = "<group>"; };
 		F10000000000000000000012 /* RadarCompanyMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadataStore.swift; sourceTree = "<group>"; };
 		F10000000000000000000013 /* RadarCompanyMetadataService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadataService.swift; sourceTree = "<group>"; };
+		F20000000000000000000011 /* RecentCoverageClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoverageClient.swift; sourceTree = "<group>"; };
+		F20000000000000000000012 /* RadarCoverageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCoverageView.swift; sourceTree = "<group>"; };
 		05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingBatchTests.swift; sourceTree = "<group>"; };
 		0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalRow.swift; sourceTree = "<group>"; };
 		06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCredentialStore.swift; sourceTree = "<group>"; };
@@ -402,6 +406,7 @@
 		9150DE9B8D5D31ED4987F053 /* Providers */ = {
 			isa = PBXGroup;
 			children = (
+				F20000000000000000000011 /* RecentCoverageClient.swift */,
 				F10000000000000000000013 /* RadarCompanyMetadataService.swift */,
 				A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */,
 				06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */,
@@ -579,6 +584,7 @@
 		E612AEB71A0EF70B42A81033 /* Radar */ = {
 			isa = PBXGroup;
 			children = (
+				F20000000000000000000012 /* RadarCoverageView.swift */,
 				68F5096101F9BE77D56984F1 /* DiscoveryCandidateList.swift */,
 				5235DFF6ECD25F329C365833 /* RadarActivityBanner.swift */,
 				923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */,
@@ -779,6 +785,7 @@
 				9B0462558BD80589645FE08B /* FinnhubBidAskClient.swift in Sources */,
 				03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */,
 				BBF88726F1EC08B77602F2E6 /* FinnhubCredentialStore.swift in Sources */,
+				F20000000000000000000001 /* RecentCoverageClient.swift in Sources */,
 				F10000000000000000000003 /* RadarCompanyMetadataService.swift in Sources */,
 				3936D9169F7B63A1C80846B1 /* FinnhubMinuteAggregator.swift in Sources */,
 				886E88920162B6DA3199D90A /* FinnhubRadarPipeline.swift in Sources */,
@@ -815,6 +822,7 @@
 				9BEFDA17CEDC56446AEEF0CC /* RadarActivityBanner.swift in Sources */,
 				ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */,
 				9B2E1789F379A2C23E6306B5 /* RadarChartPlot.swift in Sources */,
+				F20000000000000000000002 /* RadarCoverageView.swift in Sources */,
 				B9DEC7CD282978431B054494 /* RadarChartPreview.swift in Sources */,
 				F5CFA707D78337A1E1F43E3F /* RadarHeader.swift in Sources */,
 				301333BB18B7BB3B4FF15D6D /* RadarPaneLayout.swift in Sources */,

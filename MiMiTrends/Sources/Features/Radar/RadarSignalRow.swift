@@ -16,6 +16,7 @@ struct RadarSignalRow: View {
     let isSelected: Bool
     let widths: RadarSignalColumnWidths
     let onSelect: () -> Void
+    let onShowCoverage: (RadarCoverageRequest) -> Void
 
     var body: some View {
         Group {
@@ -73,7 +74,9 @@ struct RadarSignalRow: View {
             HStack(spacing: 6) {
                 eventBadge
                 Spacer(minLength: 4)
-                Link("Rumors", destination: rumorsURL)
+                Button("Rumors") {
+                    onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
+                }
                     .font(.subheadline)
                     .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true))
                     .fixedSize(horizontal: true, vertical: false)
@@ -177,11 +180,6 @@ struct RadarSignalRow: View {
                 .font(tableTypography.font(size: tableTypography.size * 0.86).monospacedDigit())
                 .foregroundStyle(tableColor(.signalMutedText))
         }
-    }
-
-    private var rumorsURL: URL {
-        let symbol = signal.symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? signal.symbol
-        return URL(string: "https://finance.yahoo.com/quote/\(symbol)/news")!
     }
 
     private var formattedPrice: String {

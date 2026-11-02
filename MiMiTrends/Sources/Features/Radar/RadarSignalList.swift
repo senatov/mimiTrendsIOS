@@ -20,6 +20,7 @@ struct RadarSignalList: View {
     @State private var ascending = false
     @State private var availableWidth: CGFloat = 0
     @State private var columnWidthOverrides: [RadarSortColumn: CGFloat] = [:]
+    @State private var coverageRequest: RadarCoverageRequest?
     private var scrollbarGutter: CGFloat {
         #if os(macOS)
         CGFloat(NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy))
@@ -121,7 +122,8 @@ struct RadarSignalList: View {
                                     compact: compact,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
-                                    onSelect: { onSelect(item.signal) }
+                                    onSelect: { onSelect(item.signal) },
+                                    onShowCoverage: { coverageRequest = $0 }
                                 )
                                 .accessibilityAddTraits(isSelected(item.signal) ? [.isSelected] : [])
                                 tableSeparator
@@ -142,6 +144,10 @@ struct RadarSignalList: View {
         .foregroundStyle(tableColor(.signalBodyText))
         .background(tableColor(.signalTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
+        .sheet(item: $coverageRequest) { request in
+            RadarCoverageView(request: request)
+                .frame(minWidth: 360, minHeight: 260)
+        }
     }
 
     private var header: some View {
