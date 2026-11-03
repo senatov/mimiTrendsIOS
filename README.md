@@ -1,5 +1,7 @@
 # mimiTrends-iOS
 
+**macOS download:** [Latest release and notarized DMG](https://github.com/senatov/mimiTrendsIOS/releases/latest) · [All releases](https://github.com/senatov/mimiTrendsIOS/releases). Open the latest release and expand **Assets** to find the DMG. The Mac build requires macOS 27 or newer; the iPad App Store build is not published yet.
+
 This repository is the starting point for a native MiMiTrends application. iPadOS 27 is the primary development target; macOS 27 is an optional destination. The iOS app still supports iPhone. The existing Kotlin/JavaFX desktop application remains in the separate `mimiTrends` repository.
 
 The repository, Xcode project, run scheme, and native app are named `mimiTrends-iOS`. The Kotlin/JavaFX desktop app is named MiMiTrends. The native app retains its existing bundle identifier so development installations and local data keep the same app identity.
