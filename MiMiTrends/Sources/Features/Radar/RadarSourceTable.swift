@@ -14,7 +14,6 @@ struct RadarTelemetrySource: Identifiable {
     let valid: Int?
     let requests: Int?
     let errors: Int?
-    let canLogin: Bool
     let canShowCandidates: Bool
 
     var id: String { name }
@@ -90,7 +89,6 @@ struct RadarSourceTable: View {
     @Environment(\.colorScheme) private var colorScheme
     let sources: [RadarTelemetrySource]
     let availableWidth: CGFloat
-    let onLogin: () -> Void
     let onShowCandidates: () -> Void
 
     @State private var sortColumn: RadarSourceSortColumn?
@@ -134,7 +132,6 @@ struct RadarSourceTable: View {
                     RadarSourceTelemetryRow(
                         source: source,
                         layout: layout,
-                        onLogin: onLogin,
                         onShowCandidates: onShowCandidates
                     )
                     separator
@@ -210,7 +207,6 @@ private struct RadarSourceTelemetryRow: View {
     @Environment(\.colorScheme) private var colorScheme
     let source: RadarTelemetrySource
     let layout: RadarSourceTableLayout
-    let onLogin: () -> Void
     let onShowCandidates: () -> Void
 
     var body: some View {
@@ -241,10 +237,7 @@ private struct RadarSourceTelemetryRow: View {
             Circle().fill(source.dotColor).frame(width: 7, height: 7).accessibilityHidden(true)
             Text(source.name).lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 2)
-            if source.canLogin {
-                Button("Sign in", action: onLogin)
-                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.sourceActionAccent), compact: true))
-            } else if source.canShowCandidates {
+            if source.canShowCandidates {
                 Button(action: onShowCandidates) {
                     Image(systemName: "list.number")
                 }

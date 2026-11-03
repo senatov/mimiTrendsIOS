@@ -3,7 +3,6 @@ import SwiftUI
 struct RadarSourcePanel: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.openURL) private var openURL
 
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
@@ -38,13 +37,8 @@ struct RadarSourcePanel: View {
         RadarSourceTable(
             sources: telemetrySources,
             availableWidth: availableWidth,
-            onLogin: loginAction,
             onShowCandidates: { showingCandidates = true }
         )
-    }
-
-    private var loginAction: () -> Void {
-        { ScalableWebLogin.open(using: openURL, source: "radar") }
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
@@ -54,13 +48,13 @@ struct RadarSourcePanel: View {
                 statusColor: marketColor(marketCycle?.yahoo), dotColor: marketColor(marketCycle?.yahoo),
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
-                canLogin: false, canShowCandidates: false
+                canShowCandidates: false
             ),
             RadarTelemetrySource(
                 name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
                 received: session.tradeCount, valid: session.completedBarsStored,
                 requests: nil, errors: session.errorCount,
-                canLogin: false, canShowCandidates: false
+                canShowCandidates: false
             ),
             RadarTelemetrySource(
                 name: "Lang & Schwarz",
@@ -69,29 +63,29 @@ struct RadarSourcePanel: View {
                 dotColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
                 received: lsStatus?.quotes.count, valid: lsStatus.map { _ in lsFreshCount },
                 requests: lsStatus?.requestCount, errors: lsStatus?.errorCount,
-                canLogin: false, canShowCandidates: false
+                canShowCandidates: false
             ),
             RadarTelemetrySource(
                 name: "wallstreetONLINE", status: discoveryLabel,
                 statusColor: discoveryColor, dotColor: discoveryColor,
                 received: discoveryStatus?.snapshot?.candidates.count, valid: nil,
                 requests: discoveryRequests, errors: discoveryErrors,
-                canLogin: false, canShowCandidates: discoveryStatus?.snapshot != nil
+                canShowCandidates: discoveryStatus?.snapshot != nil
             ),
             RadarTelemetrySource(
                 name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
                 statusColor: marketColor(marketCycle?.traderFox), dotColor: marketColor(marketCycle?.traderFox),
                 received: marketCycle?.traderFox.received, valid: marketCycle?.traderFox.valid,
                 requests: marketCycle?.traderFox.operations, errors: marketCycle?.traderFox.errors,
-                canLogin: false, canShowCandidates: false
+                canShowCandidates: false
             )
         ]
         rows.insert(
             RadarTelemetrySource(
-                name: "Scalable", status: "BROWSER ONLY",
+                name: "Scalable", status: "NO CONNECTION",
                 statusColor: tableColor(.sourceInactive), dotColor: tableColor(.sourceInactive),
                 received: nil, valid: nil, requests: nil, errors: nil,
-                canLogin: true, canShowCandidates: false
+                canShowCandidates: false
             ),
             at: 2
         )
