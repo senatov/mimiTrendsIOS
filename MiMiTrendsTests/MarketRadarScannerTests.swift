@@ -16,6 +16,14 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(MarketRadarScanner.scanSlice([], offset: 0, limit: 4), [])
     }
 
+    func testInitialScanDoesNotRecheckSymbolsWhenRejectedCandidatesLeavePool() {
+        let remaining = ["A", "D", "E", "F", "G", "H"]
+        let batch = MarketRadarScanner.scanBatch(
+            remaining, processed: ["A", "B", "C", "D"], offset: 4, limit: 4
+        )
+        XCTAssertEqual(batch, ["E", "F", "G", "H"])
+    }
+
     func testYahooRateLimitDoesNotRetryAlternateHost() async {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [YahooRateLimitURLProtocol.self]

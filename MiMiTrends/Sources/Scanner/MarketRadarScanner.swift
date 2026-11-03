@@ -52,8 +52,11 @@ actor MarketRadarScanner {
                                     scannedSymbols: 0, storedSignals: 0, companyNames: names)
         }
         yahooCooldownUntil = nil
-        let symbols = Self.scanSlice(pool, offset: scanOffset, limit: 4)
-        if !pool.isEmpty { scanOffset = (scanOffset + symbols.count) % pool.count }
+        let pending = pool.filter { !initialScanSymbols.contains($0) }
+        let symbols = Self.scanBatch(pool, processed: initialScanSymbols, offset: scanOffset, limit: 4)
+        if pending.isEmpty && !pool.isEmpty {
+            scanOffset = (scanOffset + symbols.count) % pool.count
+        }
         guard !symbols.isEmpty else {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
                                     yahooCooldownUntil: nil,
@@ -222,6 +225,12 @@ actor MarketRadarScanner {
     static func scanSlice(_ symbols: [String], offset: Int, limit: Int) -> [String] {
         guard !symbols.isEmpty, limit > 0 else { return [] }
         return (0..<min(limit, symbols.count)).map { symbols[(offset + $0) % symbols.count] }
+    }
+
+    static func scanBatch(_ symbols: [String], processed: Set<String>, offset: Int, limit: Int) -> [String] {
+        let pending = symbols.filter { !processed.contains($0) }
+        return pending.isEmpty ? scanSlice(symbols, offset: offset, limit: limit)
+            : Array(pending.prefix(max(0, limit)))
     }
 }
 

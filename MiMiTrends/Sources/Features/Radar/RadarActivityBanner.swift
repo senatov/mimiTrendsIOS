@@ -2,12 +2,14 @@ import SwiftUI
 
 enum RadarActivity: Equatable {
     case loadingRankings(previousCount: Int?)
+    case scanningMarket(processed: Int, total: Int)
     case preparingFeed
     case connectingFeed(symbolCount: Int)
 
     var title: String {
         switch self {
         case .loadingRankings: "Collecting ranking candidates…"
+        case .scanningMarket: "Checking market symbols…"
         case .preparingFeed: "Preparing live feed…"
         case .connectingFeed: "Connecting to Finnhub…"
         }
@@ -18,6 +20,8 @@ enum RadarActivity: Equatable {
         case .loadingRankings(let previousCount):
             if let previousCount { "\(previousCount) saved candidates remain available" }
             else { "Fetching the current market ranking" }
+        case .scanningMarket(let processed, let total):
+            "Checked \(processed) of \(total); saved signals remain available"
         case .preparingFeed:
             "Loading the selected symbols and scan settings"
         case .connectingFeed(let symbolCount):
@@ -58,7 +62,7 @@ struct RadarWarmupOverlay: View {
     let total: Int
 
     private var title: String {
-        historyLoaded ? "Collecting current market statistics…" : "Restoring saved radar data…"
+        historyLoaded ? "Loading the first market sample…" : "Restoring saved radar data…"
     }
 
     private var detail: String {

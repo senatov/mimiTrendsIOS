@@ -171,15 +171,14 @@ struct RadarView: View {
                 let cycle = try await marketScanner.scan(settings: RadarScanPreferencesStore.load())
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
-                if cycle.initialScanTotal == 0 ||
-                    cycle.initialScanProcessed >= cycle.initialScanTotal ||
+                if cycle.scannedSymbols > 0 || cycle.initialScanTotal == 0 ||
                     cycle.yahooCooldownUntil != nil {
                     initialScanReady = true
                 }
                 if cycle.storedSignals > 0 { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "market-scan-finished",
-                    "symbols=\(cycle.scannedSymbols) signals=\(cycle.storedSignals) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
+                    "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) signals=\(cycle.storedSignals) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return
@@ -202,6 +201,12 @@ struct RadarView: View {
         }
         if discoveryRefreshID != nil {
             return .loadingRankings(previousCount: discoveryStatus?.snapshot?.candidates.count)
+        }
+        if let marketCycle, marketCycle.initialScanTotal > 0,
+           marketCycle.initialScanProcessed < marketCycle.initialScanTotal,
+           marketCycle.yahooCooldownUntil == nil {
+            return .scanningMarket(processed: marketCycle.initialScanProcessed,
+                                   total: marketCycle.initialScanTotal)
         }
         return nil
     }
