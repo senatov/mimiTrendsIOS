@@ -64,12 +64,12 @@ All builds use this repository's ignored `DerivedData/` directory. They do not c
 
 ## Scripts and macOS release
 
-Run these commands from the repository root. `Scripts/_common.zsh` supplies the shared project paths and selects an eligible iPad or simulator. The scripts use the generated `mimiTrends-iOS.xcodeproj`; `mimiTrendsIOS.xcodeproj` is retained for older local Xcode setups and is kept at the same release version.
+Run these commands from the repository root. `Scripts/_common.zsh` supplies the shared project paths and selects an eligible iPad or simulator. The scripts use the generated `mimiTrends-iOS.xcodeproj`; `mimiTrendsIOS.xcodeproj` remains available for older local Xcode setups and mirrors the same targets, source files, and release version. Regenerate through `Scripts/generate_project.zsh` after adding source files so both projects stay synchronized.
 
 | Script | What it does and when to use it |
 | --- | --- |
 | `_common.zsh` | Internal helper sourced by the other shell scripts; checks Xcode and the project, selects a paired iPad or iPadOS 27 simulator, and boots a simulator when needed. Do not run it on its own. |
-| `generate_project.zsh` | Regenerates the canonical Xcode project from `project.yml` after source files or project settings change. CI runs it before building. Requires XcodeGen. |
+| `generate_project.zsh` | Regenerates the canonical Xcode project from `project.yml` and mirrors it into the legacy project after source files or project settings change. CI runs it before building. Requires XcodeGen. |
 | `build_ios.zsh` | Builds for a paired iPad with Apple Development signing; `Release` selects the Release configuration. `SIMULATOR_UDID` or `CI=true` selects an ad hoc signed simulator build. It does not install the app. |
 | `run_ios.zsh` | Builds, installs, and launches on the selected iPad; with `SIMULATOR_UDID`, boots and uses that simulator. Use it to check the running iPad UI. |
 | `test_ios.zsh` | Runs the native XCTest suite on the selected iPad or simulator. CI uses a simulator. |
