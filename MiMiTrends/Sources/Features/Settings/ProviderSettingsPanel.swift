@@ -168,7 +168,7 @@ private struct ScalableSettingsCard: View {
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
             TrendsActionButton(title: "Open Scalable sign-in", systemImage: "arrow.up.right.square") {
-                openURL(ScalableWebLogin.url)
+                ScalableWebLogin.open(using: openURL, source: "settings")
             }
         }
     }

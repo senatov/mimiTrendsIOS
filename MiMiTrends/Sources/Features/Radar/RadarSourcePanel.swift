@@ -44,7 +44,7 @@ struct RadarSourcePanel: View {
     }
 
     private var loginAction: () -> Void {
-        { openURL(ScalableWebLogin.url) }
+        { ScalableWebLogin.open(using: openURL, source: "radar") }
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
