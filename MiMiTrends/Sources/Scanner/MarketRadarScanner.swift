@@ -58,6 +58,8 @@ actor MarketRadarScanner {
         var storedSignals = 0
         var firstYahooFailure: String?
         var yahooFailuresThisCycle = 0
+        var rejectedSymbolsThisCycle = 0
+        var firstRejectedSymbol: String?
         var rateLimited = false
         for batch in stride(from: 0, to: symbols.count, by: 4) {
             try Task.checkCancellation()
@@ -99,7 +101,7 @@ actor MarketRadarScanner {
                                                  rateLimited: true)
                         } catch RadarSourceError.invalidSymbol {
                             return SymbolOutcome(received: 0, signalStored: false,
-                                                 failure: "symbol=\(symbol) error=invalidSymbol",
+                                                 failure: nil,
                                                  rejectedSymbol: symbol)
                         } catch {
                             return SymbolOutcome(
@@ -122,6 +124,8 @@ actor MarketRadarScanner {
                     if outcome.rateLimited { rateLimited = true }
                     if let symbol = outcome.rejectedSymbol {
                         unsupportedSymbols.insert(symbol)
+                        rejectedSymbolsThisCycle += 1
+                        if firstRejectedSymbol == nil { firstRejectedSymbol = symbol }
                     }
                     if outcome.signalStored { storedSignals += 1 }
                 }
@@ -137,6 +141,12 @@ actor MarketRadarScanner {
             AppDiagnostics.shared.record(
                 .warning, "Yahoo", "minute-bars-failed",
                 "count=\(yahooFailuresThisCycle) first=\(firstYahooFailure)"
+            )
+        }
+        if let firstRejectedSymbol {
+            AppDiagnostics.shared.record(
+                .info, "Yahoo", "unsupported-symbols-skipped",
+                "count=\(rejectedSymbolsThisCycle) first=\(firstRejectedSymbol)"
             )
         }
         return MarketRadarCycle(
