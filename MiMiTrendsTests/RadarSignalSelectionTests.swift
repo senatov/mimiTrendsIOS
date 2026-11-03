@@ -15,6 +15,19 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(selected.first?.signalSource, "Rapid rise")
     }
 
+    func testRestoresOlderSignalsOnlyWhenNoFreshSignalsExist() {
+        let history = [event("OLD", source: "Rapid rise", at: 100),
+                       event("NEW", source: "Rapid crash", at: 300)]
+
+        let restored = RadarSignalSelection.displayHistory(history, since: 400, limit: 10)
+        XCTAssertTrue(restored.savedFallback)
+        XCTAssertEqual(restored.signals.map(\.symbol), ["NEW", "OLD"])
+
+        let fresh = RadarSignalSelection.displayHistory(history, since: 200, limit: 10)
+        XCTAssertFalse(fresh.savedFallback)
+        XCTAssertEqual(fresh.signals.map(\.symbol), ["NEW"])
+    }
+
     private func event(_ symbol: String, source: String, at epoch: Int64) -> ScanResult {
         ScanResult(
             symbol: symbol, price: 100, anomalyScore: 0,

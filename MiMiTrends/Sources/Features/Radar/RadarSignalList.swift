@@ -8,6 +8,7 @@ struct RadarSignalList: View {
     @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
+    let showingSavedHistory: Bool
     let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
@@ -57,7 +58,8 @@ struct RadarSignalList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack {
-                Text("Live radar").font(.title3.weight(.light))
+                Text(showingSavedHistory ? "Saved radar" : "Live radar")
+                    .font(.title3.weight(.light))
                 Text("\(signals.count) signals")
                     .font(.subheadline)
                     .foregroundStyle(tableColor(.signalMutedText))
@@ -68,6 +70,10 @@ struct RadarSignalList: View {
                     .accessibilityLabel("Refresh saved signals")
             }
             Divider()
+            if showingSavedHistory {
+                Text("Previous saved signals · waiting for current detections")
+                    .font(.caption).foregroundStyle(tableColor(.signalMutedText))
+            }
             if let errorMessage {
                 Text(errorMessage).font(.footnote).foregroundStyle(.red)
             }

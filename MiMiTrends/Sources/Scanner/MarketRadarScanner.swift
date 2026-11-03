@@ -11,6 +11,8 @@ struct MarketRadarCycle: Sendable {
     let yahoo: RadarSourceTotals
     let traderFox: RadarSourceTotals
     let yahooCooldownUntil: Date?
+    let initialScanProcessed: Int
+    let initialScanTotal: Int
     let scannedSymbols: Int
     let storedSignals: Int
     let companyNames: [String: String]
@@ -25,6 +27,8 @@ actor MarketRadarScanner {
     private var yahooCooldownUntil: Date?
     private var unsupportedSymbols = Set<String>()
     private var scanOffset = 0
+    private var initialScanSymbols = Set<String>()
+    private var initialScanTotal = 0
     private var yahooTotals = RadarSourceTotals()
     private var traderFoxTotals = RadarSourceTotals()
 
@@ -35,6 +39,7 @@ actor MarketRadarScanner {
         }
         let pool = Self.interleave(yahooCandidates.map(\.symbol), traderFoxCandidates.map(\.symbol), limit: 16)
             .filter { !unsupportedSymbols.contains($0) }
+        if initialScanTotal == 0 { initialScanTotal = pool.count }
         let names = Dictionary(
             (yahooCandidates + traderFoxCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
@@ -42,6 +47,8 @@ actor MarketRadarScanner {
         if let yahooCooldownUntil, Date() < yahooCooldownUntil {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
                                     yahooCooldownUntil: yahooCooldownUntil,
+                                    initialScanProcessed: initialScanSymbols.count,
+                                    initialScanTotal: initialScanTotal,
                                     scannedSymbols: 0, storedSignals: 0, companyNames: names)
         }
         yahooCooldownUntil = nil
@@ -50,6 +57,8 @@ actor MarketRadarScanner {
         guard !symbols.isEmpty else {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
                                     yahooCooldownUntil: nil,
+                                    initialScanProcessed: initialScanSymbols.count,
+                                    initialScanTotal: initialScanTotal,
                                     scannedSymbols: 0, storedSignals: 0, companyNames: names)
         }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
@@ -130,6 +139,7 @@ actor MarketRadarScanner {
                     if outcome.signalStored { storedSignals += 1 }
                 }
             }
+            initialScanSymbols.formUnion(group)
             if rateLimited {
                 yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
                 AppDiagnostics.shared.record(.warning, "Yahoo", "rate-limited",
@@ -152,6 +162,8 @@ actor MarketRadarScanner {
         return MarketRadarCycle(
             yahoo: yahooTotals, traderFox: traderFoxTotals,
             yahooCooldownUntil: yahooCooldownUntil,
+            initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
+            initialScanTotal: initialScanTotal,
             scannedSymbols: symbols.count, storedSignals: storedSignals, companyNames: names
         )
     }

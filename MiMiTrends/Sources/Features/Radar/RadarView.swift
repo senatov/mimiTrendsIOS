@@ -9,6 +9,9 @@ struct RadarView: View {
     @Binding var symbol: String
     @State private var setupMessage: String?
     @State private var recentSignals: [ScanResult] = []
+    @State private var showingSavedHistory = false
+    @State private var hasLoadedHistory = false
+    @State private var initialScanReady = false
     @State private var companyMetadata: [String: RadarCompanyMetadata] = [:]
     @State private var companyMetadataService = RadarCompanyMetadataService()
     @State private var selectedSignal: ScanResult?
@@ -168,6 +171,11 @@ struct RadarView: View {
                 let cycle = try await marketScanner.scan(settings: RadarScanPreferencesStore.load())
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
+                if cycle.initialScanTotal == 0 ||
+                    cycle.initialScanProcessed >= cycle.initialScanTotal ||
+                    cycle.yahooCooldownUntil != nil {
+                    initialScanReady = true
+                }
                 if cycle.storedSignals > 0 { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "market-scan-finished",
@@ -176,6 +184,7 @@ struct RadarView: View {
             } catch is CancellationError {
                 return
             } catch {
+                initialScanReady = true
                 AppDiagnostics.shared.record(
                     .error, "Radar", "market-scan-failed",
                     "error=\(String(describing: type(of: error)))"
@@ -200,6 +209,7 @@ struct RadarView: View {
     private func signalList(compact: Bool) -> some View {
         RadarSignalList(
             signals: recentSignals,
+            showingSavedHistory: showingSavedHistory,
             quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
             companyMetadata: companyMetadata,
@@ -212,21 +222,34 @@ struct RadarView: View {
             },
             onRefresh: { Task { await refreshSignals() } }
         )
+        .allowsHitTesting(!isInitialScanBlocking)
+        .accessibilityHidden(isInitialScanBlocking)
+        .overlay {
+            if isInitialScanBlocking {
+                RadarWarmupOverlay(
+                    historyLoaded: hasLoadedHistory, savedCount: recentSignals.count,
+                    processed: marketCycle?.initialScanProcessed ?? 0,
+                    total: marketCycle?.initialScanTotal ?? 0
+                )
+            }
+        }
     }
 
+    private var isInitialScanBlocking: Bool { !hasLoadedHistory || !initialScanReady }
+
     private func refreshSignals(selectNewest: Bool = false) async {
+        defer { hasLoadedHistory = true }
         do {
             let limit = min(max(maxResults, 5), 100)
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
-            let loaded = try await Task.detached(priority: .userInitiated) {
+            let (loaded, savedFallback) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
-                let history = try await store.loadRecent(
-                    limit: min(limit * 10, 500), sinceEpochMillis: cutoff
-                )
-                return RadarSignalSelection.latestPerSymbol(history, limit: limit)
+                let history = try await store.loadRecent(limit: min(limit * 10, 500))
+                return RadarSignalSelection.displayHistory(history, since: cutoff, limit: limit)
             }.value
             recentSignals = loaded
+            showingSavedHistory = savedFallback
             AppDiagnostics.shared.record(.info, "Radar", "history-loaded", "signals=\(loaded.count)")
             historyError = nil
             if let selectedSignal, !loaded.contains(where: {

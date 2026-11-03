@@ -49,3 +49,48 @@ struct RadarActivityBanner: View {
         .accessibilityLabel("\(activity.title) \(activity.detail)")
     }
 }
+
+struct RadarWarmupOverlay: View {
+    @Environment(\.colorScheme) private var colorScheme
+    let historyLoaded: Bool
+    let savedCount: Int
+    let processed: Int
+    let total: Int
+
+    private var title: String {
+        historyLoaded ? "Collecting current market statistics…" : "Restoring saved radar data…"
+    }
+
+    private var detail: String {
+        if !historyLoaded { return "Loading signals from the previous session" }
+        if total == 0 { return "Finding market candidates" }
+        return "Checked \(min(processed, total)) of \(total) market symbols"
+    }
+
+    var body: some View {
+        ZStack {
+            Rectangle().fill(Color.black.opacity(colorScheme == .dark ? 0.28 : 0.08))
+            VStack(alignment: .leading, spacing: 12) {
+                Text(title).font(.headline)
+                Text(detail).font(.subheadline).foregroundStyle(TrendsColors.supportingInk)
+                if historyLoaded && total > 0 {
+                    ProgressView(value: Double(min(processed, total)), total: Double(total))
+                } else {
+                    ProgressView().controlSize(.regular)
+                }
+                if savedCount > 0 {
+                    Text("\(savedCount) saved signals loaded")
+                        .font(.caption).foregroundStyle(TrendsColors.supportingInk)
+                }
+            }
+            .frame(maxWidth: 360, alignment: .leading)
+            .padding(20)
+            .trendsPanel()
+            .padding(12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(title) \(detail)")
+    }
+}
