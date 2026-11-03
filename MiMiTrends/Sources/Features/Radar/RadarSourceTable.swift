@@ -242,7 +242,7 @@ private struct RadarSourceTelemetryRow: View {
             Text(source.name).lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 2)
             if source.canLogin {
-                Button("Login", action: onLogin)
+                Button("Sign in", action: onLogin)
                     .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.sourceActionAccent), compact: true))
             } else if source.canShowCandidates {
                 Button(action: onShowCandidates) {

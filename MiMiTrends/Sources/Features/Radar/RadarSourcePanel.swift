@@ -3,6 +3,7 @@ import SwiftUI
 struct RadarSourcePanel: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
 
     let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
@@ -11,12 +12,6 @@ struct RadarSourcePanel: View {
     let discoveryErrors: Int
     let marketCycle: MarketRadarCycle?
 
-    #if os(macOS)
-    @State private var scalableStatus = "CHECKING"
-    @State private var scalableChecks = 0
-    @State private var scalableErrors = 0
-    @State private var loginTask: Task<Void, Never>?
-    #endif
     @State private var showingCandidates = false
 
     var body: some View {
@@ -37,10 +32,6 @@ struct RadarSourcePanel: View {
                 DiscoveryCandidateList(snapshot: snapshot)
             }
         }
-        #if os(macOS)
-        .task { await checkScalable() }
-        .onDisappear { loginTask?.cancel() }
-        #endif
     }
 
     private func telemetryTable(availableWidth: CGFloat) -> some View {
@@ -53,11 +44,7 @@ struct RadarSourcePanel: View {
     }
 
     private var loginAction: () -> Void {
-        #if os(macOS)
-        { startScalableLogin() }
-        #else
-        {}
-        #endif
+        { openURL(ScalableWebLogin.url) }
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
@@ -99,28 +86,15 @@ struct RadarSourcePanel: View {
                 canLogin: false, canShowCandidates: false
             )
         ]
-        #if os(macOS)
         rows.insert(
             RadarTelemetrySource(
-                name: "Scalable", status: scalableStatus,
-                statusColor: tableColor(scalableStatus == "LOGIN NEEDED" ? .sourceAttention : .sourceInactive),
-                dotColor: tableColor(scalableStatus == "LOGIN NEEDED" ? .sourceAttention : .sourceInactive),
-                received: nil, valid: nil, requests: scalableChecks, errors: scalableErrors,
-                canLogin: scalableStatus == "LOGIN NEEDED", canShowCandidates: false
-            ),
-            at: 2
-        )
-        #else
-        rows.insert(
-            RadarTelemetrySource(
-                name: "Scalable", status: "NOT CONNECTED",
+                name: "Scalable", status: "BROWSER ONLY",
                 statusColor: tableColor(.sourceInactive), dotColor: tableColor(.sourceInactive),
                 received: nil, valid: nil, requests: nil, errors: nil,
-                canLogin: false, canShowCandidates: false
+                canLogin: true, canShowCandidates: false
             ),
             at: 2
         )
-        #endif
         return rows
     }
 
@@ -169,40 +143,4 @@ struct RadarSourcePanel: View {
         return tableColor(.sourceInactive)
     }
 
-    #if os(macOS)
-    private func checkScalable() async {
-        scalableChecks += 1
-        do {
-            scalableStatus = try await ScalableCLIService().isAuthorized() ? "CLI READY" : "LOGIN NEEDED"
-        } catch ScalableCLIError.notInstalled {
-            scalableStatus = "CLI UNAVAILABLE"
-            scalableErrors += 1
-        } catch {
-            scalableStatus = "LOGIN NEEDED"
-            scalableErrors += 1
-        }
-    }
-
-    private func startScalableLogin() {
-        guard loginTask == nil else { return }
-        scalableStatus = "SIGNING IN"
-        loginTask = Task {
-            do {
-                try await ScalableCLIService().startReadOnlyLogin()
-                for _ in 0..<120 {
-                    try Task.checkCancellation()
-                    try await Task.sleep(for: .seconds(5))
-                    await checkScalable()
-                    if scalableStatus == "CLI READY" { break }
-                }
-            } catch is CancellationError {
-                return
-            } catch {
-                scalableStatus = "LOGIN NEEDED"
-                scalableErrors += 1
-            }
-            loginTask = nil
-        }
-    }
-    #endif
 }

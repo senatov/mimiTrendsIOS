@@ -47,9 +47,7 @@ struct ProviderSettingsPanel: View {
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )
             }
-            #if os(macOS)
             ScalableSettingsCard()
-            #endif
             if let savingMessage {
                 Label(savingMessage, systemImage: "checkmark.circle")
                     .font(.body.weight(.light))
@@ -162,32 +160,16 @@ private struct ProviderEndpointRow: View {
 }
 
 private struct ScalableSettingsCard: View {
-    #if os(macOS)
-    @State private var status = "Checking local session…"
-    #endif
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         SettingsGroup(title: "Scalable account · optional") {
-            #if os(macOS)
-            Text(status)
+            Text("Sign in on Scalable's website. This does not connect your account to mimiTrends; import a CSV export to use trade history here.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
-            TrendsActionButton(title: "Login with Scalable", systemImage: "person.crop.circle") {
-                Task {
-                    do {
-                        try await ScalableCLIService().startReadOnlyLogin()
-                        status = "Complete the Scalable sign-in in your browser."
-                    } catch {
-                        status = error.localizedDescription
-                    }
-                }
+            TrendsActionButton(title: "Open Scalable sign-in", systemImage: "arrow.up.right.square") {
+                openURL(ScalableWebLogin.url)
             }
-            .task {
-                status = (try? await ScalableCLIService().isAuthorized()) == true
-                    ? "Existing local CLI session is authorized."
-                    : "Login is required on this Mac."
-            }
-            #endif
         }
     }
 }
