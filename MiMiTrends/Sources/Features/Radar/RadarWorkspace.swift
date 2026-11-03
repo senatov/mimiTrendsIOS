@@ -11,8 +11,6 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
     @State private var topDrag: Double?
     @State private var topStart: Double?
 
-    private let sourcePanelHeight: CGFloat = 238
-
     var body: some View {
         GeometryReader { geometry in
             if dynamicTypeSize.isAccessibilitySize {
@@ -43,14 +41,14 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
                 signals(leftWidth < 620)
                     .frame(width: leftWidth, height: topHeight)
                     .clipped()
-                VStack(spacing: 6) {
-                    sources()
-                        .frame(height: sourcePanelHeight, alignment: .top)
-                    controls()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                ScrollView(.vertical) {
+                    VStack(spacing: 6) {
+                        sources().fixedSize(horizontal: false, vertical: true)
+                        controls().fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
                 .frame(width: rightWidth, height: topHeight, alignment: .top)
-                .clipped()
                 .layoutPriority(1)
             }
             .frame(width: size.width, alignment: .leading)
@@ -61,16 +59,13 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
     }
 
     private func stackedWorkspace(size: CGSize) -> some View {
-        let sourceHeight = min(sourcePanelHeight, max(190, size.height * 0.32))
-        let controlsHeight = min(130, max(96, size.height * 0.18))
-        let chartAndSignalHeight = max(0, size.height - sourceHeight - controlsHeight)
-        let signalHeight = RadarPaneLayout.clamp(chartAndSignalHeight * 0.43, minimum: 140, maximum: chartAndSignalHeight - 150)
         return VStack(spacing: 6) {
-            sources().frame(height: sourceHeight, alignment: .top)
-            controls().frame(height: controlsHeight, alignment: .topLeading)
-            signals(true).frame(height: signalHeight)
-            plot().frame(maxHeight: .infinity)
+            sources().fixedSize(horizontal: false, vertical: true)
+            controls().fixedSize(horizontal: false, vertical: true)
+            signals(true).frame(minHeight: 140, maxHeight: .infinity)
+            plot().frame(minHeight: 150, maxHeight: .infinity)
         }
+        .frame(height: size.height)
     }
 
     private func chartSplitHandle(topHeight: CGFloat, availableHeight: CGFloat, totalHeight: CGFloat) -> some View {
@@ -100,8 +95,8 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
     private var scrollingFallback: some View {
         ScrollView {
             VStack(spacing: 10) {
-                sources().frame(height: sourcePanelHeight, alignment: .top)
-                controls()
+                sources().fixedSize(horizontal: false, vertical: true)
+                controls().fixedSize(horizontal: false, vertical: true)
                 signals(true).frame(minHeight: 170)
                 plot().frame(height: 420)
             }

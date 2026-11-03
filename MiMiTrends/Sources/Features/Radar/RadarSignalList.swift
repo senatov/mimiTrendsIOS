@@ -71,7 +71,7 @@ struct RadarSignalList: View {
             }
             Divider()
             if showingSavedHistory {
-                Text("Previous saved signals · waiting for current detections")
+                Text("Older saved signals · no new confirmed signals yet")
                     .font(.caption).foregroundStyle(tableColor(.signalMutedText))
             }
             if let errorMessage {

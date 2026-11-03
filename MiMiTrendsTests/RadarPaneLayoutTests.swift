@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import MiMiTrends
 
 final class RadarPaneLayoutTests: XCTestCase {
@@ -37,17 +38,24 @@ final class RadarPaneLayoutTests: XCTestCase {
         }
     }
 
-    func testStackedPanelsReserveChartAndSourceSpace() {
-        let totalHeight: CGFloat = 600
-        let signals = RadarPaneLayout.stackedSignalHeight(totalHeight: totalHeight, ratio: 1)
-        let sources = RadarPaneLayout.stackedSourceHeight(
-            totalHeight: totalHeight, signalHeight: signals, ratio: 1
+    func testTelemetryColumnsUseTheirOwnContentWidths() {
+        let sources = [RadarTelemetrySource(
+            name: "wallstreetONLINE", status: "NO FRESH QUOTES",
+            statusColor: .red, dotColor: .red,
+            received: 1_234_567, valid: 12, requests: 2, errors: 0,
+            canShowCandidates: true
+        )]
+        let narrow = RadarSourceTableLayout.fit(
+            sources: sources, availableWidth: 320, fontName: "System", fontSize: 14
+        )
+        let wide = RadarSourceTableLayout.fit(
+            sources: sources, availableWidth: 800, fontName: "System", fontSize: 14
         )
 
-        XCTAssertGreaterThanOrEqual(signals, 140)
-        XCTAssertGreaterThanOrEqual(sources, 120)
-        XCTAssertGreaterThanOrEqual(
-            totalHeight - 2 * RadarPaneLayout.handleSize - signals - sources, 260
-        )
+        XCTAssertGreaterThan(narrow.table, 320)
+        XCTAssertGreaterThan(narrow.width(for: .received), narrow.width(for: .errors))
+        XCTAssertGreaterThan(narrow.width(for: .source), narrow.width(for: .requests))
+        XCTAssertEqual(wide.table, 800, accuracy: 0.01)
+        XCTAssertGreaterThan(wide.width(for: .source), narrow.width(for: .source))
     }
 }

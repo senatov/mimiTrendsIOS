@@ -49,35 +49,44 @@ enum RadarSourceSortColumn: CaseIterable {
 }
 
 struct RadarSourceTableLayout {
-    let source: CGFloat
-    let metric: CGFloat
-    let status: CGFloat
+    private let widths: [RadarSourceSortColumn: CGFloat]
     let table: CGFloat
 
     func width(for column: RadarSourceSortColumn) -> CGFloat {
-        switch column {
-        case .source: source
-        case .received, .valid, .requests, .errors: metric
-        case .status: status
+        widths[column] ?? 0
+    }
+
+    static func fit(sources: [RadarTelemetrySource], availableWidth: CGFloat,
+                    fontName: String, fontSize: CGFloat) -> Self {
+        var widths: [RadarSourceSortColumn: CGFloat] = [:]
+        for column in RadarSourceSortColumn.allCases {
+            let heading = measure([column.title.uppercased()], fontName: fontName, fontSize: fontSize) + 29
+            let content: CGFloat
+            switch column {
+            case .source:
+                content = measure(sources.map(\.name), fontName: fontName, fontSize: fontSize) +
+                    (sources.contains { $0.canShowCandidates } ? 53 : 18)
+            case .status:
+                content = measure(sources.map { $0.status.uppercased() }, fontName: fontName,
+                                  fontSize: fontSize) + 14
+            default:
+                content = measure(sources.compactMap { $0.value(for: column)?.formatted() },
+                                  fontName: fontName, fontSize: fontSize) + 18
+            }
+            widths[column] = max(column == .source ? 100 : 48, max(heading, content))
         }
+        let minimumWidth = RadarSourceSortColumn.allCases.reduce(CGFloat(14)) { $0 + (widths[$1] ?? 0) }
+        let spare = max(0, availableWidth - minimumWidth)
+        widths[.source, default: 0] += spare * 0.6
+        widths[.status, default: 0] += spare * 0.4
+        return Self(widths: widths, table: minimumWidth + spare)
     }
 
-    static func fit(sources: [RadarTelemetrySource], availableWidth: CGFloat) -> Self {
-        let sourceWidth = max(138, measure(sources.map(\.name)) + 34)
-        let statusWidth = max(150, measure(sources.map(\.status)) + 34)
-        let counts = sources.flatMap { [$0.received, $0.valid, $0.requests, $0.errors].compactMap { $0 } }
-        let metricWidth = max(68, measure(counts.map { $0.formatted() }) + 28)
-        let minimumTableWidth = sourceWidth + metricWidth * 4 + statusWidth + 14
-        let tableWidth = max(availableWidth, minimumTableWidth)
-        let fittedSourceWidth = max(sourceWidth, tableWidth - metricWidth * 4 - statusWidth - 14)
-        return Self(source: fittedSourceWidth, metric: metricWidth, status: statusWidth, table: tableWidth)
-    }
-
-    private static func measure(_ values: [String]) -> CGFloat {
+    private static func measure(_ values: [String], fontName: String, fontSize: CGFloat) -> CGFloat {
         #if os(macOS)
-        let font = NSFont.systemFont(ofSize: 12)
+        let font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
         #else
-        let font = UIFont.systemFont(ofSize: 12)
+        let font = UIFont(name: fontName, size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
         #endif
         return values.prefix(200).map { ($0 as NSString).size(withAttributes: [.font: font]).width }.max() ?? 0
     }
@@ -95,7 +104,9 @@ struct RadarSourceTable: View {
     @State private var ascending = true
 
     private var layout: RadarSourceTableLayout {
-        RadarSourceTableLayout.fit(sources: sources, availableWidth: availableWidth)
+        RadarSourceTableLayout.fit(sources: sources, availableWidth: availableWidth,
+                                   fontName: tableTypography.fontName,
+                                   fontSize: CGFloat(tableTypography.size))
     }
 
     private var sortedSources: [RadarTelemetrySource] {
@@ -139,6 +150,7 @@ struct RadarSourceTable: View {
             }
             .frame(width: layout.table, alignment: .leading)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var headings: some View {
@@ -211,17 +223,16 @@ private struct RadarSourceTelemetryRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            sourceCell.frame(width: layout.source, alignment: .leading)
-            metric(source.received).frame(width: layout.metric, alignment: .trailing)
-            metric(source.valid).frame(width: layout.metric, alignment: .trailing)
-            metric(source.requests).frame(width: layout.metric, alignment: .trailing)
-            metric(source.errors).frame(width: layout.metric, alignment: .trailing)
+            sourceCell.frame(width: layout.width(for: .source), alignment: .leading)
+            metric(source.received).frame(width: layout.width(for: .received), alignment: .trailing)
+            metric(source.valid).frame(width: layout.width(for: .valid), alignment: .trailing)
+            metric(source.requests).frame(width: layout.width(for: .requests), alignment: .trailing)
+            metric(source.errors).frame(width: layout.width(for: .errors), alignment: .trailing)
             Text(source.status.uppercased())
-        .font(.system(size: 12, weight: .regular))
+                .font(tableTypography.font(size: tableTypography.size))
                 .foregroundStyle(source.statusColor)
                 .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .frame(width: layout.status, alignment: .trailing)
+                .frame(width: layout.width(for: .status), alignment: .trailing)
         }
         .font(tableTypography.font(size: tableTypography.size))
         .padding(.horizontal, 7)
@@ -271,14 +282,12 @@ private struct RadarSourceColumnLines: View {
     var body: some View {
         GeometryReader { geometry in
             Path { path in
-                var x = inset + layout.source
-                for _ in 0..<4 {
+                var x = inset
+                for column in RadarSourceSortColumn.allCases.dropLast() {
+                    x += layout.width(for: column)
                     path.move(to: CGPoint(x: x, y: 0))
                     path.addLine(to: CGPoint(x: x, y: geometry.size.height))
-                    x += layout.metric
                 }
-                path.move(to: CGPoint(x: x, y: 0))
-                path.addLine(to: CGPoint(x: x, y: geometry.size.height))
             }
             .stroke(color, lineWidth: 1)
         }

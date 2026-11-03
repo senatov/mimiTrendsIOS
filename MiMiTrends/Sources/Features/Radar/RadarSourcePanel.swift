@@ -12,33 +12,32 @@ struct RadarSourcePanel: View {
     let marketCycle: MarketRadarCycle?
 
     @State private var showingCandidates = false
+    @State private var availableTableWidth: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Source telemetry")
                 .font(.title3.weight(.light))
             Divider()
-            GeometryReader { geometry in
-                telemetryTable(availableWidth: geometry.size.width)
-            }
+            RadarSourceTable(
+                sources: telemetrySources,
+                availableWidth: availableTableWidth,
+                onShowCandidates: { showingCandidates = true }
+            )
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
         .foregroundStyle(tableColor(.sourceBodyText))
         .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
+        .fixedSize(horizontal: false, vertical: true)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
+            availableTableWidth = max(0, width - 22)
+        }
         .navigationDestination(isPresented: $showingCandidates) {
             if let snapshot = discoveryStatus?.snapshot {
                 DiscoveryCandidateList(snapshot: snapshot)
             }
         }
-    }
-
-    private func telemetryTable(availableWidth: CGFloat) -> some View {
-        RadarSourceTable(
-            sources: telemetrySources,
-            availableWidth: availableWidth,
-            onShowCandidates: { showingCandidates = true }
-        )
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
