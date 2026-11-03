@@ -31,6 +31,7 @@ struct RadarChartPlot: View {
             Chart {
                 ForEach(data.bars, id: \.minuteEpochSeconds) { bar in
                     let time = Date(timeIntervalSince1970: TimeInterval(bar.minuteEpochSeconds))
+                    let halfWidth: TimeInterval = data.range.usesDailyBars ? 9 * 3_600 : 20
                     let color: Color = bar.close >= bar.open ? .green : .red
                     RuleMark(
                         x: .value("Minute", time),
@@ -39,8 +40,8 @@ struct RadarChartPlot: View {
                     )
                     .foregroundStyle(color)
                     RectangleMark(
-                        xStart: .value("Start", time.addingTimeInterval(-20)),
-                        xEnd: .value("End", time.addingTimeInterval(20)),
+                        xStart: .value("Start", time.addingTimeInterval(-halfWidth)),
+                        xEnd: .value("End", time.addingTimeInterval(halfWidth)),
                         yStart: .value("Open", bar.open),
                         yEnd: .value("Close", bar.close)
                     )
@@ -87,7 +88,7 @@ struct RadarChartPlot: View {
                 )
             }
             .frame(height: priceHeight)
-            .accessibilityLabel("Saved minute candle chart with EMA 9 and EMA 21 for \(symbol)")
+            .accessibilityLabel("\(data.range.usesDailyBars ? "Daily" : "Minute") candle chart with EMA 9 and EMA 21 for \(symbol)")
 
             HStack(spacing: 14) {
                 Label("EMA 9", systemImage: "line.diagonal")

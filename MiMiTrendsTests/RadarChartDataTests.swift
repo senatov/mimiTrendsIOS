@@ -56,6 +56,18 @@ final class RadarChartDataTests: XCTestCase {
         XCTAssertNil(RadarChartData.nearestBar(to: Date(), in: []))
     }
 
+    func testDailyEMAContinuesAcrossWeekend() {
+        let friday: Int64 = 1_795_248_000
+        let bars = [bar(minute: friday / 60, close: 10),
+                    bar(minute: (friday + 3 * 86_400) / 60, close: 12)]
+        let data = RadarChartData(
+            allBars: bars, range: .oneWeek, nowEpochSeconds: friday + 3 * 86_400
+        )
+        XCTAssertEqual(data.bars.count, 2)
+        XCTAssertEqual(data.fastEMA.map(\.segment), [0, 0])
+        XCTAssertEqual(data.fastEMA.last?.value ?? 0, 10.4, accuracy: 0.0001)
+    }
+
     private func bar(minute: Int64, close: Double) -> MinuteBar {
         MinuteBar(
             symbol: "TEST", minuteEpochSeconds: minute * 60,
