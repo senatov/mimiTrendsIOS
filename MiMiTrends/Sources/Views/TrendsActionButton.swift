@@ -23,9 +23,10 @@ struct TrendsActionButton: View {
 struct TrendsActionButtonStyle: ButtonStyle {
     var tint: Color = .blue
     var compact = true
+    var tiny = false
 
     func makeBody(configuration: Configuration) -> some View {
-        TrendsActionButtonBody(configuration: configuration, tint: tint, compact: compact)
+        TrendsActionButtonBody(configuration: configuration, tint: tint, compact: compact, tiny: tiny)
     }
 }
 
@@ -33,6 +34,7 @@ private struct TrendsActionButtonBody: View {
     let configuration: TrendsActionButtonStyle.Configuration
     let tint: Color
     let compact: Bool
+    let tiny: Bool
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -44,8 +46,8 @@ private struct TrendsActionButtonBody: View {
 
     var body: some View {
         configuration.label
-            .font(.body)
-            .padding(.horizontal, compact ? 10 : 12)
+            .font(buttonFont)
+            .padding(.horizontal, tiny ? 6 : compact ? 10 : 12)
             .frame(minWidth: minimumWidth, minHeight: minimumHeight)
             .background {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
@@ -89,11 +91,19 @@ private struct TrendsActionButtonBody: View {
             .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: configuration.isPressed)
     }
 
+    private var buttonFont: Font {
+        #if os(iOS)
+        tiny ? .system(size: 11, weight: .ultraLight) : .body
+        #else
+        tiny ? .system(size: 10, weight: .ultraLight) : .body
+        #endif
+    }
+
     private var minimumHeight: CGFloat {
         #if os(iOS)
         44
         #else
-        compact ? 24 : 30
+        tiny ? 20 : compact ? 24 : 30
         #endif
     }
 

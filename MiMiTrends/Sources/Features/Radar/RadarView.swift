@@ -113,14 +113,15 @@ struct RadarView: View {
     }
 
     private var companyMetadataRequestKey: String {
-        let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
+        let symbols = Set(recentSignals.map(\.symbol))
         return chartSymbol.uppercased() + "|" + symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
     }
 
     private func refreshCompanyMetadata() async {
-        let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
+        let symbols = [chartSymbol] + recentSignals.map(\.symbol)
+        companyMetadata = await companyMetadataService.cached(symbols: symbols)
         companyMetadata = await companyMetadataService.load(
-            symbols: [chartSymbol] + symbols.sorted(), names: marketCycle?.companyNames ?? [:]
+            symbols: symbols, names: marketCycle?.companyNames ?? [:]
         )
     }
 

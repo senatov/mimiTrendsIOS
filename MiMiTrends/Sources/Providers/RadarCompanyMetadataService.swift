@@ -3,20 +3,26 @@ import Foundation
 actor RadarCompanyMetadataService {
     private let session: URLSession
     private let cacheLifetime: Int64 = 7 * 24 * 60 * 60 * 1_000
+    private let incompleteCacheLifetime: Int64 = 15 * 60 * 1_000
 
     init(session: URLSession = .shared) { self.session = session }
+
+    func cached(symbols: [String]) async -> [String: RadarCompanyMetadata] {
+        guard let store = try? RadarCompanyMetadataStore(url: RadarCompanyMetadataStore.defaultURL()) else { return [:] }
+        return (try? await store.load(symbols: Self.normalized(symbols))) ?? [:]
+    }
 
     func load(symbols: [String], names: [String: String]) async -> [String: RadarCompanyMetadata] {
         do {
             let store = try RadarCompanyMetadataStore(url: RadarCompanyMetadataStore.defaultURL())
-            var seen = Set<String>()
-            let normalized = symbols.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
-                .filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(30)
+            let normalized = Self.normalized(symbols)
             var metadata = try await store.load(symbols: Array(normalized))
             let now = Int64(Date().timeIntervalSince1970 * 1_000)
             let stale = normalized.filter { symbol in
                 guard let cached = metadata[symbol] else { return true }
-                return now - cached.updatedAtMillis > cacheLifetime
+                let lifetime = cached.logoData == nil || cached.countryCode == nil
+                    ? incompleteCacheLifetime : cacheLifetime
+                return now - cached.updatedAtMillis > lifetime
             }
             let token = try? FinnhubCredentialStore.load()
             let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
@@ -67,6 +73,12 @@ actor RadarCompanyMetadataService {
                                          "error=\(String(describing: type(of: error)))")
             return [:]
         }
+    }
+
+    private static func normalized(_ symbols: [String]) -> [String] {
+        var seen = Set<String>()
+        return Array(symbols.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+            .filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(101))
     }
 
     private static func fetchProfile(symbol: String, apiKey: String?, session: URLSession) async -> CompanyProfileResponse? {

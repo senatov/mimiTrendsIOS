@@ -63,6 +63,7 @@ struct RadarSignalRow: View {
                 eventBadge
                 Spacer(minLength: 4)
                 movement
+                windowText
             }
             ageText
         }
@@ -79,8 +80,7 @@ struct RadarSignalRow: View {
                 Button("Rumors") {
                     onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
                 }
-                    .font(.subheadline)
-                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true))
+                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                     .fixedSize(horizontal: true, vertical: false)
             }
             .padding(.horizontal, 6)
@@ -88,6 +88,9 @@ struct RadarSignalRow: View {
             movement
                 .padding(.horizontal, 6)
                 .frame(width: widths.movement, alignment: .trailing)
+            windowText
+                .padding(.horizontal, 6)
+                .frame(width: widths.window, alignment: .trailing)
             Text(formattedPrice.text)
                 .monospacedDigit()
                 .help(formattedPrice.explanation)
@@ -102,7 +105,7 @@ struct RadarSignalRow: View {
 
     private var companyIdentity: some View {
         HStack(spacing: 5) {
-            RadarCompanyMark(metadata: companyMetadata, name: companyName)
+            RadarCompanyMark(metadata: companyMetadata, name: companyName, showsPlaceholder: true)
             Text(companyName).lineLimit(1)
             if let flag = RadarCompanyMetadata.flag(for: companyMetadata?.countryCode ?? RadarCompanyMetadata.countryFallback(for: signal.symbol)) {
                 Text(flag).accessibilityLabel("Issuer country")
@@ -121,9 +124,16 @@ struct RadarSignalRow: View {
     }
 
     private var movement: some View {
-        Text("\(signal.windowChangePercent.formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))))% / \(signal.signalWindowLabel)")
+        Text("\(signal.windowChangePercent.formatted(.number.sign(strategy: .always()).precision(.fractionLength(2))))%")
             .font(tableTypography.font(size: tableTypography.size * 0.86).monospacedDigit())
             .foregroundStyle(signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise))
+            .lineLimit(1)
+    }
+
+    private var windowText: some View {
+        Text(signal.signalWindowLabel)
+            .font(tableTypography.font(size: tableTypography.size * 0.86).monospacedDigit())
+            .foregroundStyle(tableColor(.signalMutedText))
             .lineLimit(1)
     }
 
@@ -239,7 +249,7 @@ struct RadarSignalColumnLines: View {
         GeometryReader { geometry in
             Path { path in
                 var x = horizontalInset + widths.company
-                for width in [widths.event, widths.movement, widths.price] {
+                for width in [widths.event, widths.movement, widths.window, widths.price] {
                     path.move(to: CGPoint(x: x, y: 0))
                     path.addLine(to: CGPoint(x: x, y: geometry.size.height))
                     x += width

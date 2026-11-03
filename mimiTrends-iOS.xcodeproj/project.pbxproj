@@ -124,6 +124,7 @@
 		CEC005ADCE1D13DA8216CFFD /* HeaderBuildBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06B6AB0F726BA83574BB6C3 /* HeaderBuildBadge.swift */; };
 		D6091C23869009035ADDADDE /* DiscoveryRankingBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50748F16A78F3C42B993F374 /* DiscoveryRankingBatch.swift */; };
 		D63D58AA798680833CA73137 /* RadarSignalPriceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A3BB2451399E654A8E8A0D /* RadarSignalPriceTests.swift */; };
+		E088B913DC8304392B964CB1 /* RadarSignalColumns.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */; };
 		E1EA5AE0F47FDA7E76C7F2D9 /* MiminaviInfo1DecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBBB6C2292BBB1F06288300 /* MiminaviInfo1DecoderTests.swift */; };
 		E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40276ADEA60EC008CF7CDB8 /* ScanResult.swift */; };
 		E2D61BFCDEF3AD2FDA077055 /* MarketQuoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BC5153BBD2D84EDC0237EC /* MarketQuoteStoreTests.swift */; };
@@ -274,6 +275,7 @@
 		C31B280E8FA9DB0623EFBA3B /* DiscoveryCandidateSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelector.swift; sourceTree = "<group>"; };
 		C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelectionTests.swift; sourceTree = "<group>"; };
 		C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSessionTests.swift; sourceTree = "<group>"; };
+		C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalColumns.swift; sourceTree = "<group>"; };
 		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA861D47A0E6F330BDC42DBC /* MarketQuoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStore.swift; sourceTree = "<group>"; };
 		CBE947CFF4E30D853A5BBFE0 /* FinnhubRadarPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubRadarPipeline.swift; sourceTree = "<group>"; };
@@ -600,6 +602,7 @@
 				A2258B49416B5E6F51BFC08C /* RadarPaneLayout.swift */,
 				821F3802722B3BDBE88B896D /* RadarRankingPreview.swift */,
 				9875C0F9708CB9BE887178A3 /* RadarSession.swift */,
+				C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */,
 				D7546F11E9F21290A5D8DD5F /* RadarSignalList.swift */,
 				E6BDE36F9F20F202E1B15AAC /* RadarSignalPrice.swift */,
 				0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */,
@@ -831,6 +834,7 @@
 				43EF6E380CF958D857D0AB4D /* RadarScanPreferencesStore.swift in Sources */,
 				EA3B3403D3312F96C0C6A169 /* RadarScanSettingsView.swift in Sources */,
 				2E9FE5D99050C05D9AF62282 /* RadarSession.swift in Sources */,
+				E088B913DC8304392B964CB1 /* RadarSignalColumns.swift in Sources */,
 				8130F723170308441E0805E7 /* RadarSignalList.swift in Sources */,
 				95636F577B28BDCE79F9B67A /* RadarSignalPrice.swift in Sources */,
 				68E7C876F306558E9C2EFD34 /* RadarSignalRow.swift in Sources */,
