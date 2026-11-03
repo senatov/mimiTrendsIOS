@@ -280,7 +280,7 @@
 		C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelectionTests.swift; sourceTree = "<group>"; };
 		C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSessionTests.swift; sourceTree = "<group>"; };
 		C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalColumns.swift; sourceTree = "<group>"; };
-		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA861D47A0E6F330BDC42DBC /* MarketQuoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStore.swift; sourceTree = "<group>"; };
 		CBE947CFF4E30D853A5BBFE0 /* FinnhubRadarPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubRadarPipeline.swift; sourceTree = "<group>"; };
 		D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStoreTests.swift; sourceTree = "<group>"; };
@@ -977,7 +977,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -993,7 +993,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.1.1;
+				MARKETING_VERSION = 0.0.1.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
@@ -1010,11 +1010,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacDebug.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
 				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
@@ -1026,15 +1024,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0.1.2;
 				PRODUCT_MODULE_NAME = MiMiTrends;
 				PRODUCT_NAME = "mimiTrends-iOS";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 2;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -1098,7 +1095,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1120,7 +1117,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.1.1;
+				MARKETING_VERSION = 0.0.1.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1138,11 +1135,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacAppStore.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 12;
 				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
 				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
@@ -1154,15 +1149,14 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.0.1.2;
 				PRODUCT_MODULE_NAME = MiMiTrends;
 				PRODUCT_NAME = "mimiTrends-iOS";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
-				TARGETED_DEVICE_FAMILY = 2;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
