@@ -42,10 +42,10 @@ struct RadarSourcePanel: View {
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
-        var rows = [
+        [
             RadarTelemetrySource(
-                name: "Yahoo", status: marketStatus(marketCycle?.yahoo),
-                statusColor: marketColor(marketCycle?.yahoo), dotColor: marketColor(marketCycle?.yahoo),
+                name: "Yahoo", status: yahooStatus,
+                statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
                 canShowCandidates: false
@@ -80,16 +80,15 @@ struct RadarSourcePanel: View {
                 canShowCandidates: false
             )
         ]
-        rows.insert(
-            RadarTelemetrySource(
-                name: "Scalable", status: "NO CONNECTION",
-                statusColor: tableColor(.sourceInactive), dotColor: tableColor(.sourceInactive),
-                received: nil, valid: nil, requests: nil, errors: nil,
-                canShowCandidates: false
-            ),
-            at: 2
-        )
-        return rows
+    }
+
+    private var yahooStatus: String {
+        if let until = marketCycle?.yahooCooldownUntil, Date() < until { return "RATE LIMITED" }
+        return marketStatus(marketCycle?.yahoo)
+    }
+
+    private var yahooColor: Color {
+        yahooStatus == "RATE LIMITED" ? tableColor(.sourceAttention) : marketColor(marketCycle?.yahoo)
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {

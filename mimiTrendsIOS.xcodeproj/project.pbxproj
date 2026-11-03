@@ -119,7 +119,6 @@
 		CD519C4250E3EC674E8F699A /* FinnhubTradeDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 117997F6759266E018D18DC6 /* FinnhubTradeDecoder.swift */; };
 		CEC005ADCE1D13DA8216CFFD /* HeaderBuildBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06B6AB0F726BA83574BB6C3 /* HeaderBuildBadge.swift */; };
 		3D19485557344896A996A6B4 /* LocalAccountInstanceGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FCD1944EAB144398ED8E8B8 /* LocalAccountInstanceGuard.swift */; };
-		D5727C08299654E6291E4A7F /* ScalableAccountLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC24B739908B22E9A686BF4C /* ScalableAccountLink.swift */; };
 		D6091C23869009035ADDADDE /* DiscoveryRankingBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50748F16A78F3C42B993F374 /* DiscoveryRankingBatch.swift */; };
 		E1EA5AE0F47FDA7E76C7F2D9 /* MiminaviInfo1DecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBBB6C2292BBB1F06288300 /* MiminaviInfo1DecoderTests.swift */; };
 		E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40276ADEA60EC008CF7CDB8 /* ScanResult.swift */; };
@@ -253,7 +252,6 @@
 		C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSessionTests.swift; sourceTree = "<group>"; };
 		C843429B89E6E4F3610BF61D /* mimiTrendsIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = mimiTrendsIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CBE947CFF4E30D853A5BBFE0 /* FinnhubRadarPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubRadarPipeline.swift; sourceTree = "<group>"; };
-		CC24B739908B22E9A686BF4C /* ScalableAccountLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableAccountLink.swift; sourceTree = "<group>"; };
 		D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStoreTests.swift; sourceTree = "<group>"; };
 		D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
 		A1A1A1A1A1A1A1A1A1A1A102 /* BrokerTradeChartMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTradeChartMatcher.swift; sourceTree = "<group>"; };
@@ -348,14 +346,6 @@
 			path = Fixtures;
 			sourceTree = "<group>";
 		};
-		4E867C16A486D8C62DF5CD73 /* Scalable */ = {
-			isa = PBXGroup;
-			children = (
-				CC24B739908B22E9A686BF4C /* ScalableAccountLink.swift */,
-			);
-			path = Scalable;
-			sourceTree = "<group>";
-		};
 		512FFC5A94B06041BD09D503 /* Settings */ = {
 			isa = PBXGroup;
 			children = (
@@ -416,7 +406,6 @@
 				F00000000000000000000011 /* MarketPageQuote.swift */,
 				9FAB19903F43D7F97FFADD41 /* Finnhub */,
 				F00000000000000000000021 /* LangSchwarz */,
-				4E867C16A486D8C62DF5CD73 /* Scalable */,
 				D346E039BF19ADEA870F1FB0 /* TraderFox */,
 				F00000000000000000000022 /* WallstreetOnline */,
 				A808C3F4C0A58330580E116D /* Yahoo */,
@@ -841,7 +830,6 @@
 				37D78CEF629DC78C86E7ECAD /* RadarWorkspace.swift in Sources */,
 				8A32C3D5EE9D0C6051E8A84E /* RapidCrashDetector.swift in Sources */,
 				FEF8C8CD52FF04FF8EBDAAEC /* RapidRiseDetector.swift in Sources */,
-				D5727C08299654E6291E4A7F /* ScalableAccountLink.swift in Sources */,
 				E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */,
 				F10000000000000000000001 /* RadarCompanyMetadata.swift in Sources */,
 				AD6C456C4C15471D7D60FDE1 /* ScannerSettingsView.swift in Sources */,

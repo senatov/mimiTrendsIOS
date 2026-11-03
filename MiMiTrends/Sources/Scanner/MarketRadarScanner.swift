@@ -10,6 +10,7 @@ struct RadarSourceTotals: Sendable {
 struct MarketRadarCycle: Sendable {
     let yahoo: RadarSourceTotals
     let traderFox: RadarSourceTotals
+    let yahooCooldownUntil: Date?
     let scannedSymbols: Int
     let storedSignals: Int
     let companyNames: [String: String]
@@ -21,6 +22,9 @@ actor MarketRadarScanner {
     private var yahooCandidates: [RadarCompanyCandidate] = []
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
     private var nextDiscoveryAt: Date = .distantPast
+    private var yahooCooldownUntil: Date?
+    private var unsupportedSymbols = Set<String>()
+    private var scanOffset = 0
     private var yahooTotals = RadarSourceTotals()
     private var traderFoxTotals = RadarSourceTotals()
 
@@ -29,13 +33,23 @@ actor MarketRadarScanner {
         if Date() >= nextDiscoveryAt {
             await refreshSources()
         }
-        let symbols = Self.interleave(yahooCandidates.map(\.symbol), traderFoxCandidates.map(\.symbol), limit: 16)
+        let pool = Self.interleave(yahooCandidates.map(\.symbol), traderFoxCandidates.map(\.symbol), limit: 16)
+            .filter { !unsupportedSymbols.contains($0) }
         let names = Dictionary(
             (yahooCandidates + traderFoxCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
+        if let yahooCooldownUntil, Date() < yahooCooldownUntil {
+            return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
+                                    yahooCooldownUntil: yahooCooldownUntil,
+                                    scannedSymbols: 0, storedSignals: 0, companyNames: names)
+        }
+        yahooCooldownUntil = nil
+        let symbols = Self.scanSlice(pool, offset: scanOffset, limit: 4)
+        if !pool.isEmpty { scanOffset = (scanOffset + symbols.count) % pool.count }
         guard !symbols.isEmpty else {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
+                                    yahooCooldownUntil: nil,
                                     scannedSymbols: 0, storedSignals: 0, companyNames: names)
         }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
@@ -44,6 +58,7 @@ actor MarketRadarScanner {
         var storedSignals = 0
         var firstYahooFailure: String?
         var yahooFailuresThisCycle = 0
+        var rateLimited = false
         for batch in stride(from: 0, to: symbols.count, by: 4) {
             try Task.checkCancellation()
             let group = Array(symbols[batch..<min(batch + 4, symbols.count)])
@@ -78,10 +93,19 @@ actor MarketRadarScanner {
                                 saved = false
                             }
                             return SymbolOutcome(received: bars.count, signalStored: saved, failure: nil)
+                        } catch RadarSourceError.rateLimited {
+                            return SymbolOutcome(received: 0, signalStored: false,
+                                                 failure: "symbol=\(symbol) error=rateLimited",
+                                                 rateLimited: true)
+                        } catch RadarSourceError.invalidSymbol {
+                            return SymbolOutcome(received: 0, signalStored: false,
+                                                 failure: "symbol=\(symbol) error=invalidSymbol",
+                                                 rejectedSymbol: symbol)
                         } catch {
                             return SymbolOutcome(
                                 received: 0, signalStored: false,
-                                failure: "symbol=\(symbol) error=\(String(describing: type(of: error)))"
+                                failure: "symbol=\(symbol) error=\(String(describing: error))",
+                                rateLimited: false
                             )
                         }
                     }
@@ -95,8 +119,18 @@ actor MarketRadarScanner {
                         yahooFailuresThisCycle += 1
                         if firstYahooFailure == nil { firstYahooFailure = failure }
                     }
+                    if outcome.rateLimited { rateLimited = true }
+                    if let symbol = outcome.rejectedSymbol {
+                        unsupportedSymbols.insert(symbol)
+                    }
                     if outcome.signalStored { storedSignals += 1 }
                 }
+            }
+            if rateLimited {
+                yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
+                AppDiagnostics.shared.record(.warning, "Yahoo", "rate-limited",
+                                             "cooldownMinutes=30")
+                break
             }
         }
         if let firstYahooFailure {
@@ -107,6 +141,7 @@ actor MarketRadarScanner {
         }
         return MarketRadarCycle(
             yahoo: yahooTotals, traderFox: traderFoxTotals,
+            yahooCooldownUntil: yahooCooldownUntil,
             scannedSymbols: symbols.count, storedSignals: storedSignals, companyNames: names
         )
     }
@@ -116,7 +151,17 @@ actor MarketRadarScanner {
         do {
             let symbols = try await yahoo.mostActiveCandidates()
             yahooTotals.operations += 1
-            if !symbols.isEmpty { yahooCandidates = symbols }
+            if !symbols.isEmpty {
+                yahooCandidates = symbols
+                unsupportedSymbols.removeAll()
+                scanOffset = 0
+            }
+        } catch RadarSourceError.rateLimited {
+            yahooTotals.operations += 1
+            yahooTotals.errors += 1
+            yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
+            AppDiagnostics.shared.record(.warning, "Yahoo", "candidate-rate-limited",
+                                         "cooldownMinutes=30")
         } catch {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
@@ -151,10 +196,17 @@ actor MarketRadarScanner {
         }
         return Array(result.prefix(max(0, limit)))
     }
+
+    static func scanSlice(_ symbols: [String], offset: Int, limit: Int) -> [String] {
+        guard !symbols.isEmpty, limit > 0 else { return [] }
+        return (0..<min(limit, symbols.count)).map { symbols[(offset + $0) % symbols.count] }
+    }
 }
 
 private struct SymbolOutcome: Sendable {
     let received: Int
     let signalStored: Bool
     let failure: String?
+    var rateLimited = false
+    var rejectedSymbol: String? = nil
 }

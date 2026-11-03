@@ -47,7 +47,6 @@ struct ProviderSettingsPanel: View {
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )
             }
-            ScalableSettingsCard()
             if let savingMessage {
                 Label(savingMessage, systemImage: "checkmark.circle")
                     .font(.body.weight(.light))
@@ -155,21 +154,6 @@ private struct ProviderEndpointRow: View {
             Text(status)
                 .font(.subheadline.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
-        }
-    }
-}
-
-private struct ScalableSettingsCard: View {
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        SettingsGroup(title: "Scalable account · external") {
-            Text("MiMiTrends has no Scalable account connection. If your account offers a CSV export, open Scalable and import the file below.")
-                .font(.body.weight(.light))
-                .foregroundStyle(TrendsColors.supportingInk)
-            TrendsActionButton(title: "Open Scalable", systemImage: "arrow.up.right.square") {
-                ScalableAccountLink.open(using: openURL, source: "settings")
-            }
         }
     }
 }

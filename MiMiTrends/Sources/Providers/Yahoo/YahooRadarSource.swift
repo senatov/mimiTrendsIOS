@@ -34,6 +34,12 @@ struct YahooRadarSource: Sendable {
             return try await loadJSON(primary)
         } catch is CancellationError {
             throw CancellationError()
+        } catch RadarSourceError.rateLimited {
+            throw RadarSourceError.rateLimited
+        } catch RadarSourceError.invalidSymbol {
+            throw RadarSourceError.invalidSymbol
+        } catch let RadarSourceError.httpStatus(status) where status < 500 {
+            throw RadarSourceError.httpStatus(status)
         } catch {
             let alternate = URL(string: path, relativeTo: ProviderEndpointStore.url(for: .yahooAlternate))!.absoluteURL
             return try await loadJSON(alternate)
@@ -47,8 +53,15 @@ struct YahooRadarSource: Sendable {
         request.setValue("MiMiTrends/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse,
-              response.statusCode == 200, data.count <= 2_000_000,
+        guard let response = response as? HTTPURLResponse else {
+            throw RadarSourceError.invalidResponse
+        }
+        if response.statusCode == 429 { throw RadarSourceError.rateLimited }
+        if response.statusCode == 404 { throw RadarSourceError.invalidSymbol }
+        guard response.statusCode == 200 else {
+            throw RadarSourceError.httpStatus(response.statusCode)
+        }
+        guard data.count <= 2_000_000,
               let root = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw RadarSourceError.invalidResponse
         }
@@ -118,4 +131,6 @@ struct RadarCompanyCandidate: Sendable {
 enum RadarSourceError: Error {
     case invalidResponse
     case invalidSymbol
+    case rateLimited
+    case httpStatus(Int)
 }

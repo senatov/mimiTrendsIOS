@@ -9,6 +9,29 @@ final class MarketRadarScannerTests: XCTestCase {
         )
     }
 
+    func testYahooScanRotatesAcrossBoundedBatches() {
+        let symbols = ["A", "B", "C", "D", "E", "F"]
+        XCTAssertEqual(MarketRadarScanner.scanSlice(symbols, offset: 0, limit: 4), ["A", "B", "C", "D"])
+        XCTAssertEqual(MarketRadarScanner.scanSlice(symbols, offset: 4, limit: 4), ["E", "F", "A", "B"])
+        XCTAssertEqual(MarketRadarScanner.scanSlice([], offset: 0, limit: 4), [])
+    }
+
+    func testYahooRateLimitDoesNotRetryAlternateHost() async {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [YahooRateLimitURLProtocol.self]
+        let session = URLSession(configuration: configuration)
+        YahooRateLimitURLProtocol.reset()
+
+        do {
+            _ = try await YahooRadarSource(session: session).minuteBars(symbol: "AAPL")
+            XCTFail("Expected HTTP 429 to stop Yahoo requests")
+        } catch RadarSourceError.rateLimited {
+            XCTAssertEqual(YahooRateLimitURLProtocol.requestCount, 1)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testYahooMostActiveSelectionRequiresEquitiesWithVolume() {
         let quotes: [[String: Any]] = [
             ["symbol": "LOW", "quoteType": "EQUITY", "regularMarketVolume": 10],
@@ -45,4 +68,37 @@ final class MarketRadarScannerTests: XCTestCase {
         """
         XCTAssertEqual(try TraderFoxRadarSource.decode(html, limit: 10, nowSeconds: now), ["AAPL"])
     }
+}
+
+private final class YahooRateLimitURLProtocol: URLProtocol {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var count = 0
+
+    static var requestCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return count
+    }
+
+    static func reset() {
+        lock.lock()
+        defer { lock.unlock() }
+        count = 0
+    }
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        Self.lock.lock()
+        Self.count += 1
+        Self.lock.unlock()
+        let response = HTTPURLResponse(url: request.url!, statusCode: 429,
+                                       httpVersion: "HTTP/1.1", headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data())
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }
