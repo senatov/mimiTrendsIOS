@@ -3,6 +3,7 @@ import SwiftUI
 struct RadarChartPreview: View {
     let symbol: String
     let companyName: String
+    let companyMetadata: RadarCompanyMetadata?
     let signal: ScanResult?
     let exchangeRate: FMPExchangeRate?
     let refreshID: Int
@@ -84,9 +85,18 @@ struct RadarChartPreview: View {
                 .frame(maxWidth: 350)
                 Spacer(minLength: 0)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(symbol.isEmpty ? "No symbol selected" : symbol)
+            HStack(alignment: .center, spacing: 8) {
+                if !symbol.isEmpty {
+                    RadarCompanyMark(metadata: companyMetadata, name: companyName,
+                                     size: 22, showsPlaceholder: true)
+                }
+                Text(symbol.isEmpty ? "No symbol selected" : companyName)
                     .font(.title3.weight(.regular))
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                if !symbol.isEmpty && companyName.caseInsensitiveCompare(symbol) != .orderedSame {
+                    Text(symbol).font(.caption).foregroundStyle(.secondary)
+                }
                 if let signal {
                     let price = RadarSignalPrice.display(signal, exchangeRate: exchangeRate,
                                                          nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))

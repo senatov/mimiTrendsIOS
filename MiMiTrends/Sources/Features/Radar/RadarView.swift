@@ -47,6 +47,7 @@ struct RadarView: View {
                         RadarChartPreview(
                             symbol: chartSymbol,
                             companyName: chartCompanyName,
+                            companyMetadata: companyMetadata[chartSymbol.uppercased()],
                             signal: selectedSignal,
                             exchangeRate: exchangeRate,
                             refreshID: chartRefreshID
@@ -106,19 +107,18 @@ struct RadarView: View {
     }
 
     private var chartCompanyName: String {
-        marketCycle?.companyNames[chartSymbol] ?? chartSymbol
+        companyMetadata[chartSymbol.uppercased()]?.name ?? marketCycle?.companyNames[chartSymbol] ?? chartSymbol
     }
 
     private var companyMetadataRequestKey: String {
         let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
-        return symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
+        return chartSymbol.uppercased() + "|" + symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
     }
 
     private func refreshCompanyMetadata() async {
         let symbols = Set(recentSignals.map(\.symbol)).union(marketCycle?.companyNames.keys ?? Dictionary<String, String>().keys)
-        guard !symbols.isEmpty else { companyMetadata = [:]; return }
         companyMetadata = await companyMetadataService.load(
-            symbols: Array(symbols), names: marketCycle?.companyNames ?? [:]
+            symbols: [chartSymbol] + symbols.sorted(), names: marketCycle?.companyNames ?? [:]
         )
     }
 

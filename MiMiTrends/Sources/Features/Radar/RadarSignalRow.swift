@@ -102,34 +102,12 @@ struct RadarSignalRow: View {
 
     private var companyIdentity: some View {
         HStack(spacing: 5) {
-            companyMark
+            RadarCompanyMark(metadata: companyMetadata, name: companyName)
             Text(companyName).lineLimit(1)
             if let flag = RadarCompanyMetadata.flag(for: companyMetadata?.countryCode ?? RadarCompanyMetadata.countryFallback(for: signal.symbol)) {
                 Text(flag).accessibilityLabel("Issuer country")
             }
         }
-    }
-
-    @ViewBuilder
-    private var companyMark: some View {
-        if let data = companyMetadata?.logoData, let image = decodedLogo(data) {
-            image
-                .resizable()
-                .scaledToFit()
-                .frame(width: 18, height: 18)
-                .clipShape(RoundedRectangle(cornerRadius: 3))
-                .accessibilityLabel("\(companyName) logo")
-        }
-    }
-
-    private func decodedLogo(_ data: Data) -> Image? {
-        #if os(macOS)
-        guard let image = NSImage(data: data) else { return nil }
-        return Image(nsImage: image)
-        #else
-        guard let image = UIImage(data: data) else { return nil }
-        return Image(uiImage: image)
-        #endif
     }
 
     private var eventBadge: some View {

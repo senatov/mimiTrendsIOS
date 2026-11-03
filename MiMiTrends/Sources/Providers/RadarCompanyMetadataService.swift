@@ -9,7 +9,9 @@ actor RadarCompanyMetadataService {
     func load(symbols: [String], names: [String: String]) async -> [String: RadarCompanyMetadata] {
         do {
             let store = try RadarCompanyMetadataStore(url: RadarCompanyMetadataStore.defaultURL())
-            let normalized = Array(Set(symbols.map { $0.uppercased() })).sorted().prefix(30)
+            var seen = Set<String>()
+            let normalized = symbols.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+                .filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(30)
             var metadata = try await store.load(symbols: Array(normalized))
             let now = Int64(Date().timeIntervalSince1970 * 1_000)
             let stale = normalized.filter { symbol in
