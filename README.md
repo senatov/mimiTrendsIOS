@@ -54,18 +54,38 @@ zsh Scripts/run_ios.zsh
 
 This builds, installs, and launches the app on the single paired iPad running iPadOS 27. Set `IPAD_UDID` if more than one eligible iPad is paired. To use a simulator instead, set `SIMULATOR_UDID` to an installed iPad simulator's UDID; the script then boots and launches that simulator.
 
-| Script | Purpose |
-| --- | --- |
-| `zsh Scripts/generate_project.zsh` | Regenerate `mimiTrends-iOS.xcodeproj` from `project.yml` after changing project settings or files. |
-| `zsh Scripts/build_ios.zsh` | Build a development-signed app for the connected iPad. Pass `Release` for a Release configuration build. With `SIMULATOR_UDID` or `CI=true`, build an ad hoc signed simulator app instead. |
-| `zsh Scripts/run_ios.zsh` | Build, install, and launch on the connected iPad. Set `SIMULATOR_UDID` to use an iPad simulator. |
-| `zsh Scripts/test_ios.zsh` | Run unit tests on the connected iPad. With `SIMULATOR_UDID` or `CI=true`, use an iPad simulator. |
-| `zsh Scripts/build_macos.zsh` | Build the optional unsigned macOS app. Pass `Release` for a Release configuration build. |
-| `zsh Scripts/run_macos.zsh` | Stop the existing app from this checkout, build, sign with this Mac's stable Developer ID Application identity and the Mac App Sandbox entitlements, then launch one `mimiTrends-iOS.app` instance on macOS 27 or newer; verify its path, bundle ID, display name, and PID. Set `MIMITRENDS_MAC_SIGN_IDENTITY` to select another installed identity for the configured team. |
-| `zsh Scripts/check_macos_sandbox.zsh` | Check the Mac target's sandbox entitlement file and Xcode build settings. |
-| `Scripts/write_build_info.zsh` | Xcode build phase that records the local build date and compiling Mac's Computer Name in the app bundle for the window title. It runs automatically during each app build. |
-
 All builds use this repository's ignored `DerivedData/` directory. They do not clear shared Xcode caches, modify other repositories, sign an App Store distribution binary, or upload one. Connected-iPad builds use the configured Apple Development team; simulator builds use local ad hoc signing so Keychain works during development. On Mac, the app attempts a single silent import of existing Keychain values into local preferences. If macOS denies that read, re-enter the value once in Settings; no Keychain password dialog is requested. The generated Xcode project is committed so it can also be opened directly in Xcode.
+
+## Scripts and macOS release
+
+Run these commands from the repository root. `Scripts/_common.zsh` supplies the shared project paths and selects an eligible iPad or simulator. The scripts use the generated `mimiTrends-iOS.xcodeproj`; `mimiTrendsIOS.xcodeproj` is retained for older local Xcode setups and is kept at the same release version.
+
+| Script | What it does and when to use it |
+| --- | --- |
+| `_common.zsh` | Internal helper sourced by the other shell scripts; checks Xcode and the project, selects a paired iPad or iPadOS 27 simulator, and boots a simulator when needed. Do not run it on its own. |
+| `generate_project.zsh` | Regenerates the canonical Xcode project from `project.yml` after source files or project settings change. CI runs it before building. Requires XcodeGen. |
+| `build_ios.zsh` | Builds for a paired iPad with Apple Development signing; `Release` selects the Release configuration. `SIMULATOR_UDID` or `CI=true` selects an ad hoc signed simulator build. It does not install the app. |
+| `run_ios.zsh` | Builds, installs, and launches on the selected iPad; with `SIMULATOR_UDID`, boots and uses that simulator. Use it to check the running iPad UI. |
+| `test_ios.zsh` | Runs the native XCTest suite on the selected iPad or simulator. CI uses a simulator. |
+| `build_macos.zsh` | Builds an unsigned Mac app in Debug or `Release`. Use it for compilation checks; an unsigned build is not a distributable DMG. |
+| `run_macos.zsh` | Stops this checkout's existing Mac app, builds Debug, signs it with the local Developer ID identity and sandbox entitlements, then launches and checks the app process. Requires macOS 27 and a matching signing identity. |
+| `check_macos_sandbox.zsh` | Checks the entitlement plist and **Release** Mac build settings for sandbox, outbound network, selected-file read access, bundle ID, and product name. It checks configuration, not runtime permissions. |
+| `write_build_info.zsh` | Xcode build phase, run automatically, that writes build date and the compiling Mac's Computer Name into `BuildInfo.plist` for the window title. |
+| `release_version.py` | Internal release helper that validates four single-digit version components, calculates carry after 9, and synchronizes `MARKETING_VERSION` and numeric build version in `project.yml` and both checked-in projects. `current` and `next` are available for inspection. |
+| `release_macos.zsh` | On a clean `main`, calculates the next version, regenerates the project, builds and Developer ID signs Release with hardened runtime, creates a DMG, submits it to Apple, staples and verifies it, then commits the version, pushes its matching tag, and publishes the DMG as a GitHub Release. `--dry-run` only reports the next version. |
+
+Examples:
+
+```zsh
+zsh Scripts/generate_project.zsh
+SIMULATOR_UDID=YOUR_IPAD_SIMULATOR_UDID zsh Scripts/test_ios.zsh
+zsh Scripts/build_macos.zsh Release
+zsh Scripts/check_macos_sandbox.zsh
+zsh Scripts/release_macos.zsh --dry-run
+MIMITRENDS_NOTARY_PROFILE=YOUR_KEYCHAIN_PROFILE zsh Scripts/release_macos.zsh
+```
+
+The release script requires Xcode, XcodeGen, an authenticated GitHub CLI, a Developer ID Application certificate for the team in `project.yml`, and an existing `notarytool` Keychain profile named by `MIMITRENDS_NOTARY_PROFILE`. Configure that profile using Apple's [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow); credentials stay in Keychain. `MIMITRENDS_MAC_SIGN_IDENTITY` can select a different installed identity for the same team. The version and GitHub Release title use exactly `0.0.0.0`: the current source version is `0.0.1.1`, so the first release from it will be `0.0.1.2`; `0.0.1.9` advances to `0.0.2.0`. The script also considers existing tags and releases, refuses to wrap after `9.9.9.9`, and stops before publication if signing, notarization, stapling, or verification fails. DMGs and notarization results stay under ignored `DerivedData/Releases/`.
 
 ## App Store preparation
 

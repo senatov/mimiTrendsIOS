@@ -22,7 +22,7 @@ done
 
 xcodebuild -project "${PROJECT_FILE}" \
     -scheme "${SCHEME}" \
-    -configuration Debug \
+    -configuration Release \
     -sdk macosx \
     -destination 'generic/platform=macOS' \
     -showBuildSettings -json 2>/dev/null | /usr/bin/python3 -c '
