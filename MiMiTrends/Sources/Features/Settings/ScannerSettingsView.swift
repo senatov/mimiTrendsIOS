@@ -39,7 +39,7 @@ struct ScannerSettingsView: View {
         SettingsGroup(title: "Current scan scope") {
             SettingsValueRow(title: "Confirmed signals", value: "Yahoo minute bars; optional Finnhub trades")
             SettingsValueRow(title: "Preliminary quotes", value: "Lang & Schwarz; linked wallstreetONLINE prices on demand")
-            SettingsValueRow(title: "Symbols", value: scanWatchlist ? "Selected + Watchlist, up to 5" : "Selected symbol")
+            SettingsValueRow(title: "Symbols", value: scanWatchlist ? "Selected + saved, up to 5" : "Selected only")
             SettingsValueRow(title: "Activity", value: "Foreground only")
             Text("Quote movements have no verified trade volume. Existing source-currency minute bars remain separate from EUR quote observations.")
                 .font(.body.weight(.light))

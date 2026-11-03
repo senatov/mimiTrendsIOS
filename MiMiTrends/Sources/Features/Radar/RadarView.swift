@@ -7,6 +7,8 @@ struct RadarView: View {
     @AppStorage("radar.historyAgeHours.v1") private var maxAgeHours = 2
     @AppStorage("radar.scanWatchlist.v1") private var scanWatchlist = false
     @Binding var symbol: String
+    let watchlistRevision: Int
+    let onManageWatchlist: () -> Void
     @State private var setupMessage: String?
     @State private var recentSignals: [ScanResult] = []
     @State private var showingSavedHistory = false
@@ -59,7 +61,7 @@ struct RadarView: View {
                                 symbol: $symbol, scanWatchlist: $scanWatchlist,
                                 session: session, setupMessage: setupMessage,
                                 isPreparingFeed: isPreparingFeed,
-                                watchlist: watchlistPreview
+                                watchlist: watchlistPreview, onManageWatchlist: onManageWatchlist
                             ) {
                                 if session.isScanning { session.stop() } else { startFeed() }
                             }
@@ -80,7 +82,7 @@ struct RadarView: View {
             .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
             .task(id: "\(scenePhase)|\(marketCycle?.usesFMP == true)") { await refreshExchangeRateWhileActive() }
-            .task(id: scenePhase) { await loadWatchlistPreview() }
+            .task(id: "\(scenePhase)|\(watchlistRevision)") { await loadWatchlistPreview() }
             .onChange(of: scanWatchlist) { _, includeWatchlist in
                 AppDiagnostics.shared.record(
                     .info, "Radar", "feed-scope-changed",

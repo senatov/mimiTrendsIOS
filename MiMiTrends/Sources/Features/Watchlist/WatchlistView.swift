@@ -3,6 +3,7 @@ import SwiftUI
 struct WatchlistView: View {
     let onSelect: (String) -> Void
 
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -44,6 +45,7 @@ struct WatchlistView: View {
             }
             .background(TrendsColors.canvas)
             .navigationTitle("Watchlist")
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
             .task { await load() }
         }
     }

@@ -11,6 +11,7 @@ struct RadarHeader: View {
     let setupMessage: String?
     let isPreparingFeed: Bool
     let watchlist: [WatchlistEntry]
+    let onManageWatchlist: () -> Void
     let onToggleFeed: () -> Void
 
     var body: some View {
@@ -18,7 +19,7 @@ struct RadarHeader: View {
             headerLayout {
                 HStack(spacing: 10) { feedControls }
                 if !isCompactLayout { Spacer(minLength: 8) }
-                scopePicker
+                scopeControls
             }
             Text(feedScopeDescription)
                 .font(.footnote)
@@ -69,14 +70,26 @@ struct RadarHeader: View {
 
     private var scopePicker: some View {
         Picker("Finnhub feed scope", selection: $scanWatchlist) {
-            Text("This Symbol").tag(false)
-            Text("+ Watchlist").tag(true)
+            Text("Selected only").tag(false)
+            Text("Selected + saved").tag(true)
         }
         .pickerStyle(.segmented)
         .labelsHidden()
         .frame(maxWidth: 310)
         .disabled(session.isScanning || isPreparingFeed)
         .help("Choose which symbols Finnhub subscribes to when you start the feed. Lang & Schwarz scans independently.")
+    }
+
+    private var scopeControls: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 8) { scopePicker; manageWatchlistButton }
+            VStack(alignment: .leading, spacing: 7) { scopePicker; manageWatchlistButton }
+        }
+    }
+
+    private var manageWatchlistButton: some View {
+        TrendsActionButton(title: "Edit watchlist", systemImage: "star", action: onManageWatchlist)
+            .accessibilityIdentifier("editWatchlistButton")
     }
 
     private var feedScopeDescription: String {
