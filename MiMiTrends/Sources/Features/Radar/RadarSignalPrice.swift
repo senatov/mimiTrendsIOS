@@ -4,25 +4,23 @@ enum RadarSignalPrice {
     struct Presentation: Equatable {
         let text: String
         let explanation: String
-        let estimatedEUR: Double?
+        let convertedAmount: Double?
     }
 
-    static func display(_ signal: ScanResult, exchangeRate: FMPExchangeRate?, nowMillis: Int64) -> Presentation {
-        // The native signal database predates priceCurrency; all its existing confirmed feeds are US/USD.
-        let currency = signal.priceCurrency ?? "USD"
-        let sourcePrice = signal.price.formatted(.currency(code: currency))
-        guard currency == "USD", let exchangeRate,
-              exchangeRate.isUsable(for: signal, nowMillis: nowMillis) else {
-            return Presentation(text: sourcePrice, explanation: "Signal price in \(currency): \(sourcePrice).",
-                                estimatedEUR: nil)
+    static func display(_ signal: ScanResult, rates: DisplayCurrencyRates?, currency: String) -> Presentation {
+        let sourceCurrency = signal.priceCurrency ?? "USD"
+        let sourcePrice = signal.price.formatted(.currency(code: sourceCurrency))
+        guard let rates, let converted = rates.convert(signal.price, from: sourceCurrency, to: currency) else {
+            if sourceCurrency == currency {
+                return Presentation(text: sourcePrice, explanation: "Source price: \(sourcePrice).", convertedAmount: signal.price)
+            }
+            return Presentation(text: "—", explanation: "Waiting for an ECB rate to convert \(sourceCurrency) to \(currency). Source price: \(sourcePrice).", convertedAmount: nil)
         }
-        let estimatedEUR = signal.price / exchangeRate.eurosToDollars
-        let euroPrice = estimatedEUR.formatted(.currency(code: "EUR"))
-        let rate = exchangeRate.eurosToDollars.formatted(.number.precision(.fractionLength(4...6)))
-        return Presentation(
-            text: "≈ \(euroPrice)",
-            explanation: "Estimated EUR value \(euroPrice) from signal price \(sourcePrice) using FMP EUR/USD \(rate). This is a currency conversion, not a German exchange quote.",
-            estimatedEUR: estimatedEUR
-        )
+        let text = converted.formatted(.currency(code: currency).precision(.fractionLength(2)))
+        return Presentation(text: sourceCurrency == currency ? text : "≈ \(text)",
+                            explanation: sourceCurrency == currency ? "Source price: \(sourcePrice)." :
+                                "Approximate conversion of \(sourcePrice) using ECB reference rates dated \(rates.date).",
+                            convertedAmount: converted)
     }
+
 }

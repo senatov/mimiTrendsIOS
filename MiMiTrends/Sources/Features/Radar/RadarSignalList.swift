@@ -12,7 +12,8 @@ struct RadarSignalList: View {
     let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
-    let exchangeRate: FMPExchangeRate?
+    let currencyRates: DisplayCurrencyRates?
+    let displayCurrency: String
     let selected: ScanResult?
     let compact: Bool
     let errorMessage: String?
@@ -48,8 +49,12 @@ struct RadarSignalList: View {
                 let rhs = Int(right.signalWindowLabel.prefix { $0.isNumber }) ?? 0
                 comparison = lhs == rhs ? .orderedSame : lhs < rhs ? .orderedAscending : .orderedDescending
             case .price:
-                comparison = left.price == right.price ? .orderedSame
-                    : left.price < right.price ? .orderedAscending : .orderedDescending
+                let lhs = currencyRates?.convert(left.price, from: left.priceCurrency ?? "USD", to: displayCurrency)
+                    ?? (left.priceCurrency == displayCurrency ? left.price : nil)
+                let rhs = currencyRates?.convert(right.price, from: right.priceCurrency ?? "USD", to: displayCurrency)
+                    ?? (right.priceCurrency == displayCurrency ? right.price : nil)
+                comparison = lhs == rhs ? .orderedSame
+                    : (lhs ?? -.infinity) < (rhs ?? -.infinity) ? .orderedAscending : .orderedDescending
             case .age:
                 // A smaller age means a newer signal, so compare timestamps in reverse.
                 comparison = left.signalEpochMillis == right.signalEpochMillis ? .orderedSame
@@ -68,6 +73,12 @@ struct RadarSignalList: View {
                 Text("\(signals.count) signals")
                     .font(.subheadline)
                     .foregroundStyle(tableColor(.signalMutedText))
+                Text(displayCurrency)
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(tableColor(.signalHeaderFill), in: Capsule())
+                    .help(currencyRates.map { "ECB reference rates dated \($0.date)" } ?? "Waiting for ECB exchange rates")
                 Spacer()
                 Button("Refresh", systemImage: "arrow.clockwise", action: onRefresh)
                     .labelStyle(.iconOnly)
@@ -95,7 +106,8 @@ struct RadarSignalList: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                 Text(String(format: "%+.2f%%", move.changePercent))
                                     .foregroundStyle(move.changePercent < 0 ? tableColor(.fall) : tableColor(.rise))
-                                Text(move.quote.midpointEUR.formatted(.currency(code: "EUR")))
+                                Text(currencyRates?.formatted(move.quote.midpointEUR, from: "EUR", to: displayCurrency)
+                                     ?? (displayCurrency == "EUR" ? move.quote.midpointEUR.formatted(.currency(code: "EUR")) : "—"))
                                     .monospacedDigit()
                             }
                             .font(.subheadline)
@@ -130,7 +142,8 @@ struct RadarSignalList: View {
                                     signal: item.signal,
                                     companyName: companyNames[item.signal.symbol] ?? item.signal.symbol,
                                     companyMetadata: companyMetadata[item.signal.symbol],
-                                    exchangeRate: exchangeRate,
+                                    currencyRates: currencyRates,
+                                    displayCurrency: displayCurrency,
                                     compact: compact,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
@@ -235,7 +248,8 @@ struct RadarSignalList: View {
     private func autoFit(_ column: RadarSortColumn) {
         let names = signals.map { companyNames[$0.symbol] ?? $0.symbol }
         let contentWidths = RadarSignalColumnWidths.contentWidths(
-            signals: signals, companyNames: names, exchangeRate: exchangeRate,
+            signals: signals, companyNames: names, currencyRates: currencyRates,
+            displayCurrency: displayCurrency,
             fontSize: tableTypography.size
         )
         setWidth(contentWidths[column] ?? column.minimumWidth, for: column)
@@ -245,7 +259,8 @@ struct RadarSignalList: View {
         RadarSignalColumnWidths.fit(
             signals: signals,
             companyNames: signals.map { companyNames[$0.symbol] ?? $0.symbol },
-            exchangeRate: exchangeRate,
+            currencyRates: currencyRates,
+            displayCurrency: displayCurrency,
             availableWidth: availableWidth,
             overrides: columnWidthOverrides,
             fontSize: tableTypography.size

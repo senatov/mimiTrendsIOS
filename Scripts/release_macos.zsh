@@ -67,7 +67,7 @@ release_committed=0
 restore_on_failure() {
     local result=$?
     if (( result != 0 && version_applied && !release_committed )); then
-        git restore -- project.yml mimiTrends-iOS.xcodeproj/project.pbxproj mimiTrendsIOS.xcodeproj/project.pbxproj
+        git restore -- project.yml mimiTrends-iOS.xcodeproj/project.pbxproj
         echo "Release failed before commit; project versions were restored." >&2
     elif (( result != 0 && release_committed )); then
         echo "Release commit/tag may exist. Inspect git and GitHub before starting another version." >&2
@@ -125,7 +125,7 @@ xcrun stapler staple "${dmg}"
 xcrun stapler validate "${dmg}"
 hdiutil verify -quiet "${dmg}"
 
-git add project.yml mimiTrends-iOS.xcodeproj/project.pbxproj mimiTrendsIOS.xcodeproj/project.pbxproj
+git add project.yml mimiTrends-iOS.xcodeproj/project.pbxproj
 git diff --cached --check
 git commit -m "NEW: Prepare macOS release ${next}" \
     -m "Advance the four-component app and build versions for the notarized DMG and matching GitHub Release."

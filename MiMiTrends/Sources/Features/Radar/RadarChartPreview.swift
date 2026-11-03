@@ -5,7 +5,8 @@ struct RadarChartPreview: View {
     let companyName: String
     let companyMetadata: RadarCompanyMetadata?
     let signal: ScanResult?
-    let exchangeRate: FMPExchangeRate?
+    let currencyRates: DisplayCurrencyRates?
+    let displayCurrency: String
     let refreshID: Int
 
     @State private var allBars: [MinuteBar] = []
@@ -23,10 +24,15 @@ struct RadarChartPreview: View {
 
     private var chartData: RadarChartData {
         RadarChartData(
-            allBars: range.usesDailyBars ? (dailySymbol == symbol ? dailyBars : []) : allBars,
+            allBars: convertedBars ?? [],
             range: range,
             nowEpochSeconds: Int64(Date().timeIntervalSince1970)
         )
+    }
+
+    private var convertedBars: [MinuteBar]? {
+        let source = range.usesDailyBars ? (dailySymbol == symbol ? dailyBars : []) : allBars
+        return RadarChartCurrency.bars(source, from: sourceCurrency, to: displayCurrency, rates: currencyRates)
     }
 
     private var range: RadarChartRange {
@@ -47,6 +53,7 @@ struct RadarChartPreview: View {
         .task(id: "\(symbol)|\(refreshID)") { await loadBars() }
         .task(id: "daily|\(symbol)|\(range.rawValue)") { await loadDailyBarsIfNeeded() }
         .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
+        .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
     }
 
     private func chartContent(availableHeight: CGFloat) -> some View {
@@ -69,7 +76,7 @@ struct RadarChartPreview: View {
                 }
             }
         if chartTrades.count < importedTrades.count {
-            Text("Imported trades in another currency are hidden from this chart.")
+            Text("Some imported trades could not be converted to \(displayCurrency).")
                 .font(.caption)
                 .foregroundStyle(TrendsColors.supportingInk)
         }
@@ -98,8 +105,8 @@ struct RadarChartPreview: View {
                     Text(symbol).font(.caption).foregroundStyle(.secondary)
                 }
                 if let signal {
-                    let price = RadarSignalPrice.display(signal, exchangeRate: exchangeRate,
-                                                         nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
+                    let price = RadarSignalPrice.display(signal, rates: currencyRates,
+                                                         currency: displayCurrency)
                     Text(price.text)
                         .font(.title3.monospacedDigit())
                         .help(price.explanation)
@@ -121,6 +128,10 @@ struct RadarChartPreview: View {
             } else if let message = range.usesDailyBars ? dailyError : errorMessage {
                 Text(message).foregroundStyle(.red)
                     .frame(maxWidth: .infinity, minHeight: 180)
+            } else if convertedBars == nil {
+                ContentUnavailableView("Exchange rate unavailable", systemImage: "eurosign.arrow.circlepath",
+                                       description: Text("Waiting for ECB reference rates to show this chart in \(displayCurrency)."))
+                    .frame(maxWidth: .infinity, minHeight: 180)
             } else if chartData.bars.isEmpty {
                 ContentUnavailableView(
                     "No prices in \(range.title)",
@@ -133,11 +144,13 @@ struct RadarChartPreview: View {
             } else {
                 RadarChartPlot(
                     data: chartData, symbol: symbol,
+                    displayCurrency: displayCurrency,
                     trades: showingTrades ? chartTrades : [],
                     priceHeight: max(140, availableHeight - 240),
                     volumeHeight: 60,
                     inspection: $cursorInspection
                 )
+                .id(displayCurrency)
                 if let last = chartData.bars.last {
                     Text("\(chartData.bars.count) \(range.usesDailyBars ? "FMP daily" : "saved minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · gaps are not filled")
                         .font(.subheadline.weight(.light))
@@ -149,7 +162,7 @@ struct RadarChartPreview: View {
     }
 
     private var chartTrades: [BrokerTradePosition] {
-        importedTrades.filter { $0.currency.caseInsensitiveCompare(chartCurrency) == .orderedSame }
+        importedTrades.compactMap { RadarChartCurrency.trade($0, to: displayCurrency, rates: currencyRates) }
     }
 
     @ViewBuilder
@@ -187,12 +200,14 @@ struct RadarChartPreview: View {
     }
 
     private func formattedPrice(_ value: Double) -> String {
-        value.formatted(.currency(code: chartCurrency).precision(.fractionLength(2)))
+        value.formatted(.currency(code: displayCurrency).precision(.fractionLength(2)))
     }
 
     private var chartCurrency: String {
-        [".DE", ".F", ".PA", ".AS", ".MI", ".HE"].contains(where: symbol.hasSuffix) ? "EUR" : "USD"
+        displayCurrency
     }
+
+    private var sourceCurrency: String { RadarChartCurrency.source(for: symbol) }
 
     private func loadBars() async {
         let requestedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()

@@ -4,6 +4,7 @@ import SwiftUI
 struct RadarChartPlot: View {
     let data: RadarChartData
     let symbol: String
+    let displayCurrency: String
     let trades: [BrokerTradePosition]
     var priceHeight: CGFloat = 300
     var volumeHeight: CGFloat = 90
@@ -81,7 +82,7 @@ struct RadarChartPlot: View {
             .chartXScale(domain: chartTimeDomain)
             .chartOverlay { proxy in
                 RadarChartCursorOverlay(
-                    proxy: proxy, bars: data.bars, symbol: symbol, readsPrice: true,
+                    proxy: proxy, bars: data.bars, displayCurrency: displayCurrency, readsPrice: true,
                     selectedBar: selectedBar, selectedPrice: selectedPrice,
                     isPinned: cursorPinned, onSelection: select(bar:price:),
                     onTogglePin: toggleCursorPin, onExit: clearCursor
@@ -116,7 +117,7 @@ struct RadarChartPlot: View {
                 .chartXScale(domain: chartTimeDomain)
                 .chartOverlay { proxy in
                     RadarChartCursorOverlay(
-                        proxy: proxy, bars: data.bars, symbol: symbol, readsPrice: false,
+                        proxy: proxy, bars: data.bars, displayCurrency: displayCurrency, readsPrice: false,
                         selectedBar: selectedBar, selectedPrice: selectedPrice,
                         isPinned: cursorPinned, onSelection: select(bar:price:),
                         onTogglePin: toggleCursorPin, onExit: clearCursor
@@ -213,7 +214,7 @@ struct RadarChartPlot: View {
                 .symbolSize(72)
                 .foregroundStyle(.orange)
                 .annotation(position: .top, alignment: .leading, spacing: 4) {
-                    RadarChartTradeCard(trade: trade, chartCurrency: chartCurrency)
+                    RadarChartTradeCard(trade: trade, chartCurrency: displayCurrency)
                 }
         }
         if let exitEpoch = trade.exitEpochSeconds,
@@ -226,7 +227,7 @@ struct RadarChartPlot: View {
             .symbolSize(72)
             .foregroundStyle(tradeColor(trade))
             .annotation(position: .top, alignment: .leading, spacing: 4) {
-                if !entryVisible { RadarChartTradeCard(trade: trade, chartCurrency: chartCurrency) }
+                if !entryVisible { RadarChartTradeCard(trade: trade, chartCurrency: displayCurrency) }
             }
         }
     }
@@ -236,9 +237,6 @@ struct RadarChartPlot: View {
         return profit >= 0 ? .green : .red
     }
 
-    private var chartCurrency: String {
-        [".DE", ".F", ".PA", ".AS", ".MI", ".HE"].contains(where: symbol.hasSuffix) ? "EUR" : "USD"
-    }
 }
 
 private struct RadarChartTradeCard: View {
@@ -283,7 +281,7 @@ private struct RadarChartTradeCard: View {
 private struct RadarChartCursorOverlay: View {
     let proxy: ChartProxy
     let bars: [MinuteBar]
-    let symbol: String
+    let displayCurrency: String
     let readsPrice: Bool
     let selectedBar: MinuteBar?
     let selectedPrice: Double?
@@ -325,7 +323,7 @@ private struct RadarChartCursorOverlay: View {
         if let selectedBar, let selectedPrice, let plotFrameAnchor = proxy.plotFrame {
             let plotFrame = geometry[plotFrameAnchor]
             if readsPrice, let y = proxy.position(forY: selectedPrice) {
-                cursorTag(selectedPrice.formatted(.currency(code: chartCurrency).precision(.fractionLength(2))))
+                cursorTag(selectedPrice.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
                     .position(
                         x: geometry.size.width - 28,
                         y: min(max(plotFrame.minY + y, 14), plotFrame.maxY - 14)
@@ -354,10 +352,6 @@ private struct RadarChartCursorOverlay: View {
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.blue.opacity(0.7), lineWidth: 1))
             .fixedSize()
             .allowsHitTesting(false)
-    }
-
-    private var chartCurrency: String {
-        [".DE", ".F", ".PA", ".AS", ".MI", ".HE"].contains(where: symbol.hasSuffix) ? "EUR" : "USD"
     }
 
     private func select(at location: CGPoint, in geometry: GeometryProxy) {

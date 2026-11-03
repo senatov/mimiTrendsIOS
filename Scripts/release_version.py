@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Keep four-digit release versions in the project specification and projects."""
+"""Keep four-digit release versions in the project specification and Xcode project."""
 
 import argparse
 from pathlib import Path
@@ -9,10 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "project.yml"
-PROJECTS = (
-    ROOT / "mimiTrends-iOS.xcodeproj/project.pbxproj",
-    ROOT / "mimiTrendsIOS.xcodeproj/project.pbxproj",
-)
+PROJECT = ROOT / "mimiTrends-iOS.xcodeproj/project.pbxproj"
 VERSION = re.compile(r"[0-9](?:\.[0-9]){3}\Z")
 
 
@@ -55,14 +52,13 @@ def set_version(value: str) -> None:
     build = str(sum(part * 10 ** (3 - index) for index, part in enumerate(parts)))
     replace_exact(SPEC, r"^(\s*MARKETING_VERSION:\s*)\S+(\s*)$", rf"\g<1>{value}\g<2>", 1)
     replace_exact(SPEC, r"^(\s*CURRENT_PROJECT_VERSION:\s*)\S+(\s*)$", rf"\g<1>{build}\g<2>", 1)
-    for project in PROJECTS:
-        text = project.read_text()
-        marketing_count = len(re.findall(r"(?m)^\s*MARKETING_VERSION = [^;]+;", text))
-        build_count = len(re.findall(r"(?m)^\s*CURRENT_PROJECT_VERSION = [^;]+;", text))
-        if not marketing_count or not build_count:
-            raise ValueError(f"Missing version settings in {project}")
-        replace_exact(project, r"^(\s*MARKETING_VERSION = )[^;]+(;)$", rf"\g<1>{value}\g<2>", marketing_count)
-        replace_exact(project, r"^(\s*CURRENT_PROJECT_VERSION = )[^;]+(;)$", rf"\g<1>{build}\g<2>", build_count)
+    text = PROJECT.read_text()
+    marketing_count = len(re.findall(r"(?m)^\s*MARKETING_VERSION = [^;]+;", text))
+    build_count = len(re.findall(r"(?m)^\s*CURRENT_PROJECT_VERSION = [^;]+;", text))
+    if not marketing_count or not build_count:
+        raise ValueError(f"Missing version settings in {PROJECT}")
+    replace_exact(PROJECT, r"^(\s*MARKETING_VERSION = )[^;]+(;)$", rf"\g<1>{value}\g<2>", marketing_count)
+    replace_exact(PROJECT, r"^(\s*CURRENT_PROJECT_VERSION = )[^;]+(;)$", rf"\g<1>{build}\g<2>", build_count)
 
 
 def main() -> None:

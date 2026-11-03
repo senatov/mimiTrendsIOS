@@ -66,13 +66,15 @@ struct RadarSignalColumnWidths {
     static func fit(
         signals: [ScanResult],
         companyNames: [String],
-        exchangeRate: FMPExchangeRate?,
+        currencyRates: DisplayCurrencyRates?,
+        displayCurrency: String,
         availableWidth: CGFloat,
         overrides: [RadarSortColumn: CGFloat],
         fontSize: Double
     ) -> Self {
         let contentWidths = Self.contentWidths(
-            signals: signals, companyNames: companyNames, exchangeRate: exchangeRate, fontSize: fontSize
+            signals: signals, companyNames: companyNames, currencyRates: currencyRates,
+            displayCurrency: displayCurrency, fontSize: fontSize
         )
         var widths = Dictionary(uniqueKeysWithValues: RadarSortColumn.allCases.map { column in
             let fitted = min(max(contentWidths[column] ?? column.minimumWidth, column.minimumWidth), column.maximumWidth)
@@ -100,7 +102,8 @@ struct RadarSignalColumnWidths {
         )
     }
     static func contentWidths(
-        signals: [ScanResult], companyNames: [String], exchangeRate: FMPExchangeRate?, fontSize: Double
+        signals: [ScanResult], companyNames: [String], currencyRates: DisplayCurrencyRates?,
+        displayCurrency: String, fontSize: Double
     ) -> [RadarSortColumn: CGFloat] {
         [
             .company: measuredWidth(companyNames, fontSize: fontSize) + 50,
@@ -110,8 +113,7 @@ struct RadarSignalColumnWidths {
             }, fontSize: fontSize) + 24,
             .window: measuredWidth(signals.map(\.signalWindowLabel), fontSize: fontSize) + 24,
             .price: measuredWidth(signals.map {
-                RadarSignalPrice.display($0, exchangeRate: exchangeRate,
-                                         nowMillis: Int64(Date().timeIntervalSince1970 * 1_000)).text
+                RadarSignalPrice.display($0, rates: currencyRates, currency: displayCurrency).text
             }, fontSize: fontSize) + 30,
             .age: 70
         ]

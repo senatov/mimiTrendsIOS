@@ -39,6 +39,8 @@ struct SettingsView: View {
                 RadarScanSettingsView()
             case .providers:
                 SourceCredentialsView()
+            case .currency:
+                CurrencySettingsView()
             case .appearance:
                 AppearanceSettingsView()
             case .tableColors:
@@ -50,7 +52,7 @@ struct SettingsView: View {
 }
 
 private enum SettingsSection: String, CaseIterable, Identifiable {
-    case scanner, rapidMoves, providers, appearance, tableColors
+    case scanner, rapidMoves, providers, currency, appearance, tableColors
 
     var id: String { rawValue }
 
@@ -59,6 +61,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .scanner: "Scanner"
         case .rapidMoves: "Rapid moves"
         case .providers: "Market data providers"
+        case .currency: "Currency"
         case .appearance: "Appearance"
         case .tableColors: "Color Table"
         }
@@ -69,6 +72,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
         case .scanner: "line.3.horizontal.decrease.circle"
         case .rapidMoves: "waveform.path.ecg"
         case .providers: "antenna.radiowaves.left.and.right"
+        case .currency: "eurosign.circle"
         case .appearance: "paintpalette"
         case .tableColors: "tablecells"
         }

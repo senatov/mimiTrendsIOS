@@ -6,6 +6,7 @@ struct RadarView: View {
     @AppStorage("radar.historyLimit.v1") private var maxResults = 30
     @AppStorage("radar.historyAgeHours.v1") private var maxAgeHours = 2
     @AppStorage("radar.scanWatchlist.v1") private var scanWatchlist = false
+    @AppStorage("display.currency.v1") private var displayCurrency = "EUR"
     @Binding var symbol: String
     let watchlistRevision: Int
     let onManageWatchlist: () -> Void
@@ -26,7 +27,8 @@ struct RadarView: View {
     @State private var lsStatus: LSCandidateStatus?
     @State private var marketScanner = MarketRadarScanner()
     @State private var marketCycle: MarketRadarCycle?
-    @State private var exchangeRate: FMPExchangeRate?
+    @State private var currencyRates: DisplayCurrencyRates?
+    @State private var currencyService = DisplayCurrencyService()
     @State private var discoveryStatus: DiscoveryRefreshStatus?
     @State private var discoveryRefreshID: UUID?
     @State private var discoveryRequests = 0
@@ -51,7 +53,8 @@ struct RadarView: View {
                             companyName: chartCompanyName,
                             companyMetadata: companyMetadata[chartSymbol.uppercased()],
                             signal: selectedSignal,
-                            exchangeRate: exchangeRate,
+                            currencyRates: currencyRates,
+                            displayCurrency: displayCurrency,
                             refreshID: chartRefreshID
                         )
                     },
@@ -81,7 +84,8 @@ struct RadarView: View {
             .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
             .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
-            .task(id: "\(scenePhase)|\(marketCycle?.usesFMP == true)") { await refreshExchangeRateWhileActive() }
+            .task(id: scenePhase) { await refreshDisplayCurrency() }
+            .task { await detectInitialCurrency() }
             .task(id: "\(scenePhase)|\(watchlistRevision)") { await loadWatchlistPreview() }
             .onChange(of: scanWatchlist) { _, includeWatchlist in
                 AppDiagnostics.shared.record(
@@ -200,27 +204,23 @@ struct RadarView: View {
         }
     }
 
-    private func refreshExchangeRateWhileActive() async {
-        guard scenePhase == .active,
-              let apiKey = try? ProviderCredentialStore.load(FMPCredential.account) else {
-            exchangeRate = nil
-            return
-        }
-        while !Task.isCancelled {
-            do {
-                exchangeRate = try await FMPExchangeRateSource().loadEURUSD(
-                    apiKey: apiKey, nowMillis: Int64(Date().timeIntervalSince1970 * 1_000)
-                )
-            } catch is CancellationError {
-                return
-            } catch {
-                exchangeRate = nil
-                AppDiagnostics.shared.record(.warning, "FMP", "fx-rate-unavailable",
-                                             "error=\(String(describing: error))")
-            }
-            do { try await Task.sleep(for: .seconds(15 * 60)) }
-            catch { return }
-        }
+    private func refreshDisplayCurrency() async {
+        guard scenePhase == .active else { return }
+        currencyRates = await currencyService.cached()
+        do { currencyRates = try await currencyService.latest() }
+        catch { AppDiagnostics.shared.record(.warning, "ECB", "fx-rate-unavailable",
+                                             "error=\(String(describing: type(of: error)))") }
+    }
+
+    private func detectInitialCurrency() async {
+        guard !UserDefaults.standard.bool(forKey: "display.currency.initialized.v1") else { return }
+        guard let detected = try? await IPLocationCurrencySource().detect(),
+              !Task.isCancelled,
+              !UserDefaults.standard.bool(forKey: "display.currency.initialized.v1") else { return }
+        displayCurrency = detected.currency
+        UserDefaults.standard.set(true, forKey: "display.currency.initialized.v1")
+        AppDiagnostics.shared.record(.info, "Currency", "ip-country-detected",
+                                     "country=\(detected.country) currency=\(detected.currency)")
     }
 
     private var currentActivity: RadarActivity? {
@@ -247,7 +247,8 @@ struct RadarView: View {
             quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
             companyMetadata: companyMetadata,
-            exchangeRate: exchangeRate,
+            currencyRates: currencyRates,
+            displayCurrency: displayCurrency,
             selected: selectedSignal,
             compact: compact,
             errorMessage: historyError,

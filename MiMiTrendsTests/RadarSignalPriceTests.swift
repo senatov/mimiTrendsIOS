@@ -5,35 +5,19 @@ import XCTest
 final class RadarSignalPriceTests: XCTestCase {
     private let nowSeconds: Int64 = 1_800_000_060
 
-    func testRecentUSDSignalUsesVerifiedFXAndKeepsSourcePriceInExplanation() throws {
+    func testDisplayCurrencyConvertsWithoutSignalTimeRestrictionAndNeverShowsSourceUSD() {
         let signal = makeSignal()
-        let quote = FMPExchangeRate(eurosToDollars: 1.1194,
-                                    observedAtMillis: nowSeconds * 1_000)
-        let display = RadarSignalPrice.display(signal, exchangeRate: quote,
-                                               nowMillis: nowSeconds * 1_000)
-        XCTAssertEqual(display.estimatedEUR ?? 0, 295.2743, accuracy: 0.0001)
-        XCTAssertTrue(display.text.contains("€"))
-        XCTAssertTrue(display.explanation.contains("USD"))
-
-        let staleDisplay = RadarSignalPrice.display(signal, exchangeRate: quote,
-                                                    nowMillis: nowSeconds * 1_000 + 21 * 60_000)
-        XCTAssertNil(staleDisplay.estimatedEUR)
-        XCTAssertTrue(staleDisplay.text.contains("$"))
-    }
-
-    func testFXDecoderRejectsOldQuoteAndWrongSymbol() throws {
-        let quote = Data("""
-        [{"symbol":"EURUSD","price":1.1194,"timestamp":1800000060}]
-        """.utf8)
-        XCTAssertEqual(try FMPExchangeRateSource.decode(quote, nowMillis: nowSeconds * 1_000)
-            .eurosToDollars, 1.1194)
-        XCTAssertThrowsError(try FMPExchangeRateSource.decode(
-            quote, nowMillis: nowSeconds * 1_000 + 21 * 60_000
-        ))
-        XCTAssertThrowsError(try FMPExchangeRateSource.decode(
-            Data(#"[{"symbol":"USDEUR","price":0.89,"timestamp":1800000060}]"#.utf8),
-            nowMillis: nowSeconds * 1_000
-        ))
+        let rates = DisplayCurrencyRates(date: "2026-11-03", ratesPerEuro: ["EUR": 1, "USD": 1.1194, "GBP": 0.84],
+                                         fetchedAt: Date())
+        let euro = RadarSignalPrice.display(signal, rates: rates, currency: "EUR")
+        XCTAssertEqual(euro.convertedAmount ?? 0, 295.2743, accuracy: 0.0001)
+        XCTAssertTrue(euro.text.contains("€"))
+        XCTAssertFalse(euro.text.contains("$"))
+        let pounds = RadarSignalPrice.display(signal, rates: rates, currency: "GBP")
+        XCTAssertTrue(pounds.text.contains("£"))
+        XCTAssertFalse(pounds.text.contains("$"))
+        let waiting = RadarSignalPrice.display(signal, rates: nil, currency: "EUR")
+        XCTAssertEqual(waiting.text, "—")
     }
 
     func testOldSignalPayloadWithoutCurrencyStillDecodes() throws {

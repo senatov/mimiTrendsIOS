@@ -12,7 +12,8 @@ struct RadarSignalRow: View {
     let signal: ScanResult
     let companyName: String
     let companyMetadata: RadarCompanyMetadata?
-    let exchangeRate: FMPExchangeRate?
+    let currencyRates: DisplayCurrencyRates?
+    let displayCurrency: String
     let compact: Bool
     let isSelected: Bool
     let widths: RadarSignalColumnWidths
@@ -174,8 +175,7 @@ struct RadarSignalRow: View {
     }
 
     private var formattedPrice: RadarSignalPrice.Presentation {
-        RadarSignalPrice.display(signal, exchangeRate: exchangeRate,
-                                 nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
+        RadarSignalPrice.display(signal, rates: currencyRates, currency: displayCurrency)
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {

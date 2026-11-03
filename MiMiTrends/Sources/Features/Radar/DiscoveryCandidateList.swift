@@ -2,15 +2,17 @@ import SwiftUI
 
 struct DiscoveryCandidateList: View {
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("display.currency.v1") private var displayCurrency = "EUR"
     let snapshot: DiscoverySnapshot
     @State private var searchText = ""
     @State private var directQuotes: [String: WallstreetOnlineQuote] = [:]
     @State private var quoteMessage: String?
+    @State private var currencyRates: DisplayCurrencyRates?
 
     var body: some View {
         List {
             Section {
-                Text("Prices shown below come from the linked wallstreetONLINE pages and are in EUR. Rankings do not supply verified trading symbols or scanner signals.")
+                Text("Prices come from linked wallstreetONLINE pages and display in \(displayCurrency). Rankings do not supply verified trading symbols or scanner signals.")
                     .font(.callout)
                     .foregroundStyle(TrendsColors.supportingInk)
                 Text("Direct quote checks are limited to the first eight visible candidates. USD prices require a fresh EUR/USD quote; other currencies are omitted.")
@@ -30,6 +32,11 @@ struct DiscoveryCandidateList: View {
         .searchable(text: $searchText, prompt: "Company or instrument path")
         .navigationTitle("Ranking candidates")
         .task(id: "\(searchText)|\(scenePhase)") { await loadDirectQuotes() }
+        .task {
+            let service = DisplayCurrencyService()
+            currencyRates = await service.cached()
+            if let fresh = try? await service.latest() { currencyRates = fresh }
+        }
     }
 
     private var filteredCandidates: [DiscoveryCandidate] {
@@ -48,7 +55,8 @@ struct DiscoveryCandidateList: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if let quote = directQuotes[candidate.instrumentID] {
-                    Text(quote.priceEUR.formatted(.currency(code: "EUR")))
+                    Text(currencyRates?.formatted(quote.priceEUR, from: "EUR", to: displayCurrency)
+                         ?? (displayCurrency == "EUR" ? quote.priceEUR.formatted(.currency(code: "EUR")) : "—"))
                         .monospacedDigit()
                 }
                 if let metrics = candidate.marketMetrics {
@@ -85,7 +93,7 @@ struct DiscoveryCandidateList: View {
             _ = try await store.record(loaded.values.map(MarketQuoteRecord.init),
                                        nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
             directQuotes = loaded
-            quoteMessage = "\(loaded.count) recent linked page quotes in EUR."
+            quoteMessage = "\(loaded.count) recent linked page quotes, displayed in \(displayCurrency)."
         } catch is CancellationError {
             return
         } catch {
