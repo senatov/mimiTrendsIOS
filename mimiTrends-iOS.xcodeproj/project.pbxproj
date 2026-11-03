@@ -19,6 +19,7 @@
 		181A1307A50166CF2A885315 /* ProviderSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */; };
 		18668F60B68C474955325389 /* MarketPageQuote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC50A387EC4114F9C30C9EB /* MarketPageQuote.swift */; };
 		1C5C0587B818EA38CCFF8EC9 /* FinnhubCredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */; };
+		1D4B13798A6CBE14B8BBD743 /* FMPCandidateSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A4A60180D183DA2CFED408 /* FMPCandidateSource.swift */; };
 		213EF8EF61243367B8E01CC5 /* MarketModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44371ED1585DAE0AFED41514 /* MarketModelTests.swift */; };
 		25D4F99CCC0FD8FE533AA9E1 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AA30E102A1E7015DDD6AC6 /* RadarView.swift */; };
 		29AA77D9B1BC7B34F87646FD /* SustainedMoveDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF1BDD388D1713ED47A40094 /* SustainedMoveDetector.swift */; };
@@ -95,6 +96,7 @@
 		9BEFDA17CEDC56446AEEF0CC /* RadarActivityBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5235DFF6ECD25F329C365833 /* RadarActivityBanner.swift */; };
 		9E9C4B2539001E0C566B76D0 /* DiscoveryRefreshCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB748D1A71D77B911C33C02 /* DiscoveryRefreshCache.swift */; };
 		A01241ECCD6A0F41220B9167 /* RadarScanPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC678F283ABD4BE2D71528F /* RadarScanPreferencesTests.swift */; };
+		A3DAD0D5998BC65F690ABA08 /* FMPCompanyProfileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
 		A9E0F6144582D0B1291D7057 /* FinnhubRadarPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4678F11490EA437FAD224DD /* FinnhubRadarPipelineTests.swift */; };
 		ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */; };
@@ -167,6 +169,7 @@
 		117997F6759266E018D18DC6 /* FinnhubTradeDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubTradeDecoder.swift; sourceTree = "<group>"; };
 		13737AEBC5153080CFC7D336 /* RadarTableColorStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableColorStoreTests.swift; sourceTree = "<group>"; };
 		14AC5179E3180B2FD43113A1 /* MarketRadarScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRadarScannerTests.swift; sourceTree = "<group>"; };
+		16A4A60180D183DA2CFED408 /* FMPCandidateSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCandidateSource.swift; sourceTree = "<group>"; };
 		17BA9EF663371153E075CCA3 /* MarketBarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBarStore.swift; sourceTree = "<group>"; };
 		1A9D629ECCB3C023D89194F6 /* HeaderResourceBadges.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderResourceBadges.swift; sourceTree = "<group>"; };
 		1AB1C9B19F9396B5ADD18797 /* DiscoverySnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverySnapshotStore.swift; sourceTree = "<group>"; };
@@ -223,6 +226,7 @@
 		7EE5E447F15502D8BB7E6BED /* TradableCorridorDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetector.swift; sourceTree = "<group>"; };
 		821F3802722B3BDBE88B896D /* RadarRankingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarRankingPreview.swift; sourceTree = "<group>"; };
 		84EDAF5928C89ADE1C954B20 /* ProviderQuoteSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderQuoteSnapshot.swift; sourceTree = "<group>"; };
+		856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCompanyProfileSource.swift; sourceTree = "<group>"; };
 		8663D070C2CC864433FFCE6F /* BrokerTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransaction.swift; sourceTree = "<group>"; };
 		87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRadarSource.swift; sourceTree = "<group>"; };
 		8B215D2A814E439DF586FFF1 /* RadarChartDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartDataTests.swift; sourceTree = "<group>"; };
@@ -419,6 +423,7 @@
 				4E9DBC89710B0F21F227734A /* ScalableCSVImporter.swift */,
 				B1882EF719B85F0E0E950891 /* TradeImportCoordinator.swift */,
 				9FAB19903F43D7F97FFADD41 /* Finnhub */,
+				E59BFCE6FA3A7F96BEFC6A22 /* FMP */,
 				0F7095D32CA187350C006353 /* LangSchwarz */,
 				D346E039BF19ADEA870F1FB0 /* TraderFox */,
 				870601BB1ECDCF89072C926C /* WallstreetOnline */,
@@ -554,6 +559,15 @@
 				9312D5CEC7AA53B33577BF4D /* Watchlist */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		E59BFCE6FA3A7F96BEFC6A22 /* FMP */ = {
+			isa = PBXGroup;
+			children = (
+				16A4A60180D183DA2CFED408 /* FMPCandidateSource.swift */,
+				856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */,
+			);
+			path = FMP;
 			sourceTree = "<group>";
 		};
 		E612AEB71A0EF70B42A81033 /* Radar */ = {
@@ -749,6 +763,8 @@
 				C02CCA55CA6466C3CEEC0CE3 /* DiscoveryRankingPage.swift in Sources */,
 				9E9C4B2539001E0C566B76D0 /* DiscoveryRefreshCache.swift in Sources */,
 				860B373FEC5304548C68B511 /* DiscoverySnapshotStore.swift in Sources */,
+				1D4B13798A6CBE14B8BBD743 /* FMPCandidateSource.swift in Sources */,
+				A3DAD0D5998BC65F690ABA08 /* FMPCompanyProfileSource.swift in Sources */,
 				9B0462558BD80589645FE08B /* FinnhubBidAskClient.swift in Sources */,
 				03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */,
 				BBF88726F1EC08B77602F2E6 /* FinnhubCredentialStore.swift in Sources */,

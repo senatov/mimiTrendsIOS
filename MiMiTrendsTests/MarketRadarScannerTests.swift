@@ -51,6 +51,42 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(YahooRadarSource.activeSymbols(in: quotes, limit: 3), ["HIGH", "LOW"])
     }
 
+    func testFMPCandidatesDiscardInvalidRowsAndInterleaveMoverLists() throws {
+        let data = Data("""
+        [
+          {"symbol":"AAPL","name":"Apple Inc.","price":200,"exchange":"NASDAQ"},
+          {"symbol":"PENNY","name":"Penny Corp.","price":0.5,"exchange":"OTC"},
+          {"symbol":"BAD","name":"", "price":10,"exchange":"NYSE"},
+          {"symbol":"MSFT","name":"Microsoft Corp.","price":400,"exchange":"NASDAQ"}
+        ]
+        """.utf8)
+        let active = try FMPCandidateSource.decodeCandidates(data)
+        XCTAssertEqual(active.map(\.symbol), ["AAPL", "MSFT"])
+        let movers = FMPCandidateSource.interleave(
+            [active, [active[0], RadarCompanyCandidate(symbol: "NVDA", name: "Nvidia")]], limit: 3
+        )
+        XCTAssertEqual(movers.map(\.symbol), ["AAPL", "MSFT", "NVDA"])
+        XCTAssertThrowsError(try FMPCandidateSource.decodeCandidates(Data("{}".utf8)))
+    }
+
+    func testFMPProfileAcceptsOnlyMatchingCompanyAndProviderImage() {
+        let data = Data("""
+        [{"symbol":"AAPL","companyName":"Apple Inc.","country":"US",
+          "image":"https://images.financialmodelingprep.com/symbol/AAPL.png","defaultImage":false}]
+        """.utf8)
+        let profile = FMPCompanyProfileSource.decode(data, symbol: "AAPL")
+        XCTAssertEqual(profile?.name, "Apple Inc.")
+        XCTAssertEqual(profile?.countryCode, "US")
+        XCTAssertEqual(profile?.logoURL?.host, "images.financialmodelingprep.com")
+        XCTAssertNil(FMPCompanyProfileSource.decode(data, symbol: "MSFT"))
+
+        let placeholder = Data("""
+        [{"symbol":"AAPL","image":"https://images.financialmodelingprep.com/symbol/AAPL.png",
+          "defaultImage":true}]
+        """.utf8)
+        XCTAssertNil(FMPCompanyProfileSource.decode(placeholder, symbol: "AAPL")?.logoURL)
+    }
+
     func testYahooBarDecoderSkipsIncompleteCandles() throws {
         let root: [String: Any] = ["chart": ["result": [[
             "timestamp": [120, 180],

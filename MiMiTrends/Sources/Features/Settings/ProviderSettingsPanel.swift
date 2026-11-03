@@ -38,7 +38,7 @@ struct ProviderSettingsPanel: View {
                 )
                 endpointGroup(
                     "Discovery",
-                    detail: "Market ranking and linked instrument pages",
+                    detail: "Ranking links; TraderFox candidates without an FMP key",
                     endpoints: [.wallstreetOnline, .traderFox]
                 )
                 endpointGroup(

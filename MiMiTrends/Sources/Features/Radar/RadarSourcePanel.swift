@@ -72,13 +72,19 @@ struct RadarSourcePanel: View {
                 canShowCandidates: discoveryStatus?.snapshot != nil
             ),
             RadarTelemetrySource(
-                name: "TraderFox", status: marketStatus(marketCycle?.traderFox),
-                statusColor: marketColor(marketCycle?.traderFox), dotColor: marketColor(marketCycle?.traderFox),
-                received: marketCycle?.traderFox.received, valid: marketCycle?.traderFox.valid,
-                requests: marketCycle?.traderFox.operations, errors: marketCycle?.traderFox.errors,
+                name: marketCycle?.usesFMP == true ? "FMP" : "TraderFox",
+                status: marketStatus(candidateTotals),
+                statusColor: marketColor(candidateTotals), dotColor: marketColor(candidateTotals),
+                received: candidateTotals?.received, valid: candidateTotals?.valid,
+                requests: candidateTotals?.operations, errors: candidateTotals?.errors,
                 canShowCandidates: false
             )
         ]
+    }
+
+    private var candidateTotals: RadarSourceTotals? {
+        guard let marketCycle else { return nil }
+        return marketCycle.usesFMP ? marketCycle.fmp : marketCycle.traderFox
     }
 
     private var yahooStatus: String {

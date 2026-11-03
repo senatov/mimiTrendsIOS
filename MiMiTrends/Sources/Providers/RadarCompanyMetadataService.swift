@@ -17,7 +17,9 @@ actor RadarCompanyMetadataService {
                 return now - cached.updatedAtMillis > cacheLifetime
             }
             let token = try? FinnhubCredentialStore.load()
+            let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
             let requestSession = session
+            let fmp = FMPCompanyProfileSource(session: requestSession)
             for offset in stride(from: 0, to: stale.count, by: 4) {
                 let batch = Array(stale[offset..<min(offset + 4, stale.count)])
                 await withTaskGroup(of: (String, RadarCompanyMetadata?).self) { group in
@@ -26,11 +28,23 @@ actor RadarCompanyMetadataService {
                         let cached = metadata[symbol]
                         group.addTask {
                             guard !Task.isCancelled else { return (symbol, nil) }
-                            let profile = await Self.fetchProfile(symbol: symbol, apiKey: token, session: requestSession)
-                            let name = profile?.profileName ?? fallbackName
-                            let country = profile?.countryCode ?? cached?.countryCode ?? RadarCompanyMetadata.countryFallback(for: symbol)
-                            let logo = profile?.logoURL.flatMap { URL(string: $0) }
-                            var image = await Self.loadLogo(logo, session: requestSession) ?? cached?.logoData
+                            let providerProfile: FMPCompanyProfile?
+                            if let fmpKey { providerProfile = await fmp.profile(symbol: symbol, apiKey: fmpKey) }
+                            else { providerProfile = nil }
+                            let providerImage = await Self.loadLogo(providerProfile?.logoURL, session: requestSession)
+                            let finnhubProfile: CompanyProfileResponse?
+                            if providerImage == nil {
+                                finnhubProfile = await Self.fetchProfile(symbol: symbol, apiKey: token, session: requestSession)
+                            } else {
+                                finnhubProfile = nil
+                            }
+                            let name = providerProfile?.name ?? finnhubProfile?.profileName ?? fallbackName
+                            let country = providerProfile?.countryCode ?? finnhubProfile?.countryCode
+                                ?? cached?.countryCode ?? RadarCompanyMetadata.countryFallback(for: symbol)
+                            let finnhubLogo = finnhubProfile?.logoURL.flatMap { URL(string: $0) }
+                            var image = providerImage
+                            if image == nil { image = await Self.loadLogo(finnhubLogo, session: requestSession) }
+                            if image == nil { image = cached?.logoData }
                             if image == nil { image = await Self.loadCompanyMark(name: name, session: requestSession) }
                             return (symbol, RadarCompanyMetadata(
                                 symbol: symbol, name: name, countryCode: country,

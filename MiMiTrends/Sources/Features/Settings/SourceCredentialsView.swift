@@ -11,6 +11,18 @@ struct SourceCredentialsView: View {
             VStack(alignment: .leading, spacing: 18) {
                 TradeImportSettingsSection(width: width)
                 ProviderSettingsPanel(width: width)
+                SettingsGroup(title: "FMP market candidates") {
+                    CredentialEditor(
+                        title: "Financial Modeling Prep API key",
+                        detail: "Use FMP JSON movers instead of the TraderFox HTML candidate page.",
+                        load: { try ProviderCredentialStore.load(FMPCredential.account) },
+                        save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
+                        remove: { try ProviderCredentialStore.delete(FMPCredential.account) }
+                    )
+                    Text("The key switches candidate discovery on the next Radar scan. Yahoo minute candles remain the source of confirmed market signals. FMP mover results do not include a source timestamp.")
+                        .font(.body.weight(.light))
+                        .foregroundStyle(TrendsColors.supportingInk)
+                }
                 SettingsGroup(title: "Finnhub access") {
                     finnhubKeyEditor
                     Text("Required for the live trade feed and optional US bid/ask validation.")

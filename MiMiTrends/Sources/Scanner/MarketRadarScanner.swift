@@ -10,6 +10,8 @@ struct RadarSourceTotals: Sendable {
 struct MarketRadarCycle: Sendable {
     let yahoo: RadarSourceTotals
     let traderFox: RadarSourceTotals
+    let fmp: RadarSourceTotals
+    let usesFMP: Bool
     let yahooCooldownUntil: Date?
     let initialScanProcessed: Int
     let initialScanTotal: Int
@@ -21,8 +23,11 @@ struct MarketRadarCycle: Sendable {
 actor MarketRadarScanner {
     private let yahoo = YahooRadarSource()
     private let traderFox = TraderFoxRadarSource()
+    private let fmp = FMPCandidateSource()
     private var yahooCandidates: [RadarCompanyCandidate] = []
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
+    private var fmpCandidates: [RadarCompanyCandidate] = []
+    private var activeFMPKey: String?
     private var nextDiscoveryAt: Date = .distantPast
     private var yahooCooldownUntil: Date?
     private var unsupportedSymbols = Set<String>()
@@ -31,21 +36,33 @@ actor MarketRadarScanner {
     private var initialScanTotal = 0
     private var yahooTotals = RadarSourceTotals()
     private var traderFoxTotals = RadarSourceTotals()
+    private var fmpTotals = RadarSourceTotals()
 
     func scan(settings: RadarScanPreferences) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
-        if Date() >= nextDiscoveryAt {
-            await refreshSources()
+        let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
+        if fmpKey != activeFMPKey {
+            activeFMPKey = fmpKey
+            fmpCandidates = []
+            nextDiscoveryAt = .distantPast
+            initialScanSymbols = []
+            initialScanTotal = 0
         }
-        let pool = Self.interleave(yahooCandidates.map(\.symbol), traderFoxCandidates.map(\.symbol), limit: 16)
+        let usesFMP = fmpKey != nil
+        if Date() >= nextDiscoveryAt {
+            await refreshSources(fmpKey: fmpKey)
+        }
+        let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
+        let pool = Self.interleave(yahooCandidates.map(\.symbol), secondaryCandidates.map(\.symbol), limit: 16)
             .filter { !unsupportedSymbols.contains($0) }
         if initialScanTotal == 0 { initialScanTotal = pool.count }
         let names = Dictionary(
-            (yahooCandidates + traderFoxCandidates).map { ($0.symbol, $0.name) },
+            (yahooCandidates + secondaryCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
         if let yahooCooldownUntil, Date() < yahooCooldownUntil {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
+                                    fmp: fmpTotals, usesFMP: usesFMP,
                                     yahooCooldownUntil: yahooCooldownUntil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
@@ -59,6 +76,7 @@ actor MarketRadarScanner {
         }
         guard !symbols.isEmpty else {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
+                                    fmp: fmpTotals, usesFMP: usesFMP,
                                     yahooCooldownUntil: nil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
@@ -163,7 +181,7 @@ actor MarketRadarScanner {
             )
         }
         return MarketRadarCycle(
-            yahoo: yahooTotals, traderFox: traderFoxTotals,
+            yahoo: yahooTotals, traderFox: traderFoxTotals, fmp: fmpTotals, usesFMP: usesFMP,
             yahooCooldownUntil: yahooCooldownUntil,
             initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
             initialScanTotal: initialScanTotal,
@@ -171,13 +189,15 @@ actor MarketRadarScanner {
         )
     }
 
-    private func refreshSources() async {
+    private func refreshSources(fmpKey: String?) async {
         nextDiscoveryAt = Date().addingTimeInterval(30 * 60)
+        var yahooRefreshed = false
         do {
             let symbols = try await yahoo.mostActiveCandidates()
             yahooTotals.operations += 1
             if !symbols.isEmpty {
                 yahooCandidates = symbols
+                yahooRefreshed = true
                 unsupportedSymbols.removeAll()
                 scanOffset = 0
             }
@@ -195,19 +215,48 @@ actor MarketRadarScanner {
                 "error=\(String(describing: type(of: error)))"
             )
         }
-        do {
-            let symbols = try await traderFox.activeCandidates()
-            traderFoxTotals.operations += 1
-            traderFoxTotals.received += symbols.count
-            traderFoxTotals.valid += symbols.count
-            if !symbols.isEmpty { traderFoxCandidates = symbols }
-        } catch {
-            traderFoxTotals.operations += 1
-            traderFoxTotals.errors += 1
-            AppDiagnostics.shared.record(
-                .warning, "TraderFox", "candidate-refresh-failed",
-                "error=\(String(describing: type(of: error)))"
-            )
+        if let fmpKey {
+            do {
+                let symbols = try await fmp.activeCandidates(apiKey: fmpKey)
+                fmpTotals.operations += 3
+                fmpTotals.received += symbols.count
+                fmpTotals.valid += symbols.count
+                fmpCandidates = symbols
+                let yahooSet = Set(yahooCandidates.map(\.symbol))
+                let overlap = symbols.filter { yahooSet.contains($0.symbol) }.count
+                AppDiagnostics.shared.record(
+                    .info, "FMP", "candidate-comparison",
+                    "fmp=\(symbols.count) yahoo=\(yahooCandidates.count) yahooFresh=\(yahooRefreshed) overlap=\(overlap) sourceTimestamp=unavailable"
+                )
+            } catch let failure as FMPCandidateFailure {
+                fmpTotals.operations += failure.requests
+                fmpTotals.errors += 1
+                AppDiagnostics.shared.record(
+                    .warning, "FMP", "candidate-refresh-failed",
+                    "requests=\(failure.requests) error=\(failure.reason)"
+                )
+            } catch {
+                fmpTotals.errors += 1
+                AppDiagnostics.shared.record(
+                    .warning, "FMP", "candidate-refresh-failed",
+                    "error=\(String(describing: type(of: error)))"
+                )
+            }
+        } else {
+            do {
+                let symbols = try await traderFox.activeCandidates()
+                traderFoxTotals.operations += 1
+                traderFoxTotals.received += symbols.count
+                traderFoxTotals.valid += symbols.count
+                if !symbols.isEmpty { traderFoxCandidates = symbols }
+            } catch {
+                traderFoxTotals.operations += 1
+                traderFoxTotals.errors += 1
+                AppDiagnostics.shared.record(
+                    .warning, "TraderFox", "candidate-refresh-failed",
+                    "error=\(String(describing: type(of: error)))"
+                )
+            }
         }
     }
 
