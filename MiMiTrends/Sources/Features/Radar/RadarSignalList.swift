@@ -12,6 +12,7 @@ struct RadarSignalList: View {
     let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
+    let exchangeRate: FMPExchangeRate?
     let selected: ScanResult?
     let compact: Bool
     let errorMessage: String?
@@ -125,6 +126,7 @@ struct RadarSignalList: View {
                                     signal: item.signal,
                                     companyName: companyNames[item.signal.symbol] ?? item.signal.symbol,
                                     companyMetadata: companyMetadata[item.signal.symbol],
+                                    exchangeRate: exchangeRate,
                                     compact: compact,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
@@ -229,7 +231,8 @@ struct RadarSignalList: View {
     private func autoFit(_ column: RadarSortColumn) {
         let names = signals.map { companyNames[$0.symbol] ?? $0.symbol }
         let contentWidths = RadarSignalColumnWidths.contentWidths(
-            signals: signals, companyNames: names, fontSize: tableTypography.size
+            signals: signals, companyNames: names, exchangeRate: exchangeRate,
+            fontSize: tableTypography.size
         )
         setWidth(contentWidths[column] ?? column.minimumWidth, for: column)
     }
@@ -238,6 +241,7 @@ struct RadarSignalList: View {
         RadarSignalColumnWidths.fit(
             signals: signals,
             companyNames: signals.map { companyNames[$0.symbol] ?? $0.symbol },
+            exchangeRate: exchangeRate,
             availableWidth: availableWidth,
             overrides: columnWidthOverrides,
             fontSize: tableTypography.size
@@ -318,12 +322,13 @@ struct RadarSignalColumnWidths {
     static func fit(
         signals: [ScanResult],
         companyNames: [String],
+        exchangeRate: FMPExchangeRate?,
         availableWidth: CGFloat,
         overrides: [RadarSortColumn: CGFloat],
         fontSize: Double
     ) -> Self {
         let contentWidths = Self.contentWidths(
-            signals: signals, companyNames: companyNames, fontSize: fontSize
+            signals: signals, companyNames: companyNames, exchangeRate: exchangeRate, fontSize: fontSize
         )
         var widths = Dictionary(uniqueKeysWithValues: RadarSortColumn.allCases.map { column in
             let fitted = min(max(contentWidths[column] ?? column.minimumWidth, column.minimumWidth), column.maximumWidth)
@@ -349,9 +354,8 @@ struct RadarSignalColumnWidths {
             age: widths[.age] ?? RadarSortColumn.age.minimumWidth
         )
     }
-
     static func contentWidths(
-        signals: [ScanResult], companyNames: [String], fontSize: Double
+        signals: [ScanResult], companyNames: [String], exchangeRate: FMPExchangeRate?, fontSize: Double
     ) -> [RadarSortColumn: CGFloat] {
         [
             .company: measuredWidth(companyNames, fontSize: fontSize) + 50,
@@ -360,7 +364,8 @@ struct RadarSignalColumnWidths {
                 String(format: "%+.2f%% / %@", $0.windowChangePercent, $0.signalWindowLabel)
             }, fontSize: fontSize) + 24,
             .price: measuredWidth(signals.map {
-                $0.price.formatted(.number.precision(.fractionLength(0...2)))
+                RadarSignalPrice.display($0, exchangeRate: exchangeRate,
+                                         nowMillis: Int64(Date().timeIntervalSince1970 * 1_000)).text
             }, fontSize: fontSize) + 30,
             .age: 70
         ]
@@ -388,7 +393,6 @@ struct RadarSignalColumnWidths {
         return signal.isRetained ? "\(label) · RECENT" : label
     }
 }
-
 private struct RadarSignalItem: Identifiable {
     let signal: ScanResult
     var id: String { "\(signal.symbol)|\(signal.signalSource)|\(signal.signalEpochMillis)" }

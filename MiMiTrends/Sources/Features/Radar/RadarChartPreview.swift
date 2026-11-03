@@ -4,6 +4,7 @@ struct RadarChartPreview: View {
     let symbol: String
     let companyName: String
     let signal: ScanResult?
+    let exchangeRate: FMPExchangeRate?
     let refreshID: Int
 
     @State private var allBars: [MinuteBar] = []
@@ -80,13 +81,16 @@ struct RadarChartPreview: View {
                 Text(symbol.isEmpty ? "No symbol selected" : symbol)
                     .font(.title3.weight(.regular))
                 if let signal {
-                    Text(signal.price.formatted(.number.precision(.fractionLength(0...2))))
+                    let price = RadarSignalPrice.display(signal, exchangeRate: exchangeRate,
+                                                         nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
+                    Text(price.text)
                         .font(.title3.monospacedDigit())
+                        .help(price.explanation)
                     Text("\(signal.windowChangePercent.formatted(.number.precision(.fractionLength(2))))%")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
                 } else if let last = chartData.bars.last {
-                    Text(last.close.formatted(.number.precision(.fractionLength(2))))
+                    Text(formattedPrice(last.close))
                         .font(.title3.monospacedDigit())
                     Text("latest saved close")
                         .font(.subheadline.weight(.light))
@@ -116,7 +120,7 @@ struct RadarChartPreview: View {
                     inspection: $cursorInspection
                 )
                 if let last = chartData.bars.last {
-                    Text("\(chartData.bars.count) saved bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · source currency · gaps are not filled")
+                    Text("\(chartData.bars.count) saved bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · gaps are not filled")
                         .font(.subheadline.weight(.light))
                         .foregroundStyle(TrendsColors.supportingInk)
                 }

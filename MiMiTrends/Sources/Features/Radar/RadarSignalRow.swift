@@ -12,6 +12,7 @@ struct RadarSignalRow: View {
     let signal: ScanResult
     let companyName: String
     let companyMetadata: RadarCompanyMetadata?
+    let exchangeRate: FMPExchangeRate?
     let compact: Bool
     let isSelected: Bool
     let widths: RadarSignalColumnWidths
@@ -55,7 +56,8 @@ struct RadarSignalRow: View {
                 companyIdentity
                     .layoutPriority(1)
                 Spacer()
-                Text(formattedPrice).monospacedDigit()
+                Text(formattedPrice.text).monospacedDigit()
+                    .help(formattedPrice.explanation)
             }
             HStack(spacing: 8) {
                 eventBadge
@@ -86,8 +88,9 @@ struct RadarSignalRow: View {
             movement
                 .padding(.horizontal, 6)
                 .frame(width: widths.movement, alignment: .trailing)
-            Text(formattedPrice)
+            Text(formattedPrice.text)
                 .monospacedDigit()
+                .help(formattedPrice.explanation)
                 .padding(.horizontal, 6)
                 .frame(width: widths.price, alignment: .trailing)
             ageText
@@ -182,8 +185,9 @@ struct RadarSignalRow: View {
         }
     }
 
-    private var formattedPrice: String {
-        signal.price.formatted(.number.precision(.fractionLength(0...2)))
+    private var formattedPrice: RadarSignalPrice.Presentation {
+        RadarSignalPrice.display(signal, exchangeRate: exchangeRate,
+                                 nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {

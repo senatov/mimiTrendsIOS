@@ -92,6 +92,8 @@ struct YahooRadarSource: Sendable {
         guard let chart = root["chart"] as? [String: Any],
               let result = chart["result"] as? [[String: Any]],
               let first = result.first,
+              let meta = first["meta"] as? [String: Any],
+              meta["currency"] as? String == "USD",
               let timestamps = first["timestamp"] as? [NSNumber],
               let indicators = first["indicators"] as? [String: Any],
               let quotes = indicators["quote"] as? [[String: Any]],

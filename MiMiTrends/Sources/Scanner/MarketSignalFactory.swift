@@ -16,6 +16,7 @@ enum MarketSignalFactory {
         return ScanResult(
             symbol: symbol,
             price: displayPrice,
+            priceCurrency: "USD",
             anomalyScore: anomalyScore,
             priceAnomaly: nil,
             volumeAnomaly: nil,

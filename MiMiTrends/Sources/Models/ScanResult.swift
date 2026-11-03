@@ -1,6 +1,7 @@
 struct ScanResult: Codable, Equatable, Sendable {
     let symbol: String
     let price: Double
+    let priceCurrency: String?
     let anomalyScore: Double
     let priceAnomaly: Double?
     let volumeAnomaly: Double?
@@ -37,6 +38,7 @@ struct ScanResult: Codable, Equatable, Sendable {
     init(
         symbol: String,
         price: Double,
+        priceCurrency: String? = nil,
         anomalyScore: Double,
         priceAnomaly: Double?,
         volumeAnomaly: Double?,
@@ -72,6 +74,7 @@ struct ScanResult: Codable, Equatable, Sendable {
     ) {
         self.symbol = symbol
         self.price = price
+        self.priceCurrency = priceCurrency
         self.anomalyScore = anomalyScore
         self.priceAnomaly = priceAnomaly
         self.volumeAnomaly = volumeAnomaly

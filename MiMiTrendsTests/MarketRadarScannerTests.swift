@@ -89,6 +89,7 @@ final class MarketRadarScannerTests: XCTestCase {
 
     func testYahooBarDecoderSkipsIncompleteCandles() throws {
         let root: [String: Any] = ["chart": ["result": [[
+            "meta": ["currency": "USD"],
             "timestamp": [120, 180],
             "indicators": ["quote": [[
                 "open": [10.0, NSNull()], "high": [11.0, 11.0],
@@ -99,6 +100,13 @@ final class MarketRadarScannerTests: XCTestCase {
         let bars = try YahooRadarSource.decodeBars(root, symbol: "AAPL")
         XCTAssertEqual(bars.count, 1)
         XCTAssertEqual(bars.first?.minuteEpochSeconds, 120)
+        var wrongCurrency = root
+        var chart = wrongCurrency["chart"] as! [String: Any]
+        var results = chart["result"] as! [[String: Any]]
+        results[0]["meta"] = ["currency": "EUR"]
+        chart["result"] = results
+        wrongCurrency["chart"] = chart
+        XCTAssertThrowsError(try YahooRadarSource.decodeBars(wrongCurrency, symbol: "AAPL"))
     }
 
     func testTraderFoxFiltersStaleAndInactiveRows() throws {

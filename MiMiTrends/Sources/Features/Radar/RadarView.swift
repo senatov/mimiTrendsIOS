@@ -24,6 +24,7 @@ struct RadarView: View {
     @State private var lsStatus: LSCandidateStatus?
     @State private var marketScanner = MarketRadarScanner()
     @State private var marketCycle: MarketRadarCycle?
+    @State private var exchangeRate: FMPExchangeRate?
     @State private var discoveryStatus: DiscoveryRefreshStatus?
     @State private var discoveryRefreshID: UUID?
     @State private var discoveryRequests = 0
@@ -47,6 +48,7 @@ struct RadarView: View {
                             symbol: chartSymbol,
                             companyName: chartCompanyName,
                             signal: selectedSignal,
+                            exchangeRate: exchangeRate,
                             refreshID: chartRefreshID
                         )
                     },
@@ -76,6 +78,7 @@ struct RadarView: View {
             .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
             .task(id: scenePhase) { await refreshLSWhileActive() }
             .task(id: scenePhase) { await scanMarketWhileActive() }
+            .task(id: "\(scenePhase)|\(marketCycle?.usesFMP == true)") { await refreshExchangeRateWhileActive() }
             .task(id: scenePhase) { await loadWatchlistPreview() }
             .onChange(of: scanWatchlist) { _, includeWatchlist in
                 AppDiagnostics.shared.record(
@@ -194,6 +197,29 @@ struct RadarView: View {
         }
     }
 
+    private func refreshExchangeRateWhileActive() async {
+        guard scenePhase == .active,
+              let apiKey = try? ProviderCredentialStore.load(FMPCredential.account) else {
+            exchangeRate = nil
+            return
+        }
+        while !Task.isCancelled {
+            do {
+                exchangeRate = try await FMPExchangeRateSource().loadEURUSD(
+                    apiKey: apiKey, nowMillis: Int64(Date().timeIntervalSince1970 * 1_000)
+                )
+            } catch is CancellationError {
+                return
+            } catch {
+                exchangeRate = nil
+                AppDiagnostics.shared.record(.warning, "FMP", "fx-rate-unavailable",
+                                             "error=\(String(describing: error))")
+            }
+            do { try await Task.sleep(for: .seconds(15 * 60)) }
+            catch { return }
+        }
+    }
+
     private var currentActivity: RadarActivity? {
         if isPreparingFeed { return .preparingFeed }
         if session.isScanning && !session.isSubscribed {
@@ -218,6 +244,7 @@ struct RadarView: View {
             quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
             companyMetadata: companyMetadata,
+            exchangeRate: exchangeRate,
             selected: selectedSignal,
             compact: compact,
             errorMessage: historyError,
