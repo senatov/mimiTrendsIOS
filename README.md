@@ -82,10 +82,10 @@ SIMULATOR_UDID=YOUR_IPAD_SIMULATOR_UDID zsh Scripts/test_ios.zsh
 zsh Scripts/build_macos.zsh Release
 zsh Scripts/check_macos_sandbox.zsh
 zsh Scripts/release_macos.zsh --dry-run
-MIMITRENDS_NOTARY_PROFILE=YOUR_KEYCHAIN_PROFILE zsh Scripts/release_macos.zsh
+zsh Scripts/release_macos.zsh
 ```
 
-The release script requires Xcode, XcodeGen, an authenticated GitHub CLI, a Developer ID Application certificate for the team in `project.yml`, and an existing `notarytool` Keychain profile named by `MIMITRENDS_NOTARY_PROFILE`. Configure that profile using Apple's [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow); credentials stay in Keychain. `MIMITRENDS_MAC_SIGN_IDENTITY` can select a different installed identity for the same team. The version and GitHub Release title use exactly `0.0.0.0`: the current source version is `0.0.1.1`, so the first release from it will be `0.0.1.2`; `0.0.1.9` advances to `0.0.2.0`. The script also considers existing tags and releases, refuses to wrap after `9.9.9.9`, and stops before publication if signing, notarization, stapling, or verification fails. DMGs and notarization results stay under ignored `DerivedData/Releases/`.
+The release script requires Xcode, XcodeGen, an authenticated GitHub CLI, a Developer ID Application certificate for the team in `project.yml`, and a usable `notarytool` Keychain profile. It uses this Mac's existing `MiMiNotary` profile by default and checks access before building; set `MIMITRENDS_NOTARY_PROFILE` only to use a different profile. Apple's [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow) explains how profiles are stored; credentials stay in Keychain. `MIMITRENDS_MAC_SIGN_IDENTITY` can select a different installed identity for the same team. The version and GitHub Release title use exactly `0.0.0.0`: the current source version is `0.0.1.1`, so the first release from it will be `0.0.1.2`; `0.0.1.9` advances to `0.0.2.0`. The script also considers existing tags and releases, refuses to wrap after `9.9.9.9`, and stops before publication if signing, notarization, stapling, or verification fails. DMGs and notarization results stay under ignored `DerivedData/Releases/`.
 
 ## App Store preparation
 

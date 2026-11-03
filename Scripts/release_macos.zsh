@@ -44,9 +44,9 @@ if [[ "${dry_run}" == "--dry-run" ]]; then
     exit 0
 fi
 
-notary_profile="${MIMITRENDS_NOTARY_PROFILE:-}"
-if [[ -z "${notary_profile}" ]]; then
-    echo "Set MIMITRENDS_NOTARY_PROFILE to an existing notarytool Keychain profile." >&2
+notary_profile="${MIMITRENDS_NOTARY_PROFILE:-MiMiNotary}"
+if ! xcrun notarytool history --keychain-profile "${notary_profile}" --output-format json >/dev/null 2>&1; then
+    echo "Notary profile ${notary_profile} is unavailable. Set MIMITRENDS_NOTARY_PROFILE to a valid profile." >&2
     exit 1
 fi
 team_id="$(/usr/bin/sed -nE 's/^[[:space:]]*DEVELOPMENT_TEAM:[[:space:]]*([A-Z0-9]+).*/\1/p' project.yml)"
