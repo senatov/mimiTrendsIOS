@@ -26,7 +26,7 @@ To view collected bars, open Charts, enter the same symbol, select a rolling 1H,
 
 ## Diagnostics
 
-The Mac Debug build writes a bounded diagnostic log to `/tmp/mimiTrendsiOS.log` (the same file is visible as `/private/tmp/mimiTrendsiOS.log`). Run `tail -f /tmp/mimiTrendsiOS.log` while exercising Charts or Radar. The log records chart bar counts, discovery refreshes, feed connection and trade counts, failures, and Scalable sign-in URL handoff results. It cannot report whether Scalable accepted the browser sign-in. It never records API keys or WebSocket URLs. When the file reaches 4 MB, the previous file becomes `/tmp/mimiTrendsiOS.previous.log`.
+The Mac Debug build writes a bounded diagnostic log to `/tmp/mimiTrendsiOS.log` (the same file is visible as `/private/tmp/mimiTrendsiOS.log`). Run `tail -f /tmp/mimiTrendsiOS.log` while exercising Charts or Radar. The log records chart bar counts, discovery refreshes, feed connection and trade counts, failures, and Scalable sign-in button requests. It cannot report whether the browser opened or Scalable accepted the sign-in. It never records API keys or WebSocket URLs. When the file reaches 4 MB, the previous file becomes `/tmp/mimiTrendsiOS.previous.log`.
 
 Release builds retain App Sandbox and write to their private temporary directory; the `diagnostics-ready` event in the system Console reports the exact path. On iPad and iPhone, the file is `mimiTrendsiOS.log` in the app container's `tmp` directory; for a Simulator, locate the container with `xcrun simctl get_app_container booted org.senatov.mimitrends.apple data`. Temporary logs can be removed by the OS. Review local symbols and diagnostics before sharing them.
 
