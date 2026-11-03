@@ -38,8 +38,9 @@ if git show-ref --verify --quiet "refs/tags/${current}" && ! gh release view "${
     exit 1
 fi
 next="$(printf '%s\n%s\n' "${local_tags}" "${release_tags}" | /usr/bin/python3 "${SCRIPT_DIR}/release_version.py" next)"
+previous_release="$(printf '%s\n' "${release_tags}" | /usr/bin/python3 "${SCRIPT_DIR}/release_notes.py" previous)"
 tag="${next}"
-echo "Current ${current}; next macOS DMG and GitHub Release ${next}."
+echo "Current ${current}; next macOS DMG and GitHub Release ${next}; previous release ${previous_release:-none}."
 if [[ "${dry_run}" == "--dry-run" ]]; then
     exit 0
 fi
@@ -131,6 +132,9 @@ git commit -m "NEW: Prepare macOS release ${next}" \
     -m "Advance the four-component app and build versions for the notarized DMG and matching GitHub Release."
 release_committed=1
 git tag -a "${tag}" -m "mimiTrends-iOS ${next}"
+notes_file="${release_dir}/release-notes.md"
+/usr/bin/python3 "${SCRIPT_DIR}/release_notes.py" generate \
+    --previous "${previous_release}" --current "${tag}" --output "${notes_file}"
 git push --atomic origin HEAD:main "refs/tags/${tag}"
-gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --generate-notes
+gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --notes-file "${notes_file}"
 echo "Published notarized ${dmg} as GitHub Release ${next}."
