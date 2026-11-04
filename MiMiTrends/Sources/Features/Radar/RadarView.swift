@@ -64,12 +64,9 @@ struct RadarView: View {
                             symbol: $symbol, scanWatchlist: $scanWatchlist,
                             session: session, setupMessage: setupMessage,
                             isPreparingFeed: isPreparingFeed,
-                            sourcesOpen: showingSources,
                             watchlist: watchlistPreview, onManageWatchlist: onManageWatchlist
                         ) {
                             if session.isScanning { session.stop() } else { startFeed() }
-                        } onToggleSources: {
-                            showingSources.toggle()
                         }
                     },
                     showingSources: $showingSources
@@ -241,6 +238,8 @@ struct RadarView: View {
             selected: selectedSignal,
             compact: compact,
             errorMessage: historyError,
+            sourcesOpen: showingSources,
+            onToggleSources: { showingSources.toggle() },
             onSelect: { signal in
                 selectedSignal = signal
                 symbol = signal.symbol

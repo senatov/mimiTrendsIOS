@@ -48,7 +48,7 @@ struct TradeImportReportView: View {
             .navigationTitle("Scalable import")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    TrendsActionButton(title: "Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

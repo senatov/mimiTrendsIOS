@@ -14,7 +14,7 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
     @State private var topStart: Double?
 
     var body: some View {
-        VStack(spacing: 36) {
+        VStack(spacing: 6) {
             controls().fixedSize(horizontal: false, vertical: true).zIndex(1)
             GeometryReader { geometry in
                 if geometry.size.height >= RadarPaneLayout.minimumWideHeight &&
@@ -71,7 +71,9 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
                     .frame(minWidth: 280, minHeight: 300)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showingSources = false }
+                            TrendsActionButton(title: "Done", systemImage: "checkmark") {
+                                showingSources = false
+                            }
                         }
                     }
             }

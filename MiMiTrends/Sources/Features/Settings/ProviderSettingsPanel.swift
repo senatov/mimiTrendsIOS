@@ -147,8 +147,7 @@ private struct ProviderEndpointRow: View {
                     .autocorrectionDisabled()
                     .accessibilityLabel("\(endpoint.title) URL")
                 if endpoint != .finnhubTrades {
-                    Button("Check", action: check)
-                        .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    TrendsActionButton(title: "Check", systemImage: "checkmark.circle", action: check)
                 }
             }
             Text(status)

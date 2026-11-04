@@ -20,7 +20,7 @@ struct RadarCoverageView: View {
             .navigationTitle("Rumors · \(request.symbol)")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    TrendsActionButton(title: "Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

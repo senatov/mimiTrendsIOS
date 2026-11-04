@@ -18,6 +18,8 @@ struct RadarSignalList: View {
     let selected: ScanResult?
     let compact: Bool
     let errorMessage: String?
+    let sourcesOpen: Bool
+    let onToggleSources: () -> Void
     let onSelect: (ScanResult) -> Void
     let onVisibleSignal: (String) async -> Void
     let onRefresh: () -> Void
@@ -82,9 +84,15 @@ struct RadarSignalList: View {
                     .background(tableColor(.signalHeaderFill), in: Capsule())
                     .help(currencyRates.map { "ECB reference rates dated \($0.date)" } ?? "Waiting for ECB exchange rates")
                 Spacer()
-                Button("Refresh", systemImage: "arrow.clockwise", action: onRefresh)
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(TrendsActionButtonStyle(compact: true))
+                TrendsActionButton(
+                    title: "Sources",
+                    systemImage: "sidebar.right",
+                    tint: .blue,
+                    action: onToggleSources
+                )
+                .accessibilityLabel(sourcesOpen ? "Hide sources" : "Show sources")
+                .accessibilityValue(sourcesOpen ? "Open" : "Closed")
+                TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise", action: onRefresh)
                     .accessibilityLabel("Refresh saved signals")
             }
             Divider()

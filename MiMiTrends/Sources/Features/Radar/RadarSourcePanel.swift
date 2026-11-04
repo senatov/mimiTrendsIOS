@@ -20,8 +20,9 @@ struct RadarSourcePanel: View {
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 if discoveryStatus?.snapshot != nil {
-                    Button("Rankings", systemImage: "list.number") { showingCandidates = true }
-                        .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    TrendsActionButton(title: "Rankings", systemImage: "list.number") {
+                        showingCandidates = true
+                    }
                 }
             }
             Divider()

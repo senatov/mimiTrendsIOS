@@ -102,7 +102,7 @@ struct TableColorSettingsView: View {
                     colors.reset(role)
                 }
                 .labelStyle(.iconOnly)
-                .buttonStyle(.borderless)
+                .buttonStyle(TrendsActionButtonStyle(compact: true, tiny: true))
             }
             Spacer(minLength: 0)
         }

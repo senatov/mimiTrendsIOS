@@ -57,7 +57,11 @@ struct WatchlistView: View {
             }
             .background(TrendsColors.canvas)
             .navigationTitle("Watchlist")
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    TrendsActionButton(title: "Done", systemImage: "checkmark") { dismiss() }
+                }
+            }
             .task { await load() }
         }
         #if os(macOS)
@@ -119,11 +123,10 @@ struct WatchlistView: View {
                 Task { await rename(entry.symbol) }
             }
             .disabled(isWorking || editedSymbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            Button("Cancel") {
+            TrendsActionButton(title: "Cancel", systemImage: "xmark") {
                 editingSymbol = nil
                 errorMessage = nil
             }
-            .buttonStyle(TrendsActionButtonStyle(compact: true))
             .disabled(isWorking)
         }
         .padding(.vertical, 4)

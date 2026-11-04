@@ -9,14 +9,23 @@ struct TrendsActionButton: View {
 
     var body: some View {
         Button(role: role, action: action) {
-            Label {
-                Text(title).foregroundStyle(.primary)
-            } icon: {
-                Image(systemName: systemImage).foregroundStyle(tint)
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 17, weight: .light))
+                    .foregroundStyle(tint)
+                    .frame(width: 18, height: 18)
+                Rectangle()
+                    .fill(Color.primary.opacity(0.18))
+                    .frame(width: 1, height: 17)
+                Text(title)
+                    .foregroundStyle(.primary)
             }
             .lineLimit(1)
+            .truncationMode(.tail)
         }
         .buttonStyle(TrendsActionButtonStyle(tint: tint))
+        .accessibilityLabel(title)
+        .help(title)
     }
 }
 
@@ -43,55 +52,82 @@ private struct TrendsActionButtonBody: View {
     @Environment(\.colorSchemeContrast) private var contrast
     @State private var isHovered = false
     @AppStorage("controls.button.fontSize.v1") private var fontSize = ControlAppearance.buttonFontSize
-    @AppStorage("controls.button.cornerRadius.v1") private var storedCornerRadius = ControlAppearance.buttonCornerRadius
+    @AppStorage("controls.button.cornerRadius.v1") private var cornerRadius = ControlAppearance.buttonCornerRadius
+    @AppStorage("controls.button.borderWidth.v1") private var borderWidth = ControlAppearance.buttonBorderWidth
+    @AppStorage("controls.button.shadowRadius.v1") private var shadowRadius = ControlAppearance.buttonShadowRadius
+    @AppStorage("controls.button.shadowY.v1") private var shadowY = ControlAppearance.buttonShadowY
+    @AppStorage("controls.button.borderColor.v1") private var borderColor = ControlAppearance.buttonBorderColor
+    @AppStorage("controls.button.shadowColor.v1") private var shadowColor = ControlAppearance.buttonShadowColor
 
-    private var cornerRadius: CGFloat { CGFloat(storedCornerRadius) }
+    private var radius: CGFloat { CGFloat(cornerRadius) }
 
     var body: some View {
         configuration.label
             .font(buttonFont)
-            .padding(.horizontal, tiny ? 6 : compact ? 10 : 12)
+            .foregroundStyle(Color.primary.opacity(contrast == .increased ? 1 : 0.90))
+            .padding(.horizontal, tiny ? 6 : compact ? 9 : 12)
+            .padding(.vertical, verticalPadding)
             .frame(minWidth: minimumWidth, minHeight: minimumHeight)
             .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(.regularMaterial)
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(gradient)
                     .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(LinearGradient(
-                                colors: gradientColors,
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ))
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(tint.opacity(configuration.isPressed ? 0.28 : 0.16))
                     }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(tint.opacity(configuration.isPressed ? 0.12 : (isHovered ? 0.10 : 0.05)))
-                    }
-                    .shadow(
-                        color: .black.opacity(configuration.isPressed ? 0.05 : (isHovered ? 0.20 : 0.13)),
-                        radius: configuration.isPressed ? 1 : (isHovered ? 5 : 3),
-                        y: configuration.isPressed ? 0 : 2
-                    )
+                    .shadow(color: resolvedShadow.opacity(shadowOpacity),
+                            radius: configuration.isPressed ? 0.5 : CGFloat(shadowRadius) + (isHovered ? 2.5 : 1.25),
+                            y: configuration.isPressed ? 0.5 : CGFloat(shadowY) + 0.5)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        Color.primary.opacity(contrast == .increased ? 0.45 : (isHovered ? 0.28 : 0.18)),
-                        lineWidth: 1
-                    )
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(resolvedBorder.opacity(borderOpacity),
+                                  lineWidth: CGFloat(borderWidth) + 0.5)
             }
             .overlay(alignment: .top) {
-                RoundedRectangle(cornerRadius: cornerRadius - 1, style: .continuous)
-                    .strokeBorder(.white.opacity(colorScheme == .dark ? 0.25 : 0.70), lineWidth: 1)
-                    .padding(1)
+                RoundedRectangle(cornerRadius: max(radius - 0.5, 0), style: .continuous)
+                    .strokeBorder(.white.opacity(colorScheme == .dark ? 0.25 : 0.72), lineWidth: 1)
+                    .padding(0.75)
                     .mask(alignment: .top) { Rectangle().frame(height: 12) }
                     .allowsHitTesting(false)
             }
-            .opacity(isEnabled ? 1 : 0.48)
-            .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.52)
+            .contentShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
             .onHover { isHovered = $0 }
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isHovered)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.10), value: configuration.isPressed)
+    }
+
+    private var gradient: LinearGradient {
+        let colors: [Color]
+        if configuration.isPressed {
+            colors = [.black.opacity(0.10), .white.opacity(0.12)]
+        } else if colorScheme == .dark {
+            colors = [.white.opacity(isHovered ? 0.24 : 0.18), .white.opacity(0.04)]
+        } else {
+            colors = [.white.opacity(isHovered ? 0.76 : 0.66), Color.primary.opacity(isHovered ? 0.12 : 0.11)]
+        }
+        return LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+    }
+
+    private var shadowOpacity: Double {
+        if !isEnabled { return 0.04 }
+        if configuration.isPressed { return 0.10 }
+        return isHovered ? 0.26 : 0.20
+    }
+
+    private var borderOpacity: Double {
+        if !isEnabled { return 0.10 }
+        if configuration.isPressed { return 0.38 }
+        return isHovered ? 0.54 : contrast == .increased ? 0.60 : 0.34
+    }
+
+    private var resolvedBorder: Color {
+        RadarColorHex.color(borderColor) ?? .black
+    }
+
+    private var resolvedShadow: Color {
+        RadarColorHex.color(shadowColor) ?? .black
     }
 
     private var buttonFont: Font {
@@ -99,29 +135,27 @@ private struct TrendsActionButtonBody: View {
         return .system(size: CGFloat(tiny ? max(10, fontSize - 3) : fontSize))
     }
 
+    private var verticalPadding: CGFloat {
+        #if os(iOS)
+        return tiny ? 5 : 8
+        #else
+        return tiny ? 2 : compact ? 4 : 7
+        #endif
+    }
+
     private var minimumHeight: CGFloat {
         #if os(iOS)
-        44
+        return 44
         #else
-        tiny ? 20 : compact ? 24 : 30
+        return tiny ? 22 : compact ? 26 : 30
         #endif
     }
 
     private var minimumWidth: CGFloat {
         #if os(iOS)
-        44
+        return 44
         #else
-        0
+        return 0
         #endif
-    }
-
-    private var gradientColors: [Color] {
-        if configuration.isPressed {
-            return [.black.opacity(0.08), .white.opacity(0.05)]
-        }
-        if colorScheme == .dark {
-            return [.white.opacity(isHovered ? 0.20 : 0.14), .black.opacity(0.04)]
-        }
-        return [.white.opacity(isHovered ? 0.58 : 0.45), .black.opacity(0.07)]
     }
 }

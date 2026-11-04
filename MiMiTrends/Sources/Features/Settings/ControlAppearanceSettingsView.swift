@@ -1,53 +1,48 @@
 import SwiftUI
 
 struct ControlAppearanceSettingsView: View {
-    @AppStorage("controls.button.fontSize.v1") private var buttonFontSize = ControlAppearance.buttonFontSize
-    @AppStorage("controls.button.cornerRadius.v1") private var buttonCornerRadius = ControlAppearance.buttonCornerRadius
-    @AppStorage("controls.tab.fontSize.v1") private var tabFontSize = ControlAppearance.tabFontSize
-    @AppStorage("controls.tab.height.v1") private var tabHeight = ControlAppearance.tabHeight
-    @AppStorage("controls.tab.bottomRadius.v1") private var tabBottomRadius = ControlAppearance.tabBottomRadius
-    @AppStorage("controls.tab.openBackground.v1") private var tabOpenBackground = ControlAppearance.tabOpenBackground
-    @AppStorage("controls.tab.closedBackground.v1") private var tabClosedBackground = ControlAppearance.tabClosedBackground
-    @AppStorage("controls.tab.openText.v1") private var tabOpenText = ControlAppearance.tabOpenText
-    @AppStorage("controls.tab.closedText.v1") private var tabClosedText = ControlAppearance.tabClosedText
+    @AppStorage("controls.button.fontSize.v1") private var fontSize = ControlAppearance.buttonFontSize
+    @AppStorage("controls.button.cornerRadius.v1") private var cornerRadius = ControlAppearance.buttonCornerRadius
+    @AppStorage("controls.button.borderWidth.v1") private var borderWidth = ControlAppearance.buttonBorderWidth
+    @AppStorage("controls.button.shadowRadius.v1") private var shadowRadius = ControlAppearance.buttonShadowRadius
+    @AppStorage("controls.button.shadowY.v1") private var shadowY = ControlAppearance.buttonShadowY
+    @AppStorage("controls.button.borderColor.v1") private var borderColor = ControlAppearance.buttonBorderColor
+    @AppStorage("controls.button.shadowColor.v1") private var shadowColor = ControlAppearance.buttonShadowColor
 
     var body: some View {
         SettingsGroup(title: "Action buttons") {
-            numberRow("Font size", value: $buttonFontSize, range: 10...20)
-            numberRow("Corner radius", value: $buttonCornerRadius, range: 4...16)
-            TrendsActionButton(title: "Preview button", systemImage: "star") {}
-                .allowsHitTesting(false)
-        }
-        SettingsGroup(title: "Sources tab") {
-            numberRow("Font size", value: $tabFontSize, range: 11...18)
-            numberRow("Height", value: $tabHeight, range: 24...40)
-            numberRow("Bottom corner radius", value: $tabBottomRadius, range: 4...12)
-            colorRow("Open background", hex: $tabOpenBackground, fallback: ControlAppearance.tabOpenBackground)
-            colorRow("Closed background", hex: $tabClosedBackground, fallback: ControlAppearance.tabClosedBackground)
-            colorRow("Open text", hex: $tabOpenText, fallback: ControlAppearance.tabOpenText)
-            colorRow("Closed text", hex: $tabClosedText, fallback: ControlAppearance.tabClosedText)
-            HStack(spacing: 12) {
-                RadarSourceTab(isOpen: true) {}
-                RadarSourceTab(isOpen: false) {}
+            Text("Button appearance applies across Radar, Watchlist and Settings.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            numberRow("Font size", value: $fontSize, range: 10...20)
+            numberRow("Corner radius", value: $cornerRadius, range: 0...16)
+            numberRow("Border width", value: $borderWidth, range: 0...3, step: 0.25)
+            numberRow("Shadow radius", value: $shadowRadius, range: 0...8, step: 0.5)
+            numberRow("Shadow offset", value: $shadowY, range: 0...4, step: 0.5)
+            colorRow("Border color", hex: $borderColor, fallback: "595959")
+            colorRow("Shadow color", hex: $shadowColor, fallback: "000000")
+            HStack(spacing: 10) {
+                TrendsActionButton(title: "Sources", systemImage: "sidebar.right") {}
+                TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise") {}
+                TrendsActionButton(title: "Remove", systemImage: "trash", tint: .red) {}
             }
             .allowsHitTesting(false)
-            .accessibilityLabel("Sources tab appearance preview")
+            .accessibilityLabel("Action button appearance preview")
         }
-        Button("Restore button and tab defaults", systemImage: "arrow.uturn.backward") {
+        TrendsActionButton(title: "Restore button defaults", systemImage: "arrow.uturn.backward") {
             restoreDefaults()
         }
-        .buttonStyle(TrendsActionButtonStyle(compact: true))
     }
 
-    private func numberRow(_ title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
+    private func numberRow(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, step: Double = 1) -> some View {
         HStack(spacing: 12) {
             Text(title).frame(width: 180, alignment: .trailing)
-            Stepper(value: value, in: range, step: 1) {
-                Text("\(Int(value.wrappedValue)) pt")
+            Stepper(value: value, in: range, step: step) {
+                Text(value.wrappedValue.formatted(.number.precision(.fractionLength(step < 1 ? 2 : 0))) + " pt")
                     .monospacedDigit()
-                    .frame(width: 52, alignment: .leading)
+                    .frame(width: 70, alignment: .leading)
             }
-            .frame(maxWidth: 180, alignment: .leading)
+            .frame(maxWidth: 200, alignment: .leading)
             Spacer(minLength: 0)
         }
     }
@@ -61,21 +56,25 @@ struct ControlAppearanceSettingsView: View {
             ), supportsOpacity: false)
             .labelsHidden()
             .frame(width: 34)
-            Text(hex.wrappedValue.uppercased())
+            Text(hex.wrappedValue.isEmpty ? "System default" : hex.wrappedValue.uppercased())
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
+            if !hex.wrappedValue.isEmpty {
+                Button("Use default", systemImage: "arrow.uturn.backward") { hex.wrappedValue = "" }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    .accessibilityLabel("Restore default \(title.lowercased())")
+            }
         }
     }
 
     private func restoreDefaults() {
-        buttonFontSize = ControlAppearance.buttonFontSize
-        buttonCornerRadius = ControlAppearance.buttonCornerRadius
-        tabFontSize = ControlAppearance.tabFontSize
-        tabHeight = ControlAppearance.tabHeight
-        tabBottomRadius = ControlAppearance.tabBottomRadius
-        tabOpenBackground = ControlAppearance.tabOpenBackground
-        tabClosedBackground = ControlAppearance.tabClosedBackground
-        tabOpenText = ControlAppearance.tabOpenText
-        tabClosedText = ControlAppearance.tabClosedText
+        fontSize = ControlAppearance.buttonFontSize
+        cornerRadius = ControlAppearance.buttonCornerRadius
+        borderWidth = ControlAppearance.buttonBorderWidth
+        shadowRadius = ControlAppearance.buttonShadowRadius
+        shadowY = ControlAppearance.buttonShadowY
+        borderColor = ControlAppearance.buttonBorderColor
+        shadowColor = ControlAppearance.buttonShadowColor
     }
 }

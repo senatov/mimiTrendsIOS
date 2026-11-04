@@ -83,10 +83,7 @@ struct RadarSignalRow: View {
                 } label: {
                     Text("Rumors")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(tableColor(.signalActionAccent), in: RoundedRectangle(cornerRadius: 5))
+                        .foregroundStyle(tableColor(.signalActionAccent))
                 }
                 .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                 .fixedSize(horizontal: true, vertical: false)
