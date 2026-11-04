@@ -18,6 +18,17 @@ struct MarketRadarCycle: Sendable {
     let scannedSymbols: Int
     let storedSignals: Int
     let companyNames: [String: String]
+    let progress: MarketScanProgress
+}
+
+struct MarketScanProgress: Sendable, Equatable {
+    let processed: Int
+    let total: Int
+    let successful: Int
+    let skipped: Int
+    let errors: Int
+    let activeSymbols: [String]
+    let lastUpdatedAt: Date?
 }
 
 actor MarketRadarScanner {
@@ -37,8 +48,15 @@ actor MarketRadarScanner {
     private var yahooTotals = RadarSourceTotals()
     private var traderFoxTotals = RadarSourceTotals()
     private var fmpTotals = RadarSourceTotals()
+    private var initialSuccessful = 0
+    private var initialSkipped = 0
+    private var initialErrors = 0
+    private var lastUpdatedAt: Date?
 
-    func scan(settings: RadarScanPreferences) async throws -> MarketRadarCycle {
+    func scan(
+        settings: RadarScanPreferences,
+        onProgress: @Sendable (MarketScanProgress) async -> Void = { _ in }
+    ) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
         let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
         if fmpKey != activeFMPKey {
@@ -47,6 +65,9 @@ actor MarketRadarScanner {
             nextDiscoveryAt = .distantPast
             initialScanSymbols = []
             initialScanTotal = 0
+            initialSuccessful = 0
+            initialSkipped = 0
+            initialErrors = 0
         }
         let usesFMP = fmpKey != nil
         if Date() >= nextDiscoveryAt {
@@ -66,7 +87,8 @@ actor MarketRadarScanner {
                                     yahooCooldownUntil: yahooCooldownUntil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, storedSignals: 0, companyNames: names)
+                                    scannedSymbols: 0, storedSignals: 0, companyNames: names,
+                                    progress: progress())
         }
         yahooCooldownUntil = nil
         let pending = pool.filter { !initialScanSymbols.contains($0) }
@@ -80,7 +102,8 @@ actor MarketRadarScanner {
                                     yahooCooldownUntil: nil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, storedSignals: 0, companyNames: names)
+                                    scannedSymbols: 0, storedSignals: 0, companyNames: names,
+                                    progress: progress())
         }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
         let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
@@ -94,6 +117,9 @@ actor MarketRadarScanner {
         for batch in stride(from: 0, to: symbols.count, by: 4) {
             try Task.checkCancellation()
             let group = Array(symbols[batch..<min(batch + 4, symbols.count)])
+            var active = group
+            var completed = 0
+            await onProgress(progress(activeSymbols: active))
             await withTaskGroup(of: SymbolOutcome.self) { tasks in
                 for symbol in group {
                     tasks.addTask { [yahoo] in
@@ -102,7 +128,8 @@ actor MarketRadarScanner {
                             try Task.checkCancellation()
                             guard let last = bars.last,
                                   last.minuteEpochSeconds >= nowSeconds - 600 else {
-                                return SymbolOutcome(received: bars.count, signalStored: false, failure: nil)
+                                return SymbolOutcome(symbol: symbol, received: bars.count,
+                                                     signalStored: false, failure: nil, skipped: true)
                             }
                             for bar in bars { _ = try await barStore.upsert(bar) }
                             let recent = try await barStore.loadMinuteBars(
@@ -124,18 +151,19 @@ actor MarketRadarScanner {
                             } else {
                                 saved = false
                             }
-                            return SymbolOutcome(received: bars.count, signalStored: saved, failure: nil)
+                            return SymbolOutcome(symbol: symbol, received: bars.count,
+                                                 signalStored: saved, failure: nil)
                         } catch RadarSourceError.rateLimited {
-                            return SymbolOutcome(received: 0, signalStored: false,
+                            return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
                                                  failure: "symbol=\(symbol) error=rateLimited",
                                                  rateLimited: true)
                         } catch RadarSourceError.invalidSymbol {
-                            return SymbolOutcome(received: 0, signalStored: false,
+                            return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
                                                  failure: nil,
-                                                 rejectedSymbol: symbol)
+                                                 rejectedSymbol: symbol, skipped: true)
                         } catch {
                             return SymbolOutcome(
-                                received: 0, signalStored: false,
+                                symbol: symbol, received: 0, signalStored: false,
                                 failure: "symbol=\(symbol) error=\(String(describing: error))",
                                 rateLimited: false
                             )
@@ -143,6 +171,8 @@ actor MarketRadarScanner {
                     }
                 }
                 for await outcome in tasks {
+                    active.removeAll { $0 == outcome.symbol }
+                    completed += 1
                     yahooTotals.received += outcome.received
                     yahooTotals.valid += outcome.received
                     yahooTotals.operations += 1
@@ -158,9 +188,17 @@ actor MarketRadarScanner {
                         if firstRejectedSymbol == nil { firstRejectedSymbol = symbol }
                     }
                     if outcome.signalStored { storedSignals += 1 }
+                    if !initialScanSymbols.contains(outcome.symbol) {
+                        if outcome.failure != nil { initialErrors += 1 }
+                        else if outcome.skipped { initialSkipped += 1 }
+                        else { initialSuccessful += 1 }
+                    }
+                    await onProgress(progress(completedInBatch: completed, activeSymbols: active))
                 }
             }
             initialScanSymbols.formUnion(group)
+            lastUpdatedAt = Date()
+            await onProgress(progress())
             if rateLimited {
                 yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
                 AppDiagnostics.shared.record(.warning, "Yahoo", "rate-limited",
@@ -185,7 +223,17 @@ actor MarketRadarScanner {
             yahooCooldownUntil: yahooCooldownUntil,
             initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
             initialScanTotal: initialScanTotal,
-            scannedSymbols: symbols.count, storedSignals: storedSignals, companyNames: names
+            scannedSymbols: symbols.count, storedSignals: storedSignals, companyNames: names,
+            progress: progress()
+        )
+    }
+
+    private func progress(completedInBatch: Int = 0, activeSymbols: [String] = []) -> MarketScanProgress {
+        MarketScanProgress(
+            processed: min(initialScanSymbols.count + completedInBatch, initialScanTotal),
+            total: initialScanTotal, successful: initialSuccessful,
+            skipped: initialSkipped, errors: initialErrors,
+            activeSymbols: activeSymbols, lastUpdatedAt: lastUpdatedAt
         )
     }
 
@@ -284,9 +332,11 @@ actor MarketRadarScanner {
 }
 
 private struct SymbolOutcome: Sendable {
+    let symbol: String
     let received: Int
     let signalStored: Bool
     let failure: String?
     var rateLimited = false
     var rejectedSymbol: String? = nil
+    var skipped = false
 }
