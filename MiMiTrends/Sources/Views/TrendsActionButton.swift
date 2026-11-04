@@ -78,7 +78,7 @@ private struct TrendsActionButtonBody: View {
                     .fill(gradient)
                     .overlay {
                         RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(tint.opacity(configuration.isPressed ? 0.28 : 0.16))
+                            .fill(tint.opacity(configuration.isPressed ? 0.12 : 0))
                     }
                     .shadow(color: resolvedShadow.opacity(shadowOpacity),
                             radius: configuration.isPressed ? 0.5 : CGFloat(shadowRadius) + (isHovered ? 2.5 : 1.25),
@@ -105,10 +105,10 @@ private struct TrendsActionButtonBody: View {
 
     private var gradient: LinearGradient {
         let colors: [Color]
-        if configuration.isPressed {
+        if let custom = RadarColorHex.color(backgroundColor) {
+            colors = [custom, custom]
+        } else if configuration.isPressed {
             colors = [.black.opacity(0.10), .white.opacity(0.12)]
-        } else if let custom = RadarColorHex.color(backgroundColor) {
-            colors = [custom.opacity(isHovered ? 0.82 : 0.72), custom.opacity(isHovered ? 0.96 : 0.90)]
         } else if colorScheme == .dark {
             colors = [.white.opacity(isHovered ? 0.24 : 0.18), .white.opacity(0.04)]
         } else {
