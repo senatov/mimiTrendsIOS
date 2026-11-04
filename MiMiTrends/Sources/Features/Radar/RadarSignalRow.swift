@@ -32,17 +32,14 @@ struct RadarSignalRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            backgroundColor
-                .contentShape(Rectangle())
-                .onTapGesture(perform: onSelect)
-        }
+        .background(backgroundColor)
         .overlay {
             if !compact {
                 RadarSignalColumnLines(widths: widths, color: tableColor(.signalGrid), horizontalInset: 8)
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(companyName), \(signal.symbol)")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { onSelect() }
         .contextMenu {
@@ -71,6 +68,8 @@ struct RadarSignalRow: View {
             }
             ageText
         }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onSelect)
     }
 
     private var wideContent: some View {
@@ -78,8 +77,11 @@ struct RadarSignalRow: View {
             companyIdentity
             .padding(.horizontal, 6)
             .frame(width: widths.company, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onSelect)
             HStack(spacing: 6) {
                 eventBadge
+                    .onTapGesture(perform: onSelect)
                 Spacer(minLength: 4)
                 Button {
                     onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
@@ -91,7 +93,7 @@ struct RadarSignalRow: View {
                 .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                 .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel("Rumors for \(signal.symbol)")
-                .accessibilityHint("Show recent news and X search")
+                .accessibilityHint("Show recent news and Reuters search")
                 .help("Rumors for \(signal.symbol)")
             }
             .padding(.leading, 6)
@@ -100,17 +102,25 @@ struct RadarSignalRow: View {
             movement
                 .padding(.horizontal, 6)
                 .frame(width: widths.movement, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
             windowText
                 .padding(.horizontal, 6)
                 .frame(width: widths.window, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
             Text(formattedPrice.text)
                 .monospacedDigit()
                 .help(formattedPrice.explanation)
                 .padding(.horizontal, 6)
                 .frame(width: widths.price, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
             ageText
                 .padding(.horizontal, 6)
                 .frame(width: widths.age, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
         }
         .font(tableTypography.font(size: tableTypography.size))
     }

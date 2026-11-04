@@ -107,6 +107,7 @@
 		A01241ECCD6A0F41220B9167 /* RadarScanPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC678F283ABD4BE2D71528F /* RadarScanPreferencesTests.swift */; };
 		A149A74A65D897BE5B0B4C0F /* ControlAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */; };
 		A3DAD0D5998BC65F690ABA08 /* FMPCompanyProfileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */; };
+		A65D29A1FE27B529A9EA93CF /* ReutersSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AA19330494343EA9883E78 /* ReutersSearch.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
 		A9E0F6144582D0B1291D7057 /* FinnhubRadarPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4678F11490EA437FAD224DD /* FinnhubRadarPipelineTests.swift */; };
 		ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */; };
@@ -116,7 +117,6 @@
 		AD8DE8D44857CF937DBD5B8E /* ProviderCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */; };
 		ADBA82D1F46C0765B5A7586E /* MarketCandidateFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */; };
 		AF13818E0D1DBE9C106E730D /* ProviderEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */; };
-		AF554F6DE591C50D357D2005 /* XCashtagSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */; };
 		AF689ACCE16FDF213052FA73 /* DiscoveryPoolController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC293CB0150CC6CB7B2EA1C1 /* DiscoveryPoolController.swift */; };
 		B7F662EC77C7340B60D527DD /* DiscoverySnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */; };
 		B9DEC7CD282978431B054494 /* RadarChartPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517EEB88A6A2636A58C09DFB /* RadarChartPreview.swift */; };
@@ -137,6 +137,7 @@
 		D9D087CB14C2AF2325052412 /* RadarSearchKeywordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69643EB0435692625D61DB01 /* RadarSearchKeywordTests.swift */; };
 		DC1BBE8191421DA3BDED50CD /* ControlAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 972BE43E8B77C4F879A008D9 /* ControlAppearanceTests.swift */; };
 		E088B913DC8304392B964CB1 /* RadarSignalColumns.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */; };
+		E0ED499BE672F5D2C8393FF9 /* ReutersSearchParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3DD8BC78C38AB77A1BAE7B3 /* ReutersSearchParser.swift */; };
 		E1EA5AE0F47FDA7E76C7F2D9 /* MiminaviInfo1DecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBBB6C2292BBB1F06288300 /* MiminaviInfo1DecoderTests.swift */; };
 		E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40276ADEA60EC008CF7CDB8 /* ScanResult.swift */; };
 		E2D61BFCDEF3AD2FDA077055 /* MarketQuoteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43BC5153BBD2D84EDC0237EC /* MarketQuoteStoreTests.swift */; };
@@ -208,7 +209,6 @@
 		37E278BAC8BF8FC5AAC3E0D9 /* LocalAccountInstanceGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountInstanceGuard.swift; sourceTree = "<group>"; };
 		38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "mimiTrends-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		39E5AF93F5D263904111D4BA /* DiscoveryCandidateSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelectorTests.swift; sourceTree = "<group>"; };
-		3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCashtagSearch.swift; sourceTree = "<group>"; };
 		3C005831238BCC317F9E97AF /* RadarSignalSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelection.swift; sourceTree = "<group>"; };
 		3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsPanel.swift; sourceTree = "<group>"; };
 		3FDE4AC5FC63FB6AA4A9692E /* ProcessResourceSamplerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessResourceSamplerTests.swift; sourceTree = "<group>"; };
@@ -314,6 +314,7 @@
 		DD61AA5EB5B8F944EBCD8329 /* LangSchwarzQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangSchwarzQuoteSource.swift; sourceTree = "<group>"; };
 		E0BCF3BE1761CED7DBCC5BAA /* TradableCorridorDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetectorTests.swift; sourceTree = "<group>"; };
 		E299093ABF5E3C6E0913488F /* TraderFoxRadarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraderFoxRadarSource.swift; sourceTree = "<group>"; };
+		E2AA19330494343EA9883E78 /* ReutersSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReutersSearch.swift; sourceTree = "<group>"; };
 		E2F4937B6B24F966C3B88898 /* TrendsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsPanel.swift; sourceTree = "<group>"; };
 		E3B4E8BB96F3C24749F2B955 /* DisplayCurrencyServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayCurrencyServiceTests.swift; sourceTree = "<group>"; };
 		E6BDE36F9F20F202E1B15AAC /* RadarSignalPrice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalPrice.swift; sourceTree = "<group>"; };
@@ -325,6 +326,7 @@
 		EF1BDD388D1713ED47A40094 /* SustainedMoveDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SustainedMoveDetector.swift; sourceTree = "<group>"; };
 		EF3401A2ABC36F2EF150C888 /* VolumeStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VolumeStatus.swift; sourceTree = "<group>"; };
 		EFDC0F7AE544338A501ACAC7 /* RapidCrashDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RapidCrashDetectorTests.swift; sourceTree = "<group>"; };
+		F3DD8BC78C38AB77A1BAE7B3 /* ReutersSearchParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReutersSearchParser.swift; sourceTree = "<group>"; };
 		F6C749680DE8767BA8EF22DE /* MiMiTrendsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiMiTrendsApp.swift; sourceTree = "<group>"; };
 		F738D3015D67A0FEB94F7C80 /* RapidCrashDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RapidCrashDetector.swift; sourceTree = "<group>"; };
 		F80B2E9DCDE37394950FD413 /* FinnhubTradeStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubTradeStream.swift; sourceTree = "<group>"; };
@@ -462,9 +464,10 @@
 				DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */,
 				084CB1817144936FD030F078 /* RadarCompanyMetadataService.swift */,
 				6F8FE9A77C93F472DE6630A6 /* RecentCoverageClient.swift */,
+				E2AA19330494343EA9883E78 /* ReutersSearch.swift */,
+				F3DD8BC78C38AB77A1BAE7B3 /* ReutersSearchParser.swift */,
 				4E9DBC89710B0F21F227734A /* ScalableCSVImporter.swift */,
 				B1882EF719B85F0E0E950891 /* TradeImportCoordinator.swift */,
-				3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */,
 				9FAB19903F43D7F97FFADD41 /* Finnhub */,
 				E59BFCE6FA3A7F96BEFC6A22 /* FMP */,
 				0F7095D32CA187350C006353 /* LangSchwarz */,
@@ -891,6 +894,8 @@
 				8A32C3D5EE9D0C6051E8A84E /* RapidCrashDetector.swift in Sources */,
 				FEF8C8CD52FF04FF8EBDAAEC /* RapidRiseDetector.swift in Sources */,
 				63CCFD98B74866A8A0FFE2AB /* RecentCoverageClient.swift in Sources */,
+				A65D29A1FE27B529A9EA93CF /* ReutersSearch.swift in Sources */,
+				E0ED499BE672F5D2C8393FF9 /* ReutersSearchParser.swift in Sources */,
 				1169256C25EF48B8DBC7AF38 /* ScalableCSVImporter.swift in Sources */,
 				E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */,
 				AD6C456C4C15471D7D60FDE1 /* ScannerSettingsView.swift in Sources */,
@@ -915,7 +920,6 @@
 				42FAEF59B9780D5828088243 /* WatchlistEntryRow.swift in Sources */,
 				0CB10454D48027116BE62D30 /* WatchlistStore.swift in Sources */,
 				4671A231FD13F03F8FA3E100 /* WatchlistView.swift in Sources */,
-				AF554F6DE591C50D357D2005 /* XCashtagSearch.swift in Sources */,
 				5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

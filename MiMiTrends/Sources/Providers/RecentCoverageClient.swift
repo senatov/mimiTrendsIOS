@@ -30,13 +30,14 @@ struct RecentCoverageClient: Sendable {
         async let yahoo = capture("Yahoo Finance") { try await yahooNews(symbol: symbol, companyName: companyName) }
         async let benzinga = capture("Benzinga") { try await benzingaNews(symbol: symbol, companyName: companyName) }
         async let wallstreet = capture("wallstreetONLINE") { try await wallstreetOnlineNews(symbol: symbol, companyName: companyName) }
-        let sources = await [yahoo, benzinga, wallstreet]
+        async let reuters = capture("Reuters") { try await reutersNews(symbol: symbol) }
+        let sources = await [yahoo, benzinga, wallstreet, reuters]
         let items = Self.recentItems(sources.flatMap(\.items), now: Date())
         return CoverageResult(items: items, unavailableSources: sources.compactMap(\.unavailable))
     }
 
     static func recentItems(_ items: [CoverageItem], now: Date) -> [CoverageItem] {
-        let cutoff = now.addingTimeInterval(-48 * 3_600)
+        let cutoff = now.addingTimeInterval(-10 * 3_600)
         var seen = Set<String>()
         return Array(items
             .filter { item in
@@ -97,6 +98,11 @@ struct RecentCoverageClient: Sendable {
     private func benzingaNews(symbol: String, companyName: String) async throws -> [CoverageItem] {
         let data = try await request(URL(string: "https://www.benzinga.com/feed")!)
         return try parseRSS(data, symbol: symbol, companyName: companyName, publisher: "Benzinga", dateField: "pubDate")
+    }
+
+    private func reutersNews(symbol: String) async throws -> [CoverageItem] {
+        guard let url = ReutersSearch.url(symbol: symbol) else { throw CoverageClientError.invalidURL }
+        return ReutersSearchParser.parse(try await request(url))
     }
 
     private func wallstreetOnlineNews(symbol: String, companyName: String) async throws -> [CoverageItem] {

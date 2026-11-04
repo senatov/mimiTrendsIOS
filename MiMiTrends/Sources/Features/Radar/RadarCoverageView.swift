@@ -40,23 +40,23 @@ struct RadarCoverageView: View {
                 Text(request.companyName)
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                if let url = XCashtagSearch.latestURL(symbol: request.symbol) {
+                if let url = ReutersSearch.url(symbol: request.symbol) {
                     Link(destination: url) {
-                        Label("X Latest · $\(request.symbol)", systemImage: "bubble.left.and.text.bubble.right")
+                        Label("Reuters · \(request.symbol)", systemImage: "newspaper")
                     }
                     .buttonStyle(TrendsActionButtonStyle(compact: true))
-                    Text("X opens newest posts first. Review posts from the last two hours there.")
+                    Text("Open the full Reuters search for \(request.symbol).")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text("News published in the last 48 hours · newest first")
+                Text("News published in the last 10 hours · newest first")
                     .font(.subheadline.weight(.medium))
                 if result.items.isEmpty {
                     ContentUnavailableView(
-                        result.unavailableSources.count == 3 ? "News sources unavailable" : "No news in the last 48 hours",
-                        systemImage: result.unavailableSources.count == 3 ? "wifi.slash" : "newspaper",
-                        description: Text(result.unavailableSources.count == 3
-                                          ? "Try again later." : "No dated news was found for this stock in the last 48 hours.")
+                        result.unavailableSources.count == 4 ? "News sources unavailable" : "No news in the last 10 hours",
+                        systemImage: result.unavailableSources.count == 4 ? "wifi.slash" : "newspaper",
+                        description: Text(result.unavailableSources.count == 4
+                                          ? "Try again later." : "No dated news was found for this stock in the last 10 hours.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 180)
                 } else {
