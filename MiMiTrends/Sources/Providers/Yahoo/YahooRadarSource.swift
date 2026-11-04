@@ -84,8 +84,7 @@ struct YahooRadarSource: Sendable {
             let name = (quote["shortName"] as? String) ?? (quote["longName"] as? String) ?? symbol
             guard MarketCandidateFilter.accepts(
                 symbol: symbol, name: name, price: price, exchange: exchange,
-                currency: quote["currency"] as? String, country: quote["country"] as? String,
-                volume: volume,
+                currency: quote["currency"] as? String, volume: volume,
                 marketCap: (quote["marketCap"] as? NSNumber)?.doubleValue
             ), seen.insert(symbol).inserted else { return nil }
             return (RadarCompanyCandidate(symbol: symbol, name: name), volume)

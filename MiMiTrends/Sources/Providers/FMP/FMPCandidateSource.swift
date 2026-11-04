@@ -53,10 +53,9 @@ struct FMPCandidateSource: Sendable {
             let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
             guard row["isEtf"] as? Bool != true,
                   row["isFund"] as? Bool != true,
-                  row["isAdr"] as? Bool != true,
                   MarketCandidateFilter.accepts(
                     symbol: symbol, name: name, price: price, exchange: exchange,
-                    currency: row["currency"] as? String, country: row["country"] as? String,
+                    currency: row["currency"] as? String,
                     volume: (row["volume"] as? NSNumber)?.doubleValue,
                     marketCap: (row["marketCap"] as? NSNumber)?.doubleValue
                   ) else { return nil }

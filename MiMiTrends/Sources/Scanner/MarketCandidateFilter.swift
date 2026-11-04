@@ -6,14 +6,13 @@ enum MarketCandidateFilter {
     ]
     private static let germanExchanges: Set<String> = ["XETRA", "XETR", "FRANKFURT", "FRA", "GER"]
     private static let excludedName = try! NSRegularExpression(
-        pattern: #"\b(ETF|ETN|FUND|WARRANT|RIGHTS?|UNITS?|PREFERRED|PREFERENCE|DEPOSITARY|ADR|LEVERAGED|[23]X)\b"#,
+        pattern: #"\b(ETF|ETN|FUND|WARRANT|RIGHTS?|UNITS?|PREFERRED|PREFERENCE|LEVERAGED|[23]X)\b"#,
         options: .caseInsensitive
     )
 
     static func accepts(
         symbol: String, name: String, price: Double, exchange: String,
-        currency: String? = nil, country: String? = nil,
-        volume: Double? = nil, marketCap: Double? = nil
+        currency: String? = nil, volume: Double? = nil, marketCap: Double? = nil
     ) -> Bool {
         guard price.isFinite, price >= 5,
               !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -27,7 +26,6 @@ enum MarketCandidateFilter {
             && germanExchanges.contains(exchange)
         guard isUS || isGerman else { return false }
         if let currency, currency.uppercased() != (isGerman ? "EUR" : "USD") { return false }
-        if let country, !["US", "DE"].contains(country.uppercased()) { return false }
         if let volume {
             guard volume.isFinite, volume > 0, price * volume >= 2_000_000 else { return false }
         }
