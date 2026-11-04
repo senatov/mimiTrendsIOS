@@ -14,8 +14,8 @@ settings:
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     PRODUCT_BUNDLE_IDENTIFIER: org.senatov.mimitrends.apple
     DEVELOPMENT_TEAM: G2V9T9AD95
-    MARKETING_VERSION: 0.0.1.5
-    CURRENT_PROJECT_VERSION: 15
+    MARKETING_VERSION: 0.0.1.6
+    CURRENT_PROJECT_VERSION: 16
 targets:
   mimiTrends-iOS:
     type: application
