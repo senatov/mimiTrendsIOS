@@ -4,6 +4,7 @@ import AppKit
 #endif
 
 struct RadarSignalList: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
@@ -18,6 +19,7 @@ struct RadarSignalList: View {
     let compact: Bool
     let errorMessage: String?
     let onSelect: (ScanResult) -> Void
+    let onVisibleSignal: (String) async -> Void
     let onRefresh: () -> Void
     @State private var sortColumn: RadarSortColumn = .movement
     @State private var ascending = false
@@ -151,6 +153,10 @@ struct RadarSignalList: View {
                                     onShowCoverage: { coverageRequest = $0 }
                                 )
                                 .accessibilityAddTraits(isSelected(item.signal) ? [.isSelected] : [])
+                                .task(id: "\(item.signal.symbol)|\(scenePhase)") {
+                                    guard scenePhase == .active else { return }
+                                    await onVisibleSignal(item.signal.symbol)
+                                }
                                 tableSeparator
                             }
                         }

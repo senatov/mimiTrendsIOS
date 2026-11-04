@@ -25,8 +25,8 @@ struct RadarView: View {
     @State private var lsCandidatePool = LSCandidatePool()
     @State private var lsStatus: LSCandidateStatus?
     @State private var marketScanner = MarketRadarScanner()
+    @State private var signalBarBackfill = RadarSignalBarBackfill()
     @State private var marketCycle: MarketRadarCycle?
-    @State private var marketProgress: MarketScanProgress?
     @State private var currencyRates: DisplayCurrencyRates?
     @State private var currencyService = DisplayCurrencyService()
     @State private var discoveryStatus: DiscoveryRefreshStatus?
@@ -70,11 +70,6 @@ struct RadarView: View {
                             }
                             if let activity = currentActivity {
                                 RadarActivityBanner(activity: activity)
-                            }
-                            if let progress = marketProgress, progress.total > 0,
-                               progress.processed < progress.total,
-                               marketCycle?.yahooCooldownUntil == nil {
-                                MarketScanProgressPanel(progress: progress)
                             }
                         }
                     }
@@ -183,15 +178,9 @@ struct RadarView: View {
         guard scenePhase == .active else { return }
         while !Task.isCancelled {
             do {
-                let cycle = try await marketScanner.scan(
-                    settings: RadarScanPreferencesStore.load(),
-                    onProgress: { progress in
-                        await MainActor.run { marketProgress = progress }
-                    }
-                )
+                let cycle = try await marketScanner.scan(settings: RadarScanPreferencesStore.load())
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
-                marketProgress = cycle.progress
                 if cycle.storedSignals > 0 { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "market-scan-finished",
@@ -256,22 +245,23 @@ struct RadarView: View {
                 selectedSignal = signal
                 symbol = signal.symbol
             },
+            onVisibleSignal: { visibleSymbol in
+                if await signalBarBackfill.fillIfMissing(symbol: visibleSymbol) {
+                    chartRefreshID += 1
+                }
+            },
             onRefresh: { Task { await refreshSignals() } }
         )
-        .allowsHitTesting(!isInitialScanBlocking)
-        .accessibilityHidden(isInitialScanBlocking)
+        .allowsHitTesting(!isHistoryLoading)
+        .accessibilityHidden(isHistoryLoading)
         .overlay {
-            if isInitialScanBlocking {
-                RadarWarmupOverlay(
-                    historyLoaded: hasLoadedHistory, savedCount: recentSignals.count,
-                    processed: marketCycle?.initialScanProcessed ?? 0,
-                    total: marketCycle?.initialScanTotal ?? 0
-                )
+            if isHistoryLoading {
+                RadarWarmupOverlay()
             }
         }
     }
 
-    private var isInitialScanBlocking: Bool { !hasLoadedHistory }
+    private var isHistoryLoading: Bool { !hasLoadedHistory }
 
     private func refreshSignals(selectNewest: Bool = false) async {
         defer { hasLoadedHistory = true }

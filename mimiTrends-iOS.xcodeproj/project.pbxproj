@@ -23,6 +23,7 @@
 		1C5C0587B818EA38CCFF8EC9 /* FinnhubCredentialStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1D226CA94BA03BB4F8BB482 /* FinnhubCredentialStoreTests.swift */; };
 		1D4B13798A6CBE14B8BBD743 /* FMPCandidateSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16A4A60180D183DA2CFED408 /* FMPCandidateSource.swift */; };
 		213EF8EF61243367B8E01CC5 /* MarketModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44371ED1585DAE0AFED41514 /* MarketModelTests.swift */; };
+		25617E9BE2B76998384BCF2B /* RadarSignalBarBackfill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */; };
 		25D4F99CCC0FD8FE533AA9E1 /* RadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AA30E102A1E7015DDD6AC6 /* RadarView.swift */; };
 		29AA77D9B1BC7B34F87646FD /* SustainedMoveDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF1BDD388D1713ED47A40094 /* SustainedMoveDetector.swift */; };
 		29CC73F8A97B8BDCFCAC6DBD /* TradeTick.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92DB69298375F8673537FA0 /* TradeTick.swift */; };
@@ -77,6 +78,7 @@
 		70A0FFBE9200205385C33747 /* RadarTableColorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */; };
 		73A88781B5FBDCEE68CAB80D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1562AE82C112C8F46CFD3F /* SettingsView.swift */; };
 		764CDDB1345634F29FE0470D /* LocalAccountInstanceGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E278BAC8BF8FC5AAC3E0D9 /* LocalAccountInstanceGuard.swift */; };
+		7AB8D8CEA8AAABEEA359587D /* RadarSignalBarBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80529F8ECB52D259C6515FD7 /* RadarSignalBarBackfillTests.swift */; };
 		7C0D33CE29B686B800574331 /* MinuteBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C0F103FD5CC7F11981916F /* MinuteBar.swift */; };
 		7E233D8A837FC4D2A6227757 /* SecretEntryField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761E107AE9C658936FA63647 /* SecretEntryField.swift */; };
 		7E52120B483E1AAF73A29A76 /* MarketSignalFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD98FD247F51083747D19146 /* MarketSignalFactory.swift */; };
@@ -236,7 +238,9 @@
 		7BBE5399C15441F44ECAED0F /* TableColorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColorSettingsView.swift; sourceTree = "<group>"; };
 		7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableColorStore.swift; sourceTree = "<group>"; };
 		7D1CF3E2B688E1021D7BB466 /* BrokerTransactionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransactionStore.swift; sourceTree = "<group>"; };
+		7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfill.swift; sourceTree = "<group>"; };
 		7EE5E447F15502D8BB7E6BED /* TradableCorridorDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetector.swift; sourceTree = "<group>"; };
+		80529F8ECB52D259C6515FD7 /* RadarSignalBarBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfillTests.swift; sourceTree = "<group>"; };
 		821F3802722B3BDBE88B896D /* RadarRankingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarRankingPreview.swift; sourceTree = "<group>"; };
 		84EDAF5928C89ADE1C954B20 /* ProviderQuoteSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderQuoteSnapshot.swift; sourceTree = "<group>"; };
 		856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCompanyProfileSource.swift; sourceTree = "<group>"; };
@@ -492,6 +496,7 @@
 				109A934A9372A7CAE8442260 /* RadarPaneLayoutTests.swift */,
 				EBC678F283ABD4BE2D71528F /* RadarScanPreferencesTests.swift */,
 				C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */,
+				80529F8ECB52D259C6515FD7 /* RadarSignalBarBackfillTests.swift */,
 				98A3BB2451399E654A8E8A0D /* RadarSignalPriceTests.swift */,
 				C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */,
 				13737AEBC5153080CFC7D336 /* RadarTableColorStoreTests.swift */,
@@ -550,6 +555,7 @@
 				FD98FD247F51083747D19146 /* MarketSignalFactory.swift */,
 				1B6BAC811ECF367DA113C1F6 /* RadarScanPreferences.swift */,
 				7655A3A4106AE1F48C500EA6 /* RadarScanPreferencesStore.swift */,
+				7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */,
 				F738D3015D67A0FEB94F7C80 /* RapidCrashDetector.swift */,
 				0DC05AF8E7074B665B4AFD42 /* RapidRiseDetector.swift */,
 				328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */,
@@ -845,6 +851,7 @@
 				43EF6E380CF958D857D0AB4D /* RadarScanPreferencesStore.swift in Sources */,
 				EA3B3403D3312F96C0C6A169 /* RadarScanSettingsView.swift in Sources */,
 				2E9FE5D99050C05D9AF62282 /* RadarSession.swift in Sources */,
+				25617E9BE2B76998384BCF2B /* RadarSignalBarBackfill.swift in Sources */,
 				E088B913DC8304392B964CB1 /* RadarSignalColumns.swift in Sources */,
 				8130F723170308441E0805E7 /* RadarSignalList.swift in Sources */,
 				95636F577B28BDCE79F9B67A /* RadarSignalPrice.swift in Sources */,
@@ -918,6 +925,7 @@
 				3BF85A6F101A47723029D2D9 /* RadarPaneLayoutTests.swift in Sources */,
 				A01241ECCD6A0F41220B9167 /* RadarScanPreferencesTests.swift in Sources */,
 				E66B7F09FC9D2FCFD4B3B737 /* RadarSessionTests.swift in Sources */,
+				7AB8D8CEA8AAABEEA359587D /* RadarSignalBarBackfillTests.swift in Sources */,
 				D63D58AA798680833CA73137 /* RadarSignalPriceTests.swift in Sources */,
 				51C913942E20E972D31F6DE9 /* RadarSignalSelectionTests.swift in Sources */,
 				EE9B9F5E9B599395AFE13FE1 /* RadarTableColorStoreTests.swift in Sources */,
