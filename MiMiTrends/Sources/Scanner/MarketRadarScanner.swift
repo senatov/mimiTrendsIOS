@@ -26,6 +26,8 @@ struct MarketScanProgress: Sendable, Equatable {
     let total: Int
     let successful: Int
     let skipped: Int
+    let noRecentBars: Int
+    let unsupported: Int
     let errors: Int
     let activeSymbols: [String]
     let lastUpdatedAt: Date?
@@ -50,6 +52,8 @@ actor MarketRadarScanner {
     private var fmpTotals = RadarSourceTotals()
     private var initialSuccessful = 0
     private var initialSkipped = 0
+    private var initialNoRecentBars = 0
+    private var initialUnsupported = 0
     private var initialErrors = 0
     private var lastUpdatedAt: Date?
 
@@ -67,6 +71,8 @@ actor MarketRadarScanner {
             initialScanTotal = 0
             initialSuccessful = 0
             initialSkipped = 0
+            initialNoRecentBars = 0
+            initialUnsupported = 0
             initialErrors = 0
         }
         let usesFMP = fmpKey != nil
@@ -190,7 +196,11 @@ actor MarketRadarScanner {
                     if outcome.signalStored { storedSignals += 1 }
                     if !initialScanSymbols.contains(outcome.symbol) {
                         if outcome.failure != nil { initialErrors += 1 }
-                        else if outcome.skipped { initialSkipped += 1 }
+                        else if outcome.skipped {
+                            initialSkipped += 1
+                            if outcome.rejectedSymbol != nil { initialUnsupported += 1 }
+                            else { initialNoRecentBars += 1 }
+                        }
                         else { initialSuccessful += 1 }
                     }
                     await onProgress(progress(completedInBatch: completed, activeSymbols: active))
@@ -232,7 +242,8 @@ actor MarketRadarScanner {
         MarketScanProgress(
             processed: min(initialScanSymbols.count + completedInBatch, initialScanTotal),
             total: initialScanTotal, successful: initialSuccessful,
-            skipped: initialSkipped, errors: initialErrors,
+            skipped: initialSkipped, noRecentBars: initialNoRecentBars,
+            unsupported: initialUnsupported, errors: initialErrors,
             activeSymbols: activeSymbols, lastUpdatedAt: lastUpdatedAt
         )
     }
