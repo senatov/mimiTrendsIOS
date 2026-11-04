@@ -221,6 +221,7 @@ enum RadarSearchKeyword {
             .split(whereSeparator: \.isWhitespace)
             .map(String.init)
             .filter { $0.unicodeScalars.contains(where: CharacterSet.alphanumerics.contains) }
+            .filter { $0.caseInsensitiveCompare("com") != .orderedSame }
 
         while words.first?.caseInsensitiveCompare("The") == .orderedSame { words.removeFirst() }
         while words.last?.caseInsensitiveCompare("The") == .orderedSame { words.removeLast() }
