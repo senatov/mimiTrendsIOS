@@ -42,11 +42,16 @@ final class MarketRadarScannerTests: XCTestCase {
 
     func testYahooMostActiveSelectionRequiresEquitiesWithVolume() {
         let quotes: [[String: Any]] = [
-            ["symbol": "LOW", "quoteType": "EQUITY", "regularMarketVolume": 10],
-            ["symbol": "HIGH", "quoteType": "EQUITY", "regularMarketVolume": 100],
-            ["symbol": "FUND", "quoteType": "ETF", "regularMarketVolume": 1_000],
-            ["symbol": "ZERO", "quoteType": "EQUITY", "regularMarketVolume": 0],
-            ["symbol": "HIGH", "quoteType": "EQUITY", "regularMarketVolume": 100]
+            ["symbol": "LOW", "quoteType": "EQUITY", "regularMarketVolume": 30_000,
+             "regularMarketPrice": 100, "exchange": "NMS", "currency": "USD"],
+            ["symbol": "HIGH", "quoteType": "EQUITY", "regularMarketVolume": 100_000,
+             "regularMarketPrice": 100, "exchange": "NMS", "currency": "USD"],
+            ["symbol": "FUND", "quoteType": "ETF", "regularMarketVolume": 1_000_000,
+             "regularMarketPrice": 100, "exchange": "NMS", "currency": "USD"],
+            ["symbol": "ZERO", "quoteType": "EQUITY", "regularMarketVolume": 0,
+             "regularMarketPrice": 100, "exchange": "NMS", "currency": "USD"],
+            ["symbol": "HIGH", "quoteType": "EQUITY", "regularMarketVolume": 100_000,
+             "regularMarketPrice": 100, "exchange": "NMS", "currency": "USD"]
         ]
         XCTAssertEqual(YahooRadarSource.activeSymbols(in: quotes, limit: 3), ["HIGH", "LOW"])
     }
@@ -67,6 +72,43 @@ final class MarketRadarScannerTests: XCTestCase {
         )
         XCTAssertEqual(movers.map(\.symbol), ["AAPL", "MSFT", "NVDA"])
         XCTAssertThrowsError(try FMPCandidateSource.decodeCandidates(Data("{}".utf8)))
+    }
+
+    func testCandidateFilterKeepsUSAndGermanCommonStocks() throws {
+        let data = Data("""
+        [
+          {"symbol":"AAPL","name":"Apple Inc.","price":200,"exchange":"NASDAQ"},
+          {"symbol":"SAP.DE","name":"SAP SE","price":250,"exchange":"XETRA","currency":"EUR"},
+          {"symbol":"SHOP.TO","name":"Shopify Inc.","price":120,"exchange":"TSX"},
+          {"symbol":"PENNY","name":"Cheap Inc.","price":2,"exchange":"NASDAQ"},
+          {"symbol":"ADR","name":"Foreign Depositary Receipt","price":80,"exchange":"NASDAQ"},
+          {"symbol":"ETF","name":"Broad Market ETF","price":120,"exchange":"NYSE"},
+          {"symbol":"MICRO","name":"Micro Inc.","price":10,"exchange":"NYSE","marketCap":100000000},
+          {"symbol":"THIN","name":"Thin Inc.","price":10,"exchange":"NYSE","volume":1000},
+          {"symbol":"FOREIGN","name":"Foreign Inc.","price":100,"exchange":"NASDAQ","country":"CA"}
+        ]
+        """.utf8)
+        XCTAssertEqual(try FMPCandidateSource.decodeCandidates(data).map(\.symbol), ["AAPL", "SAP.DE"])
+        XCTAssertTrue(MarketCandidateFilter.supportsYahooBars(symbol: "SAP.DE"))
+        XCTAssertFalse(MarketCandidateFilter.supportsYahooBars(symbol: "SHOP.TO"))
+    }
+
+    func testYahooCandidatesRejectOtherMarketsAndIlliquidShares() {
+        let quotes: [[String: Any]] = [
+            ["symbol": "SAP.DE", "shortName": "SAP SE", "quoteType": "EQUITY",
+             "regularMarketPrice": 250, "regularMarketVolume": 20_000,
+             "exchange": "GER", "currency": "EUR"],
+            ["symbol": "SHOP.TO", "shortName": "Shopify Inc.", "quoteType": "EQUITY",
+             "regularMarketPrice": 100, "regularMarketVolume": 500_000,
+             "exchange": "TOR", "currency": "CAD"],
+            ["symbol": "THIN", "shortName": "Thin Inc.", "quoteType": "EQUITY",
+             "regularMarketPrice": 10, "regularMarketVolume": 1_000,
+             "exchange": "NMS", "currency": "USD"],
+            ["symbol": "AAPL", "shortName": "Apple Inc.", "quoteType": "EQUITY",
+             "regularMarketPrice": 200, "regularMarketVolume": 50_000,
+             "exchange": "NMS", "currency": "USD"]
+        ]
+        XCTAssertEqual(YahooRadarSource.activeSymbols(in: quotes, limit: 10), ["AAPL", "SAP.DE"])
     }
 
     func testFMPProfileAcceptsOnlyMatchingCompanyAndProviderImage() {
@@ -107,6 +149,7 @@ final class MarketRadarScannerTests: XCTestCase {
         chart["result"] = results
         wrongCurrency["chart"] = chart
         XCTAssertThrowsError(try YahooRadarSource.decodeBars(wrongCurrency, symbol: "AAPL"))
+        XCTAssertEqual(try YahooRadarSource.decodeBars(wrongCurrency, symbol: "SAP.DE").count, 1)
     }
 
     func testTraderFoxFiltersStaleAndInactiveRows() throws {

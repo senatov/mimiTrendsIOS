@@ -111,6 +111,7 @@
 		AD39BFB17C64FC27CE5EFFD4 /* MiMiTrendsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C749680DE8767BA8EF22DE /* MiMiTrendsApp.swift */; };
 		AD6C456C4C15471D7D60FDE1 /* ScannerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27CE5296E45D2A7374F6FA2 /* ScannerSettingsView.swift */; };
 		AD8DE8D44857CF937DBD5B8E /* ProviderCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */; };
+		ADBA82D1F46C0765B5A7586E /* MarketCandidateFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */; };
 		AF13818E0D1DBE9C106E730D /* ProviderEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */; };
 		AF689ACCE16FDF213052FA73 /* DiscoveryPoolController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC293CB0150CC6CB7B2EA1C1 /* DiscoveryPoolController.swift */; };
 		B7F662EC77C7340B60D527DD /* DiscoverySnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */; };
@@ -193,6 +194,7 @@
 		2272071A7DAED0072B533A6B /* FinnhubBidAskClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubBidAskClient.swift; sourceTree = "<group>"; };
 		23A0E3904F1519340EFA80C9 /* LSCandidatePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSCandidatePool.swift; sourceTree = "<group>"; };
 		290013CD896F05B09FCF5BB0 /* BrokerTradeChartMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTradeChartMatcher.swift; sourceTree = "<group>"; };
+		2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketCandidateFilter.swift; sourceTree = "<group>"; };
 		328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortMoveQuoteQuality.swift; sourceTree = "<group>"; };
 		35C2E8B4DD20C94DB4457374 /* HeaderBadgeSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderBadgeSurface.swift; sourceTree = "<group>"; };
 		3777AAD0702BA7456930185D /* WatchlistEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistEntryRow.swift; sourceTree = "<group>"; };
@@ -551,6 +553,7 @@
 			isa = PBXGroup;
 			children = (
 				CBE947CFF4E30D853A5BBFE0 /* FinnhubRadarPipeline.swift */,
+				2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */,
 				67B9688545B10D9D3BE1B0CB /* MarketRadarScanner.swift */,
 				FD98FD247F51083747D19146 /* MarketSignalFactory.swift */,
 				1B6BAC811ECF367DA113C1F6 /* RadarScanPreferences.swift */,
@@ -819,6 +822,7 @@
 				C63CC2365CBED179E978C94F /* LangSchwarzQuoteSource.swift in Sources */,
 				764CDDB1345634F29FE0470D /* LocalAccountInstanceGuard.swift in Sources */,
 				6A580E7214EACB7224EF26EB /* MarketBarStore.swift in Sources */,
+				ADBA82D1F46C0765B5A7586E /* MarketCandidateFilter.swift in Sources */,
 				18668F60B68C474955325389 /* MarketPageQuote.swift in Sources */,
 				C602EFEB172CEB99BBF83DC1 /* MarketQuoteStore.swift in Sources */,
 				6184C352E9EF0D6AE8168EAC /* MarketRadarScanner.swift in Sources */,

@@ -20,7 +20,7 @@ actor RadarSignalBarBackfill {
 
     func fillIfMissing(symbol: String) async -> Bool {
         let normalized = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard !normalized.isEmpty, FinnhubBidAskClient.supports(symbol: normalized) else { return false }
+        guard !normalized.isEmpty, MarketCandidateFilter.supportsYahooBars(symbol: normalized) else { return false }
         while activeChecks >= 4 {
             if Task.isCancelled { return false }
             try? await Task.sleep(for: .milliseconds(100))

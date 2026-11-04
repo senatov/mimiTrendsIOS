@@ -19,7 +19,7 @@ struct YahooRadarSource: Sendable {
     }
 
     func minuteBars(symbol: String) async throws -> [MinuteBar] {
-        guard FinnhubBidAskClient.supports(symbol: symbol),
+        guard MarketCandidateFilter.supportsYahooBars(symbol: symbol),
               let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               !encoded.isEmpty else {
             throw RadarSourceError.invalidSymbol
@@ -77,10 +77,17 @@ struct YahooRadarSource: Sendable {
         return quotes.compactMap { quote -> (RadarCompanyCandidate, Double)? in
             guard quote["quoteType"] as? String == "EQUITY",
                   let symbol = quote["symbol"] as? String,
-                  FinnhubBidAskClient.supports(symbol: symbol),
+                  MarketCandidateFilter.supportsYahooBars(symbol: symbol),
                   let volume = (quote["regularMarketVolume"] as? NSNumber)?.doubleValue,
-                  volume > 0, seen.insert(symbol).inserted else { return nil }
+                  let price = (quote["regularMarketPrice"] as? NSNumber)?.doubleValue,
+                  let exchange = quote["exchange"] as? String else { return nil }
             let name = (quote["shortName"] as? String) ?? (quote["longName"] as? String) ?? symbol
+            guard MarketCandidateFilter.accepts(
+                symbol: symbol, name: name, price: price, exchange: exchange,
+                currency: quote["currency"] as? String, country: quote["country"] as? String,
+                volume: volume,
+                marketCap: (quote["marketCap"] as? NSNumber)?.doubleValue
+            ), seen.insert(symbol).inserted else { return nil }
             return (RadarCompanyCandidate(symbol: symbol, name: name), volume)
         }
         .sorted { $0.1 > $1.1 }
@@ -93,7 +100,7 @@ struct YahooRadarSource: Sendable {
               let result = chart["result"] as? [[String: Any]],
               let first = result.first,
               let meta = first["meta"] as? [String: Any],
-              meta["currency"] as? String == "USD",
+              meta["currency"] as? String == (symbol.uppercased().hasSuffix(".DE") ? "EUR" : "USD"),
               let timestamps = first["timestamp"] as? [NSNumber],
               let indicators = first["indicators"] as? [String: Any],
               let quotes = indicators["quote"] as? [[String: Any]],

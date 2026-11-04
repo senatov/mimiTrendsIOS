@@ -42,13 +42,14 @@ struct TraderFoxRadarSource: Sendable {
                   row["currency"] as? String == "USD",
                   let raw = row["symbol"] as? String else { return nil }
             let symbol = raw.uppercased().replacingOccurrences(of: ".", with: "-")
-            guard FinnhubBidAskClient.supports(symbol: symbol),
-                  let price = (row["v"] as? NSNumber)?.doubleValue, price >= 2,
+            guard let price = (row["v"] as? NSNumber)?.doubleValue,
                   let change = (row["p"] as? NSNumber)?.doubleValue, change.isFinite,
                   let quoted = (row["t"] as? NSNumber)?.int64Value,
-                  nowSeconds - quoted >= 0, nowSeconds - quoted <= 7 * 86_400,
-                  seen.insert(symbol).inserted else { return nil }
+                  nowSeconds - quoted >= 0, nowSeconds - quoted <= 7 * 86_400 else { return nil }
             let name = (row["name"] as? String) ?? symbol
+            guard MarketCandidateFilter.accepts(
+                symbol: symbol, name: name, price: price, exchange: "NYSE", currency: "USD"
+            ), seen.insert(symbol).inserted else { return nil }
             return (RadarCompanyCandidate(symbol: symbol, name: name), abs(change))
         }
         .sorted { $0.1 == $1.1 ? $0.0.symbol < $1.0.symbol : $0.1 > $1.1 }

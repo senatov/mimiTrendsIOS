@@ -1,8 +1,5 @@
 import Foundation
 import Security
-#if os(macOS)
-import LocalAuthentication
-#endif
 
 enum FinnhubCredentialStore {
     private static let defaultService = "org.senatov.mimitrends.apple.finnhub"
@@ -32,7 +29,6 @@ enum FinnhubCredentialStore {
         guard !normalized.isEmpty else { throw CredentialStoreError.emptyKey }
         #if os(macOS)
         UserDefaults.standard.set(normalized, forKey: preferenceKey(service))
-        UserDefaults.standard.set(true, forKey: migrationKey(service))
         #else
         let data = Data(normalized.utf8)
         let update: [String: Any] = [kSecValueData as String: data]
@@ -53,7 +49,6 @@ enum FinnhubCredentialStore {
     static func delete(service: String = defaultService) throws {
         #if os(macOS)
         UserDefaults.standard.removeObject(forKey: preferenceKey(service))
-        UserDefaults.standard.set(true, forKey: migrationKey(service))
         #else
         let status = SecItemDelete(baseQuery(service: service) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
@@ -72,26 +67,9 @@ enum FinnhubCredentialStore {
 
     #if os(macOS)
     private static func preferenceKey(_ service: String) -> String { "credential.finnhub.\(service)" }
-    private static func migrationKey(_ service: String) -> String { "credential.finnhub.migrated.\(service)" }
 
     private static func loadMacPreference(service: String) -> String? {
-        let defaults = UserDefaults.standard
-        if let stored = defaults.string(forKey: preferenceKey(service)) { return stored }
-        guard !defaults.bool(forKey: migrationKey(service)) else { return nil }
-        defaults.set(true, forKey: migrationKey(service))
-
-        var query = baseQuery(service: service)
-        let context = LAContext()
-        context.interactionNotAllowed = true
-        query[kSecUseAuthenticationContext as String] = context
-        query[kSecReturnData as String] = true
-        query[kSecMatchLimit as String] = kSecMatchLimitOne
-        var result: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              let value = String(data: data, encoding: .utf8) else { return nil }
-        defaults.set(value, forKey: preferenceKey(service))
-        return value
+        UserDefaults.standard.string(forKey: preferenceKey(service))
     }
     #endif
 }

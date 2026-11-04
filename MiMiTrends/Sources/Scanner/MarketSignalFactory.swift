@@ -16,7 +16,7 @@ enum MarketSignalFactory {
         return ScanResult(
             symbol: symbol,
             price: displayPrice,
-            priceCurrency: "USD",
+            priceCurrency: symbol.uppercased().hasSuffix(".DE") ? "EUR" : "USD",
             anomalyScore: anomalyScore,
             priceAnomaly: nil,
             volumeAnomaly: nil,

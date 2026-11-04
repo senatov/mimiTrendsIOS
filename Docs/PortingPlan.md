@@ -36,7 +36,7 @@ The Radar dashboard now follows the layout hierarchy in the desktop `Doc/LiveRad
 
 - `FinnhubTradeDecoder` ports the desktop WebSocket client's `trade` envelope and `s`/`p`/`t`/`v` fields. The fixture is based on its Kotlin unit-test message and also covers multiple trades. Invalid records are skipped, while malformed or rejected messages produce a concise error.
 - `FinnhubTradeStream` connects to the same `wss://ws.finnhub.io` endpoint, sends a text subscription, and closes its socket on cancellation. Radar's existing scene lifecycle stops the session outside the foreground. A run identifier rejects late callbacks from an older feed after a new one starts.
-- `FinnhubCredentialStore` keeps the user-entered key in iPad Keychain. On Mac, local app preferences avoid authorization prompts from repeatedly signed development builds. Existing Mac Keychain values are imported once when silent access succeeds; otherwise the user re-enters the key. The key is never bundled, logged, or copied from the desktop configuration.
+- `FinnhubCredentialStore` keeps the user-entered key in iPad Keychain. On Mac, local app preferences avoid authorization prompts from repeatedly signed development builds. Former Mac Keychain entries are not read automatically; a key absent from preferences must be entered again in Settings. The key is never bundled, logged, or copied from the desktop configuration.
 - The Radar screen first displayed connection state and received trades for provider verification; stage 3 adds a rapid-rise diagnostic and bar persistence. Full product presentation remains later work.
 
 ## Stage 3 mapping

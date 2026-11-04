@@ -48,11 +48,18 @@ struct FMPCandidateSource: Sendable {
             guard let rawSymbol = row["symbol"] as? String,
                   let rawName = row["name"] as? String,
                   let price = (row["price"] as? NSNumber)?.doubleValue,
-                  price.isFinite, price > 0 else { return nil }
+                  let exchange = row["exchange"] as? String else { return nil }
             let symbol = rawSymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
             let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !name.isEmpty, FinnhubBidAskClient.supports(symbol: symbol),
-                  (row["exchange"] as? String)?.uppercased() != "OTC" else { return nil }
+            guard row["isEtf"] as? Bool != true,
+                  row["isFund"] as? Bool != true,
+                  row["isAdr"] as? Bool != true,
+                  MarketCandidateFilter.accepts(
+                    symbol: symbol, name: name, price: price, exchange: exchange,
+                    currency: row["currency"] as? String, country: row["country"] as? String,
+                    volume: (row["volume"] as? NSNumber)?.doubleValue,
+                    marketCap: (row["marketCap"] as? NSNumber)?.doubleValue
+                  ) else { return nil }
             return RadarCompanyCandidate(symbol: symbol, name: name)
         }
     }
