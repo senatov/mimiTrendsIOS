@@ -1,7 +1,7 @@
 struct RapidCrashSettings: Sendable {
-    var crashPercent = 0.35
+    var crashPercent = RadarScanThresholdDefaults.shortDropPercent
     var crashWindowMinutes: Int64 = 5
-    var sustainedCrashPercent = 0.55
+    var sustainedCrashPercent = RadarScanThresholdDefaults.sustainedDropPercent
     var sustainedCrashWindowMinutes: Int64 = 15
     var minimumPrice = 5.0
     var minimumTurnover = 250_000.0

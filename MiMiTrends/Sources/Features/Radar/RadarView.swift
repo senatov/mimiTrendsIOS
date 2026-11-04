@@ -268,10 +268,13 @@ struct RadarView: View {
             let limit = min(max(maxResults, 5), 100)
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
+            let preferences = RadarScanPreferencesStore.load()
             let (loaded, savedFallback) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let history = try await store.loadRecent(limit: min(limit * 10, 500))
-                return RadarSignalSelection.displayHistory(history, since: cutoff, limit: limit)
+                return RadarSignalSelection.displayHistory(
+                    history, since: cutoff, limit: limit, preferences: preferences
+                )
             }.value
             recentSignals = loaded
             showingSavedHistory = savedFallback

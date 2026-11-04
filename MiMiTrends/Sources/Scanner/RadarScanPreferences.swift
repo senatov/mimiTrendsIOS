@@ -1,9 +1,16 @@
 import Foundation
 
+enum RadarScanThresholdDefaults {
+    static let shortDropPercent = 1.0
+    static let sustainedDropPercent = 1.5
+    static let legacyShortDropPercent = 0.35
+    static let legacySustainedDropPercent = 0.55
+}
+
 struct RadarScanPreferences: Codable, Equatable, Sendable {
-    var crashPercent = 0.35
+    var crashPercent = RadarScanThresholdDefaults.shortDropPercent
     var crashWindowMinutes = 5
-    var sustainedCrashPercent = 0.55
+    var sustainedCrashPercent = RadarScanThresholdDefaults.sustainedDropPercent
     var sustainedCrashWindowMinutes = 15
     var risePercent = 0.8
     var riseWindowMinutes = 5
@@ -15,9 +22,13 @@ struct RadarScanPreferences: Codable, Equatable, Sendable {
 
     var validated: Self {
         var result = self
-        result.crashPercent = Self.bounded(crashPercent, 0.05...20, fallback: 0.35)
+        result.crashPercent = Self.bounded(
+            crashPercent, 0.05...20, fallback: RadarScanThresholdDefaults.shortDropPercent
+        )
         result.crashWindowMinutes = crashWindowMinutes.clamped(to: 4...15)
-        result.sustainedCrashPercent = Self.bounded(sustainedCrashPercent, 0.05...20, fallback: 0.55)
+        result.sustainedCrashPercent = Self.bounded(
+            sustainedCrashPercent, 0.05...20, fallback: RadarScanThresholdDefaults.sustainedDropPercent
+        )
         result.sustainedCrashWindowMinutes = sustainedCrashWindowMinutes.clamped(to: 5...30)
         result.risePercent = Self.bounded(risePercent, 0.05...20, fallback: 0.8)
         result.riseWindowMinutes = riseWindowMinutes.clamped(to: 1...15)

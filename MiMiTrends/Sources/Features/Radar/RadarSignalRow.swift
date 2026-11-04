@@ -160,15 +160,7 @@ struct RadarSignalRow: View {
     }
 
     private var eventLabel: String {
-        let label: String
-        switch signal.signalSource.lowercased() {
-        case "rapid crash": label = "‼ RAPID CRASH"
-        case "rapid rise": label = "↑ RAPID RISE"
-        case "sustained drop": label = "↓ SUSTAINED DROP"
-        case "sustained rise": label = "↑ SUSTAINED RISE"
-        case "tradable corridor": label = "▰ CORRIDOR"
-        default: label = signal.signalSource.uppercased()
-        }
+        let label = RadarSignalPresentation.badge(for: signal.signalSource)
         return signal.isRetained ? "\(label) · RECENT" : label
     }
 

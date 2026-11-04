@@ -29,7 +29,7 @@ enum RadarTableColorRole: String, CaseIterable, Identifiable {
         case .rise: "Rising signals"
         case .fall: "Falling signals"
         case .selectedRow: "Selected signal"
-        case .criticalRow: "Rapid crash row"
+        case .criticalRow: "Rapid drop row"
         case .sourceActive: "Active source"
         case .sourceAttention: "Source needing attention"
         case .sourceInactive: "Inactive source"

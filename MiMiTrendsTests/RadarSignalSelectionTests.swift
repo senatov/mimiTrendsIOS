@@ -28,14 +28,31 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(fresh.signals.map(\.symbol), ["NEW"])
     }
 
-    private func event(_ symbol: String, source: String, at epoch: Int64) -> ScanResult {
+    func testHidesSavedRapidDropsBelowCurrentThresholds() {
+        let history = [
+            event("NVDA", source: "Rapid crash", at: 300, change: -0.63, window: "5m"),
+            event("FIS", source: "Rapid crash", at: 295, change: -1.14, window: "10m"),
+            event("AMZN", source: "Rapid crash", at: 292, change: -0.78, window: "15m"),
+            event("AAPL", source: "Rapid crash", at: 290, change: -2.0, window: "5m"),
+            event("MSFT", source: "Rapid rise", at: 280, change: 0.8, window: "5m")
+        ]
+
+        let displayed = RadarSignalSelection.displayHistory(history, since: 0, limit: 10)
+
+        XCTAssertEqual(displayed.signals.map(\.symbol), ["AAPL", "MSFT"])
+    }
+
+    private func event(
+        _ symbol: String, source: String, at epoch: Int64,
+        change: Double = 1, window: String = "1m"
+    ) -> ScanResult {
         ScanResult(
             symbol: symbol, price: 100, anomalyScore: 0,
             priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
             relativeVolume: nil, candleBodyRatio: 0,
-            windowChangePercent: 1, windowVolume: 0, sessionVolume: 0,
+            windowChangePercent: change, windowVolume: 0, sessionVolume: 0,
             sessionTurnover: 0, signalAgeMinutes: 0, signalSource: source,
-            updatedAtMillis: epoch, signalEpochMillis: epoch
+            updatedAtMillis: epoch, signalWindowLabel: window, signalEpochMillis: epoch
         )
     }
 }

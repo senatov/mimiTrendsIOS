@@ -70,7 +70,7 @@ struct RadarChartPreview: View {
                     Task { await loadImportedTrades() }
                 }
                 if let signal {
-                    Text(signal.signalSource.replacingOccurrences(of: "_", with: " "))
+                    Text(RadarSignalPresentation.title(for: signal.signalSource))
                         .font(.caption.weight(.regular))
                         .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
                 }

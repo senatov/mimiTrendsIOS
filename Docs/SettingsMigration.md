@@ -4,7 +4,7 @@ Reviewed the local desktop files in `~/.mimi/trends/` on 2026-10-28. The iPad ap
 
 | Desktop source | Native handling |
 | --- | --- |
-| `scanner.properties` rapid crash, rise, sustained move, minimum price, and turnover values | Editable in **Settings → Rapid moves**. The eleven recorded values seed native defaults. Saving validates desktop-equivalent bounds, persists locally, and stops an active feed; a new feed takes a stable settings snapshot. |
+| `scanner.properties` rapid crash, rise, sustained move, minimum price, and turnover values | Editable in **Settings → Rapid moves**. Native rapid-drop defaults are 1% over 5 minutes or 1.5% over 15 minutes; an existing saved pair of the older 0.35%/0.55% defaults is upgraded once while other preferences are retained. Saving validates bounds, persists locally, and stops an active feed; a new feed takes a stable settings snapshot. |
 | `scanner.properties` maximum results `30` and maximum signal age `2` hours | Editable in **Settings → Scanner**. These controls filter the native saved Radar list immediately and persist on this device. They do not delete historical signals. Target table results and the desktop market universe are not active in the limited native scanner. |
 | `ui-state.properties` selected symbol `ORCL`, chart range `1D` | First-run defaults. Radar owns the selected symbol and chart range, and each change is saved for later launches. |
 | `scanner.properties` `ui.theme=LIGHT` | Native appearance initially uses Light; Settings offers System, Light, and Dark. The choice is saved locally. The existing compact panel layout corresponds to the old compact density without a separate density switch. |

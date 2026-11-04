@@ -38,12 +38,21 @@ struct RadarScanSettingsView: View {
     }
 
     private var crashGroup: some View {
-        section("Rapid crashes") {
+        section("Rapid drops") {
+            Text(crashDescription)
+                .font(.body.weight(.light))
+                .foregroundStyle(TrendsColors.supportingInk)
             doubleRow("Short drop", value: $draft.crashPercent, range: 0.05...20, step: 0.05, unit: "%")
             intRow("Short window", value: $draft.crashWindowMinutes, range: 4...15, unit: "min")
             doubleRow("Sustained drop", value: $draft.sustainedCrashPercent, range: 0.05...20, step: 0.05, unit: "%")
             intRow("Long window", value: $draft.sustainedCrashWindowMinutes, range: 5...30, unit: "min")
         }
+    }
+
+    private var crashDescription: String {
+        let short = draft.crashPercent.formatted(.number.precision(.fractionLength(0...2)))
+        let sustained = draft.sustainedCrashPercent.formatted(.number.precision(.fractionLength(0...2)))
+        return "This is a short-term price-move alert, not an overall stock rating. Current thresholds: at least \(short)% in \(draft.crashWindowMinutes) minutes or \(sustained)% in \(draft.sustainedCrashWindowMinutes) minutes. Both rules require a new low and reported volume; the longer-window rule also requires acceleration."
     }
 
     private var riseGroup: some View {

@@ -2,16 +2,22 @@ import XCTest
 @testable import MiMiTrends
 
 final class RapidCrashDetectorTests: XCTestCase {
-    func testDesktopCloseThresholdFixture() throws {
+    func testConfiguredShortDropThresholdIncludesBoundary() throws {
         let now: Int64 = 12_000
-        let bars = prices("THRESHOLD", endingAt: now, [100, 100.15, 99.90, 99.65])
+        let bars = prices("THRESHOLD", endingAt: now, [100, 100.15, 99.50, 99.0])
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
             symbol: "THRESHOLD", bars: bars, nowEpochSeconds: now
         ))
         XCTAssertEqual(signal.signalSource, "Rapid crash")
-        XCTAssertEqual(signal.windowChangePercent, -0.35, accuracy: 1e-9)
+        XCTAssertEqual(signal.windowChangePercent, -1.0, accuracy: 1e-9)
         XCTAssertEqual(signal.signalPrice, 100)
-        XCTAssertEqual(signal.price, 99.65)
+        XCTAssertEqual(signal.price, 99.0)
+    }
+
+    func testModeratePullbackDoesNotQualifyAsRapidCrash() {
+        let now: Int64 = 12_000
+        let bars = prices("PULLBACK", endingAt: now, [100, 99.85, 99.70, 99.37])
+        XCTAssertNil(RapidCrashDetector.detect(symbol: "PULLBACK", bars: bars, nowEpochSeconds: now))
     }
 
     func testGradualDeclineNeedsAcceleration() throws {
@@ -26,13 +32,13 @@ final class RapidCrashDetectorTests: XCTestCase {
 
         let acceleratingNow: Int64 = 41_000
         let accelerating = prices("ACCELERATING", endingAt: acceleratingNow, [
-            100, 99.99, 99.98, 99.97, 99.96, 99.95, 99.94, 99.93,
-            99.92, 99.91, 99.90, 99.88, 99.83, 99.72, 99.55, 99.40
+            100, 99.94, 99.88, 99.82, 99.76, 99.70, 99.64, 99.58,
+            99.52, 99.46, 99.40, 99.40, 99.40, 99.20, 98.80, 98.41
         ])
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
             symbol: "ACCELERATING", bars: accelerating, nowEpochSeconds: acceleratingNow
         ))
-        XCTAssertEqual(signal.windowChangePercent, -0.60, accuracy: 1e-9)
+        XCTAssertEqual(signal.windowChangePercent, -1.59, accuracy: 1e-9)
     }
 
     func testSpikeReversalNeedsBreakOfPrecedingLow() throws {
@@ -44,13 +50,13 @@ final class RapidCrashDetectorTests: XCTestCase {
         }
         XCTAssertNil(RapidCrashDetector.detect(symbol: "SPIKE", bars: bars, nowEpochSeconds: now))
 
-        let breakBars = zip(times, [100.0, 101.0, 100.8, 100.4, 99.8]).map { time, price in
+        let breakBars = zip(times, [100.0, 101.0, 100.8, 100.4, 98.5]).map { time, price in
             bar("BREAK", time, price)
         }
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
             symbol: "BREAK", bars: breakBars, nowEpochSeconds: now
         ))
-        XCTAssertLessThan(signal.windowChangePercent, -0.55)
+        XCTAssertLessThan(signal.windowChangePercent, -1.5)
     }
 
     func testThinMissingAndStaleCrashesAreRejected() {

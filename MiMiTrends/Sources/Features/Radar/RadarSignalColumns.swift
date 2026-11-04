@@ -129,15 +129,31 @@ struct RadarSignalColumnWidths {
     }
 
     private static func eventLabel(_ signal: ScanResult) -> String {
-        let label: String
-        switch signal.signalSource.lowercased() {
-        case "rapid crash": label = "‼ RAPID CRASH"
-        case "rapid rise": label = "↑ RAPID RISE"
-        case "sustained drop": label = "↓ SUSTAINED DROP"
-        case "sustained rise": label = "↑ SUSTAINED RISE"
-        case "tradable corridor": label = "▰ CORRIDOR"
-        default: label = signal.signalSource.uppercased()
-        }
+        let label = RadarSignalPresentation.badge(for: signal.signalSource)
         return signal.isRetained ? "\(label) · RECENT" : label
+    }
+}
+
+enum RadarSignalPresentation {
+    static func title(for source: String) -> String {
+        switch source.lowercased() {
+        case "rapid crash": "Rapid drop"
+        case "rapid rise": "Rapid rise"
+        case "sustained drop": "Sustained drop"
+        case "sustained rise": "Sustained rise"
+        case "tradable corridor": "Tradable corridor"
+        default: source.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    static func badge(for source: String) -> String {
+        switch source.lowercased() {
+        case "rapid crash": "↓ RAPID DROP"
+        case "rapid rise": "↑ RAPID RISE"
+        case "sustained drop": "↓ SUSTAINED DROP"
+        case "sustained rise": "↑ SUSTAINED RISE"
+        case "tradable corridor": "▰ CORRIDOR"
+        default: title(for: source).uppercased()
+        }
     }
 }
