@@ -67,7 +67,9 @@ private struct TrendsActionButtonBody: View {
     var body: some View {
         configuration.label
             .font(buttonFont)
-            .foregroundStyle(RadarColorHex.color(textColor) ?? Color.primary.opacity(contrast == .increased ? 1 : 0.90))
+            .foregroundStyle(RadarColorHex.color(textColor)
+                ?? ControlAppearance.contrastingTextColor(for: backgroundColor)
+                ?? Color.primary.opacity(contrast == .increased ? 1 : 0.90))
             .padding(.horizontal, tiny ? 6 : compact ? 9 : 12)
             .padding(.vertical, verticalPadding)
             .frame(minWidth: minimumWidth, minHeight: minimumHeight)

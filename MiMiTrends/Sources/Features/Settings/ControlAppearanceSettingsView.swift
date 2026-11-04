@@ -31,18 +31,21 @@ struct ControlAppearanceSettingsView: View {
                 Spacer(minLength: 0)
             }
             numberRow("Font size", value: $fontSize, range: 10...20)
-            colorRow("Text color", hex: $textColor, fallback: .primary)
-            colorRow("Icon color", hex: $iconColor, fallback: .blue)
-            colorRow("Background color", hex: $backgroundColor, fallback: SettingsColors.group)
-            Text("Default icon colors follow each action; the default button surface follows the system theme.")
+            colorRow("Text color", hex: $textColor, factoryHex: ControlAppearance.buttonTextColor,
+                     fallback: ControlAppearance.contrastingTextColor(for: backgroundColor) ?? .primary,
+                     emptyLabel: "Automatic contrast")
+            colorRow("Icon color", hex: $iconColor, factoryHex: ControlAppearance.buttonIconColor, fallback: .blue)
+            colorRow("Background color", hex: $backgroundColor, factoryHex: ControlAppearance.buttonBackgroundColor,
+                     fallback: SettingsColors.group)
+            Text("These factory colors apply to new installations. Restore defaults returns to this palette.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             numberRow("Corner radius", value: $cornerRadius, range: 0...16)
             numberRow("Border width", value: $borderWidth, range: 0...3, step: 0.25)
             numberRow("Shadow radius", value: $shadowRadius, range: 0...8, step: 0.5)
             numberRow("Shadow offset", value: $shadowY, range: 0...4, step: 0.5)
-            colorRow("Border color", hex: $borderColor, fallback: .gray)
-            colorRow("Shadow color", hex: $shadowColor, fallback: .black)
+            colorRow("Border color", hex: $borderColor, factoryHex: ControlAppearance.buttonBorderColor, fallback: .gray)
+            colorRow("Shadow color", hex: $shadowColor, factoryHex: ControlAppearance.buttonShadowColor, fallback: .black)
             HStack(spacing: 10) {
                 TrendsActionButton(title: "Sources", systemImage: "sidebar.right") {}
                 TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise") {}
@@ -69,7 +72,8 @@ struct ControlAppearanceSettingsView: View {
         }
     }
 
-    private func colorRow(_ title: String, hex: Binding<String>, fallback: Color) -> some View {
+    private func colorRow(_ title: String, hex: Binding<String>, factoryHex: String,
+                          fallback: Color, emptyLabel: String = "System default") -> some View {
         HStack(spacing: 12) {
             Text(title).frame(width: 180, alignment: .trailing)
             ColorPicker(title, selection: Binding(
@@ -78,11 +82,11 @@ struct ControlAppearanceSettingsView: View {
             ), supportsOpacity: false)
             .labelsHidden()
             .frame(width: 34)
-            Text(hex.wrappedValue.isEmpty ? "System default" : hex.wrappedValue.uppercased())
+            Text(hex.wrappedValue.isEmpty ? emptyLabel : hex.wrappedValue.uppercased())
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
-            if !hex.wrappedValue.isEmpty {
-                Button("Use default", systemImage: "arrow.uturn.backward") { hex.wrappedValue = "" }
+            if hex.wrappedValue.caseInsensitiveCompare(factoryHex) != .orderedSame {
+                Button("Use default", systemImage: "arrow.uturn.backward") { hex.wrappedValue = factoryHex }
                     .labelStyle(.iconOnly)
                     .buttonStyle(TrendsActionButtonStyle(compact: true))
                     .accessibilityLabel("Restore default \(title.lowercased())")

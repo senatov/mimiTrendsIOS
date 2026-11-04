@@ -135,6 +135,7 @@
 		D63D58AA798680833CA73137 /* RadarSignalPriceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98A3BB2451399E654A8E8A0D /* RadarSignalPriceTests.swift */; };
 		D70AF81D610FA33CCCA6E2EC /* DisplayCurrencyService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEFE17A346A28DCD26945382 /* DisplayCurrencyService.swift */; };
 		D9D087CB14C2AF2325052412 /* RadarSearchKeywordTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69643EB0435692625D61DB01 /* RadarSearchKeywordTests.swift */; };
+		DC1BBE8191421DA3BDED50CD /* ControlAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 972BE43E8B77C4F879A008D9 /* ControlAppearanceTests.swift */; };
 		E088B913DC8304392B964CB1 /* RadarSignalColumns.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */; };
 		E1EA5AE0F47FDA7E76C7F2D9 /* MiminaviInfo1DecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CBBB6C2292BBB1F06288300 /* MiminaviInfo1DecoderTests.swift */; };
 		E1F32C47FAE46C3BBEBA6C07 /* ScanResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40276ADEA60EC008CF7CDB8 /* ScanResult.swift */; };
@@ -264,6 +265,7 @@
 		926E7B5100D9ECAD2EACFF6B /* FinnhubWatchlistSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubWatchlistSelectionTests.swift; sourceTree = "<group>"; };
 		930FFF72DAC8261D47DAF60E /* finnhub-trades.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "finnhub-trades.json"; sourceTree = "<group>"; };
 		9667B20187C693B6A88265FB /* AppDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDiagnostics.swift; sourceTree = "<group>"; };
+		972BE43E8B77C4F879A008D9 /* ControlAppearanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlAppearanceTests.swift; sourceTree = "<group>"; };
 		9875C0F9708CB9BE887178A3 /* RadarSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSession.swift; sourceTree = "<group>"; };
 		98A3BB2451399E654A8E8A0D /* RadarSignalPriceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalPriceTests.swift; sourceTree = "<group>"; };
 		999950D6664725733B79DD22 /* FinnhubMinuteAggregator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubMinuteAggregator.swift; sourceTree = "<group>"; };
@@ -486,6 +488,7 @@
 			isa = PBXGroup;
 			children = (
 				FAB60A6508A4B278B3FE1905 /* AppDiagnosticsTests.swift */,
+				972BE43E8B77C4F879A008D9 /* ControlAppearanceTests.swift */,
 				39E5AF93F5D263904111D4BA /* DiscoveryCandidateSelectorTests.swift */,
 				05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */,
 				A446076C5E361B54FA3892D7 /* DiscoveryRefreshCacheTests.swift */,
@@ -922,6 +925,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				647061B7F3233DABB3B153F3 /* AppDiagnosticsTests.swift in Sources */,
+				DC1BBE8191421DA3BDED50CD /* ControlAppearanceTests.swift in Sources */,
 				385A74AA84EAF8AED62E7138 /* DiscoveryCandidateSelectorTests.swift in Sources */,
 				07672723835730B00E657F7A /* DiscoveryRankingBatchTests.swift in Sources */,
 				EE964646B6EC82384A652E27 /* DiscoveryRefreshCacheTests.swift in Sources */,
