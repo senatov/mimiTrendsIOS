@@ -31,14 +31,16 @@ struct RadarSignalRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(backgroundColor)
+        .background {
+            backgroundColor
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onSelect)
+        }
         .overlay {
             if !compact {
                 RadarSignalColumnLines(widths: widths, color: tableColor(.signalGrid), horizontalInset: 8)
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onSelect)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { onSelect() }
@@ -81,13 +83,15 @@ struct RadarSignalRow: View {
                 Button {
                     onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
                 } label: {
-                    Text("Rumors")
-                        .font(.system(size: 11, weight: .bold))
+                    Image(systemName: "ear")
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(tableColor(.signalActionAccent))
                 }
                 .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                 .fixedSize(horizontal: true, vertical: false)
-                .accessibilityLabel("Recent rumors for \(signal.symbol)")
+                .accessibilityLabel("Rumors for \(signal.symbol)")
+                .accessibilityHint("Show recent news and X search")
+                .help("Rumors for \(signal.symbol)")
             }
             .padding(.horizontal, 6)
             .frame(width: widths.event)
