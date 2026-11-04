@@ -29,7 +29,7 @@ struct RadarSignalRow: View {
             }
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(backgroundColor)
         .overlay {
@@ -52,7 +52,7 @@ struct RadarSignalRow: View {
     }
 
     private var compactContent: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack {
                 companyIdentity
                     .layoutPriority(1)
@@ -78,11 +78,19 @@ struct RadarSignalRow: View {
             HStack(spacing: 6) {
                 eventBadge
                 Spacer(minLength: 4)
-                Button("Rumors") {
+                Button {
                     onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
+                } label: {
+                    Text("Rumors")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(tableColor(.signalActionAccent), in: RoundedRectangle(cornerRadius: 5))
                 }
-                    .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
-                    .fixedSize(horizontal: true, vertical: false)
+                .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityLabel("Recent rumors for \(signal.symbol)")
             }
             .padding(.horizontal, 6)
             .frame(width: widths.event)
@@ -116,11 +124,11 @@ struct RadarSignalRow: View {
 
     private var eventBadge: some View {
         Text(eventLabel)
-            .font(.subheadline)
+            .font(tableTypography.font(size: max(10, tableTypography.size - 1)))
             .foregroundStyle(eventColor)
             .lineLimit(1)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
             .background(eventColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
     }
 

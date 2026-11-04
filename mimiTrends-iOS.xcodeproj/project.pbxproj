@@ -10,6 +10,7 @@
 		01BF49AC6898BB89FA512BE2 /* VolumeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3401A2ABC36F2EF150C888 /* VolumeStatus.swift */; };
 		03B7F47BB4928EB52E853F1D /* FinnhubBidAskSampler.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA34FE30071EAA96606E33C8 /* FinnhubBidAskSampler.swift */; };
 		0651BEACDCB7E2DCC0C81469 /* TradeImportReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53CC4B594079D6BAB938D718 /* TradeImportReportView.swift */; };
+		0706EAE57E05472207D993D4 /* RecentCoverageClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29149A54292DF51AF4B0242E /* RecentCoverageClientTests.swift */; };
 		07672723835730B00E657F7A /* DiscoveryRankingBatchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */; };
 		09027AFD633FD905C126AB08 /* RadarChartCurrency.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D52D4FFA5D71A9D4D9A856 /* RadarChartCurrency.swift */; };
 		09ED454F78192A213B35FB91 /* RadarCompanyMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5EA06841BB186EA38DA5256 /* RadarCompanyMark.swift */; };
@@ -61,6 +62,7 @@
 		50DB5A83253F590E9F4F82A4 /* RadarCompanyMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084CB1817144936FD030F078 /* RadarCompanyMetadataService.swift */; };
 		51C913942E20E972D31F6DE9 /* RadarSignalSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */; };
 		52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */; };
+		5556BEF27F928909A12797F5 /* ControlAppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36A099FF21160485E1E3753 /* ControlAppearanceSettingsView.swift */; };
 		57A571C0E8463F1C5450D3D9 /* RadarCoverageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916C77192FB721C92825AF27 /* RadarCoverageView.swift */; };
 		5A0171F5A350156537C276E2 /* WallstreetOnlineQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D5D50A3021AA14990B75EF /* WallstreetOnlineQuoteSource.swift */; };
 		5D450505D6D7625389567466 /* FinnhubTradeStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80B2E9DCDE37394950FD413 /* FinnhubTradeStream.swift */; };
@@ -103,6 +105,7 @@
 		9BEFDA17CEDC56446AEEF0CC /* RadarActivityBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5235DFF6ECD25F329C365833 /* RadarActivityBanner.swift */; };
 		9E9C4B2539001E0C566B76D0 /* DiscoveryRefreshCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB748D1A71D77B911C33C02 /* DiscoveryRefreshCache.swift */; };
 		A01241ECCD6A0F41220B9167 /* RadarScanPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC678F283ABD4BE2D71528F /* RadarScanPreferencesTests.swift */; };
+		A149A74A65D897BE5B0B4C0F /* ControlAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */; };
 		A3DAD0D5998BC65F690ABA08 /* FMPCompanyProfileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
 		A9E0F6144582D0B1291D7057 /* FinnhubRadarPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4678F11490EA437FAD224DD /* FinnhubRadarPipelineTests.swift */; };
@@ -112,7 +115,9 @@
 		AD6C456C4C15471D7D60FDE1 /* ScannerSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27CE5296E45D2A7374F6FA2 /* ScannerSettingsView.swift */; };
 		AD8DE8D44857CF937DBD5B8E /* ProviderCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */; };
 		ADBA82D1F46C0765B5A7586E /* MarketCandidateFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */; };
+		AEE76576C16B958E6488FCEE /* RadarSourceTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80C5175952753DE4951EBEB9 /* RadarSourceTab.swift */; };
 		AF13818E0D1DBE9C106E730D /* ProviderEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */; };
+		AF554F6DE591C50D357D2005 /* XCashtagSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */; };
 		AF689ACCE16FDF213052FA73 /* DiscoveryPoolController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC293CB0150CC6CB7B2EA1C1 /* DiscoveryPoolController.swift */; };
 		B7F662EC77C7340B60D527DD /* DiscoverySnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */; };
 		B9DEC7CD282978431B054494 /* RadarChartPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517EEB88A6A2636A58C09DFB /* RadarChartPreview.swift */; };
@@ -194,6 +199,7 @@
 		2272071A7DAED0072B533A6B /* FinnhubBidAskClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubBidAskClient.swift; sourceTree = "<group>"; };
 		23A0E3904F1519340EFA80C9 /* LSCandidatePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSCandidatePool.swift; sourceTree = "<group>"; };
 		290013CD896F05B09FCF5BB0 /* BrokerTradeChartMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTradeChartMatcher.swift; sourceTree = "<group>"; };
+		29149A54292DF51AF4B0242E /* RecentCoverageClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoverageClientTests.swift; sourceTree = "<group>"; };
 		2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketCandidateFilter.swift; sourceTree = "<group>"; };
 		328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortMoveQuoteQuality.swift; sourceTree = "<group>"; };
 		35C2E8B4DD20C94DB4457374 /* HeaderBadgeSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderBadgeSurface.swift; sourceTree = "<group>"; };
@@ -201,6 +207,7 @@
 		37E278BAC8BF8FC5AAC3E0D9 /* LocalAccountInstanceGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountInstanceGuard.swift; sourceTree = "<group>"; };
 		38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "mimiTrends-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		39E5AF93F5D263904111D4BA /* DiscoveryCandidateSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelectorTests.swift; sourceTree = "<group>"; };
+		3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XCashtagSearch.swift; sourceTree = "<group>"; };
 		3C005831238BCC317F9E97AF /* RadarSignalSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelection.swift; sourceTree = "<group>"; };
 		3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsPanel.swift; sourceTree = "<group>"; };
 		3FDE4AC5FC63FB6AA4A9692E /* ProcessResourceSamplerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessResourceSamplerTests.swift; sourceTree = "<group>"; };
@@ -219,6 +226,7 @@
 		53CC4B594079D6BAB938D718 /* TradeImportReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportReportView.swift; sourceTree = "<group>"; };
 		572090D6BCBD08CD6650E878 /* TradeImportAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportAction.swift; sourceTree = "<group>"; };
 		5B8AA63026829A74E3A98AC7 /* WatchlistStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistStore.swift; sourceTree = "<group>"; };
+		5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlAppearance.swift; sourceTree = "<group>"; };
 		5E38BCFD81AAF82949FAA498 /* RadarScanSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarScanSettingsView.swift; sourceTree = "<group>"; };
 		6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceCredentialsView.swift; sourceTree = "<group>"; };
 		64D52D4FFA5D71A9D4D9A856 /* RadarChartCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartCurrency.swift; sourceTree = "<group>"; };
@@ -243,6 +251,7 @@
 		7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfill.swift; sourceTree = "<group>"; };
 		7EE5E447F15502D8BB7E6BED /* TradableCorridorDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetector.swift; sourceTree = "<group>"; };
 		80529F8ECB52D259C6515FD7 /* RadarSignalBarBackfillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfillTests.swift; sourceTree = "<group>"; };
+		80C5175952753DE4951EBEB9 /* RadarSourceTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSourceTab.swift; sourceTree = "<group>"; };
 		821F3802722B3BDBE88B896D /* RadarRankingPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarRankingPreview.swift; sourceTree = "<group>"; };
 		84EDAF5928C89ADE1C954B20 /* ProviderQuoteSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderQuoteSnapshot.swift; sourceTree = "<group>"; };
 		856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCompanyProfileSource.swift; sourceTree = "<group>"; };
@@ -283,6 +292,7 @@
 		C03FCFB623D8910CA5B6945B /* MarketBarStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketBarStoreTests.swift; sourceTree = "<group>"; };
 		C27CE5296E45D2A7374F6FA2 /* ScannerSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerSettingsView.swift; sourceTree = "<group>"; };
 		C31B280E8FA9DB0623EFBA3B /* DiscoveryCandidateSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelector.swift; sourceTree = "<group>"; };
+		C36A099FF21160485E1E3753 /* ControlAppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ControlAppearanceSettingsView.swift; sourceTree = "<group>"; };
 		C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelectionTests.swift; sourceTree = "<group>"; };
 		C4DE471111EF690DA4A1E8CE /* RadarSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSessionTests.swift; sourceTree = "<group>"; };
 		C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalColumns.swift; sourceTree = "<group>"; };
@@ -386,6 +396,7 @@
 			isa = PBXGroup;
 			children = (
 				D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */,
+				C36A099FF21160485E1E3753 /* ControlAppearanceSettingsView.swift */,
 				4E50A443FA1C1379C2394D87 /* CredentialEditor.swift */,
 				FBE39A0F39A35BB3593B6E4F /* CurrencySettingsView.swift */,
 				3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */,
@@ -422,6 +433,7 @@
 		7A8495080A51F8D88897C040 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */,
 				7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */,
 				AFBD93B6C8E9C8A7FFBA524E /* RadarTableTypographyStore.swift */,
 				91FE4781F402BBF9EB8C0DFB /* TrendsActionButton.swift */,
@@ -450,6 +462,7 @@
 				6F8FE9A77C93F472DE6630A6 /* RecentCoverageClient.swift */,
 				4E9DBC89710B0F21F227734A /* ScalableCSVImporter.swift */,
 				B1882EF719B85F0E0E950891 /* TradeImportCoordinator.swift */,
+				3A8BA64B059740A4FC82F12E /* XCashtagSearch.swift */,
 				9FAB19903F43D7F97FFADD41 /* Finnhub */,
 				E59BFCE6FA3A7F96BEFC6A22 /* FMP */,
 				0F7095D32CA187350C006353 /* LangSchwarz */,
@@ -504,6 +517,7 @@
 				13737AEBC5153080CFC7D336 /* RadarTableColorStoreTests.swift */,
 				EFDC0F7AE544338A501ACAC7 /* RapidCrashDetectorTests.swift */,
 				0C714C30356DD2266706DCE5 /* RapidRiseDetectorTests.swift */,
+				29149A54292DF51AF4B0242E /* RecentCoverageClientTests.swift */,
 				B5F2DA6657E7E7FD9D289382 /* ScalableCSVImporterTests.swift */,
 				EEDAF6878E67315239B682D0 /* ShortMoveQuoteQualityTests.swift */,
 				7AC0207E808D3B3D6DB152DB /* SustainedMoveDetectorTests.swift */,
@@ -626,6 +640,7 @@
 				0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */,
 				3C005831238BCC317F9E97AF /* RadarSignalSelection.swift */,
 				E9C56FC4FCD92253926B11F1 /* RadarSourcePanel.swift */,
+				80C5175952753DE4951EBEB9 /* RadarSourceTab.swift */,
 				0B5C11318DF9D01C1B379601 /* RadarSourceTable.swift */,
 				F8488D42F93C6B865936B709 /* RadarSplitHandle.swift */,
 				40AA30E102A1E7015DDD6AC6 /* RadarView.swift */,
@@ -793,6 +808,8 @@
 				414A867CE79D5D495F0D8E9E /* BrokerTransaction.swift in Sources */,
 				F3B38685CA3D3039FD72A509 /* BrokerTransactionStore.swift in Sources */,
 				3F123A0039415D91512F590D /* ContentView.swift in Sources */,
+				A149A74A65D897BE5B0B4C0F /* ControlAppearance.swift in Sources */,
+				5556BEF27F928909A12797F5 /* ControlAppearanceSettingsView.swift in Sources */,
 				8446D29D4211BEE41824BDD3 /* CredentialEditor.swift in Sources */,
 				33D5B87FC691CC6A3724127C /* CurrencySettingsView.swift in Sources */,
 				3A47D2BB9C7BF309720F4537 /* DiscoveryCandidate.swift in Sources */,
@@ -862,6 +879,7 @@
 				68E7C876F306558E9C2EFD34 /* RadarSignalRow.swift in Sources */,
 				8A64B83D8C77AE75CFC1FCEE /* RadarSignalSelection.swift in Sources */,
 				6BE544D2D188AD9C45DD33D0 /* RadarSourcePanel.swift in Sources */,
+				AEE76576C16B958E6488FCEE /* RadarSourceTab.swift in Sources */,
 				5F44F4381DE6A442C630CB05 /* RadarSourceTable.swift in Sources */,
 				3701470AEB2EDB79BD033937 /* RadarSplitHandle.swift in Sources */,
 				70A0FFBE9200205385C33747 /* RadarTableColorStore.swift in Sources */,
@@ -895,6 +913,7 @@
 				42FAEF59B9780D5828088243 /* WatchlistEntryRow.swift in Sources */,
 				0CB10454D48027116BE62D30 /* WatchlistStore.swift in Sources */,
 				4671A231FD13F03F8FA3E100 /* WatchlistView.swift in Sources */,
+				AF554F6DE591C50D357D2005 /* XCashtagSearch.swift in Sources */,
 				5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -935,6 +954,7 @@
 				EE9B9F5E9B599395AFE13FE1 /* RadarTableColorStoreTests.swift in Sources */,
 				2F11EB1B03776F3B66344C0B /* RapidCrashDetectorTests.swift in Sources */,
 				F0854341F488FE4B24A31807 /* RapidRiseDetectorTests.swift in Sources */,
+				0706EAE57E05472207D993D4 /* RecentCoverageClientTests.swift in Sources */,
 				3BBFB93D7B6347D7D2309D04 /* ScalableCSVImporterTests.swift in Sources */,
 				2E076FB57D44F1C07A96CE29 /* ShortMoveQuoteQualityTests.swift in Sources */,
 				ABF6F9D3F9824D07C350BA3E /* SustainedMoveDetectorTests.swift in Sources */,

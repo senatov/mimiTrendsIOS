@@ -4,7 +4,7 @@ struct AppearanceSettingsView: View {
     @AppStorage("appearance.theme.v1") private var theme = "light"
 
     var body: some View {
-        SettingsPage(title: "Appearance", subtitle: "Workspace colour and system typography") { width in
+        SettingsPage(title: "Appearance", subtitle: "Workspace, buttons and source tab") { width in
             if width >= 900 {
                 HStack(alignment: .top, spacing: 18) {
                     workspaceGroup
@@ -14,6 +14,7 @@ struct AppearanceSettingsView: View {
                 workspaceGroup
                 typographyGroup
             }
+            ControlAppearanceSettingsView()
         }
     }
 

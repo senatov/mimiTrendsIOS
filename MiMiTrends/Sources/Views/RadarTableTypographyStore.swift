@@ -5,6 +5,7 @@ import SwiftUI
 @Observable
 final class RadarTableTypographyStore {
     static let defaultFontName = "System"
+    static let defaultSize: Double = 12
 
     var fontName: String {
         didSet { defaults.set(fontName, forKey: Self.fontNameKey) }
@@ -20,7 +21,7 @@ final class RadarTableTypographyStore {
         self.defaults = defaults
         fontName = defaults.string(forKey: Self.fontNameKey) ?? Self.defaultFontName
         let storedSize = defaults.double(forKey: Self.fontSizeKey)
-        size = storedSize == 0 ? 14 : min(20, max(10, storedSize))
+        size = storedSize == 0 ? Self.defaultSize : min(20, max(10, storedSize))
     }
 
     var font: Font {
@@ -36,7 +37,7 @@ final class RadarTableTypographyStore {
 
     func reset() {
         fontName = Self.defaultFontName
-        size = 14
+        size = Self.defaultSize
         defaults.removeObject(forKey: Self.fontNameKey)
         defaults.removeObject(forKey: Self.fontSizeKey)
     }

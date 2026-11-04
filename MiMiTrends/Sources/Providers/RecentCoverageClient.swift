@@ -31,12 +31,21 @@ struct RecentCoverageClient: Sendable {
         async let benzinga = capture("Benzinga") { try await benzingaNews(symbol: symbol, companyName: companyName) }
         async let wallstreet = capture("wallstreetONLINE") { try await wallstreetOnlineNews(symbol: symbol, companyName: companyName) }
         let sources = await [yahoo, benzinga, wallstreet]
+        let items = Self.recentItems(sources.flatMap(\.items), now: Date())
+        return CoverageResult(items: items, unavailableSources: sources.compactMap(\.unavailable))
+    }
+
+    static func recentItems(_ items: [CoverageItem], now: Date) -> [CoverageItem] {
+        let cutoff = now.addingTimeInterval(-48 * 3_600)
         var seen = Set<String>()
-        let items = sources.flatMap(\.items)
+        return Array(items
+            .filter { item in
+                guard let published = item.publishedAt else { return false }
+                return published >= cutoff && published <= now
+            }
             .sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
             .filter { seen.insert($0.id).inserted }
-            .prefix(20)
-        return CoverageResult(items: Array(items), unavailableSources: sources.compactMap(\.unavailable))
+            .prefix(20))
     }
 
     private func capture(

@@ -10,9 +10,11 @@ struct RadarHeader: View {
     let session: RadarSession
     let setupMessage: String?
     let isPreparingFeed: Bool
+    let sourcesOpen: Bool
     let watchlist: [WatchlistEntry]
     let onManageWatchlist: () -> Void
     let onToggleFeed: () -> Void
+    let onToggleSources: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -30,6 +32,10 @@ struct RadarHeader: View {
             }
         }
         .trendsPanel()
+        .overlay(alignment: .bottomTrailing) {
+            RadarSourceTab(isOpen: sourcesOpen, action: onToggleSources)
+                .offset(x: -12, y: 44)
+        }
     }
 
     private var isCompactLayout: Bool {

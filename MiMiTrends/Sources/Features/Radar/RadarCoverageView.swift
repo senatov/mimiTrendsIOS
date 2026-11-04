@@ -17,7 +17,7 @@ struct RadarCoverageView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
-            .navigationTitle("Recent coverage · \(request.symbol)")
+            .navigationTitle("Rumors · \(request.symbol)")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -40,12 +40,23 @@ struct RadarCoverageView: View {
                 Text(request.companyName)
                     .font(.headline)
                     .foregroundStyle(.secondary)
+                if let url = XCashtagSearch.latestURL(symbol: request.symbol) {
+                    Link(destination: url) {
+                        Label("X Latest · $\(request.symbol)", systemImage: "bubble.left.and.text.bubble.right")
+                    }
+                    .buttonStyle(TrendsActionButtonStyle(compact: true))
+                    Text("X opens newest posts first. Review posts from the last two hours there.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Text("News published in the last 48 hours · newest first")
+                    .font(.subheadline.weight(.medium))
                 if result.items.isEmpty {
                     ContentUnavailableView(
-                        result.unavailableSources.count == 3 ? "News sources unavailable" : "No recent messages",
+                        result.unavailableSources.count == 3 ? "News sources unavailable" : "No news in the last 48 hours",
                         systemImage: result.unavailableSources.count == 3 ? "wifi.slash" : "newspaper",
                         description: Text(result.unavailableSources.count == 3
-                                          ? "Try again later." : "No recent news was found for this stock.")
+                                          ? "Try again later." : "No dated news was found for this stock in the last 48 hours.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 180)
                 } else {

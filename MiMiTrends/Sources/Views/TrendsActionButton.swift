@@ -38,11 +38,14 @@ private struct TrendsActionButtonBody: View {
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var contrast
     @State private var isHovered = false
+    @AppStorage("controls.button.fontSize.v1") private var fontSize = ControlAppearance.buttonFontSize
+    @AppStorage("controls.button.cornerRadius.v1") private var storedCornerRadius = ControlAppearance.buttonCornerRadius
 
-    private let cornerRadius: CGFloat = 9
+    private var cornerRadius: CGFloat { CGFloat(storedCornerRadius) }
 
     var body: some View {
         configuration.label
@@ -92,11 +95,8 @@ private struct TrendsActionButtonBody: View {
     }
 
     private var buttonFont: Font {
-        #if os(iOS)
-        tiny ? .system(size: 11, weight: .ultraLight) : .body
-        #else
-        tiny ? .system(size: 10, weight: .ultraLight) : .body
-        #endif
+        if dynamicTypeSize.isAccessibilitySize { return .body }
+        return .system(size: CGFloat(tiny ? max(10, fontSize - 3) : fontSize))
     }
 
     private var minimumHeight: CGFloat {

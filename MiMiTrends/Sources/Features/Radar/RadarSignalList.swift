@@ -10,6 +10,7 @@ struct RadarSignalList: View {
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
     let showingSavedHistory: Bool
+    let activity: RadarActivity?
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
     let currencyRates: DisplayCurrencyRates?
@@ -67,10 +68,10 @@ struct RadarSignalList: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(showingSavedHistory ? "Saved radar" : "Live radar")
-                    .font(.title3.weight(.light))
+                    .font(.subheadline.weight(.semibold))
                 Text("\(signals.count) signals")
                     .font(.subheadline)
                     .foregroundStyle(tableColor(.signalMutedText))
@@ -97,6 +98,10 @@ struct RadarSignalList: View {
             if signals.isEmpty {
                 VStack {
                     Spacer(minLength: 16)
+                    if let activity {
+                        RadarActivityBanner(activity: activity)
+                            .frame(maxWidth: 440)
+                    }
                     Text("Waiting for a confirmed rise or drop in minute candles")
                         .font(.title2.weight(.light))
                         .foregroundStyle(TrendsColors.ink)
@@ -168,7 +173,7 @@ struct RadarSignalList: View {
         .foregroundStyle(tableColor(.signalHeaderText))
         .padding(.leading, 8)
         .padding(.trailing, 8 + scrollbarGutter)
-        .padding(.vertical, 5)
+        .padding(.vertical, 3)
         .background(tableColor(.signalHeaderFill))
         .overlay {
             RadarSignalColumnLines(widths: widths, color: tableColor(.signalGrid), horizontalInset: 8)

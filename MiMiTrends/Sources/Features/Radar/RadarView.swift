@@ -33,6 +33,7 @@ struct RadarView: View {
     @State private var discoveryRefreshID: UUID?
     @State private var discoveryRequests = 0
     @State private var discoveryErrors = 0
+    @State private var showingSources = false
 
     var body: some View {
         NavigationStack {
@@ -59,20 +60,19 @@ struct RadarView: View {
                         )
                     },
                     controls: {
-                        VStack(spacing: 6) {
-                            RadarHeader(
-                                symbol: $symbol, scanWatchlist: $scanWatchlist,
-                                session: session, setupMessage: setupMessage,
-                                isPreparingFeed: isPreparingFeed,
-                                watchlist: watchlistPreview, onManageWatchlist: onManageWatchlist
-                            ) {
-                                if session.isScanning { session.stop() } else { startFeed() }
-                            }
-                            if let activity = currentActivity {
-                                RadarActivityBanner(activity: activity)
-                            }
+                        RadarHeader(
+                            symbol: $symbol, scanWatchlist: $scanWatchlist,
+                            session: session, setupMessage: setupMessage,
+                            isPreparingFeed: isPreparingFeed,
+                            sourcesOpen: showingSources,
+                            watchlist: watchlistPreview, onManageWatchlist: onManageWatchlist
+                        ) {
+                            if session.isScanning { session.stop() } else { startFeed() }
+                        } onToggleSources: {
+                            showingSources.toggle()
                         }
-                    }
+                    },
+                    showingSources: $showingSources
                 )
                 .frame(maxHeight: .infinity)
             }
@@ -233,6 +233,7 @@ struct RadarView: View {
         RadarSignalList(
             signals: recentSignals,
             showingSavedHistory: showingSavedHistory,
+            activity: recentSignals.isEmpty ? currentActivity : nil,
             companyNames: marketCycle?.companyNames ?? [:],
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,

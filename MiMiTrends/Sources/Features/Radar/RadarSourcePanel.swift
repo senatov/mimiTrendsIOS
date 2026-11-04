@@ -12,27 +12,26 @@ struct RadarSourcePanel: View {
     let marketCycle: MarketRadarCycle?
 
     @State private var showingCandidates = false
-    @State private var availableTableWidth: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Source telemetry")
-                .font(.title3.weight(.light))
+            HStack {
+                Text("Sources")
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if discoveryStatus?.snapshot != nil {
+                    Button("Rankings", systemImage: "list.number") { showingCandidates = true }
+                        .buttonStyle(TrendsActionButtonStyle(compact: true))
+                }
+            }
             Divider()
-            RadarSourceTable(
-                sources: telemetrySources,
-                availableWidth: availableTableWidth,
-                onShowCandidates: { showingCandidates = true }
-            )
+            RadarSourceTable(sources: telemetrySources)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .foregroundStyle(tableColor(.sourceBodyText))
         .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
         .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
-            availableTableWidth = max(0, width - 22)
-        }
         .navigationDestination(isPresented: $showingCandidates) {
             if let snapshot = discoveryStatus?.snapshot {
                 DiscoveryCandidateList(snapshot: snapshot)
@@ -46,14 +45,12 @@ struct RadarSourcePanel: View {
                 name: "Yahoo", status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
-                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
-                canShowCandidates: false
+                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors
             ),
             RadarTelemetrySource(
                 name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
                 received: session.tradeCount, valid: session.completedBarsStored,
-                requests: nil, errors: session.errorCount,
-                canShowCandidates: false
+                requests: nil, errors: session.errorCount
             ),
             RadarTelemetrySource(
                 name: "Lang & Schwarz",
@@ -61,23 +58,20 @@ struct RadarSourcePanel: View {
                 statusColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
                 dotColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
                 received: lsStatus?.quotes.count, valid: lsStatus.map { _ in lsFreshCount },
-                requests: lsStatus?.requestCount, errors: lsStatus?.errorCount,
-                canShowCandidates: false
+                requests: lsStatus?.requestCount, errors: lsStatus?.errorCount
             ),
             RadarTelemetrySource(
                 name: "wallstreetONLINE", status: discoveryLabel,
                 statusColor: discoveryColor, dotColor: discoveryColor,
                 received: discoveryStatus?.snapshot?.candidates.count, valid: nil,
-                requests: discoveryRequests, errors: discoveryErrors,
-                canShowCandidates: discoveryStatus?.snapshot != nil
+                requests: discoveryRequests, errors: discoveryErrors
             ),
             RadarTelemetrySource(
                 name: marketCycle?.usesFMP == true ? "FMP" : "TraderFox",
                 status: marketStatus(candidateTotals),
                 statusColor: marketColor(candidateTotals), dotColor: marketColor(candidateTotals),
                 received: candidateTotals?.received, valid: candidateTotals?.valid,
-                requests: candidateTotals?.operations, errors: candidateTotals?.errors,
-                canShowCandidates: false
+                requests: candidateTotals?.operations, errors: candidateTotals?.errors
             )
         ]
     }

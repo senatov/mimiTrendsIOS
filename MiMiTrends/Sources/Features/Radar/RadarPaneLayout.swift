@@ -3,16 +3,17 @@ import Foundation
 enum RadarPaneLayout {
     static let handleSize: CGFloat = 14
     static let minimumWideHeight: CGFloat = 300
-    static let minimumStackedHeight: CGFloat = 680
-    static let minimumSignalPaneWidth: CGFloat = 220
-    static let minimumRightPaneWidth: CGFloat = 620
-    static let paneSpacing: CGFloat = 8
-    static let minimumWideWidth = minimumSignalPaneWidth + minimumRightPaneWidth + paneSpacing
+    static let maximumSourceDrawerWidth: CGFloat = 340
+    static let minimumInlineSourceWidth: CGFloat = 650
+    static let paneSpacing: CGFloat = 6
 
-    static func wideColumnWidth(totalWidth: CGFloat, ratio: Double) -> CGFloat {
-        let available = max(0, totalWidth - paneSpacing)
-        return clamp(available * safeRatio(ratio, fallback: 0.68),
-                     minimum: minimumSignalPaneWidth, maximum: available - minimumRightPaneWidth)
+    static func sourceDrawerWidth(totalWidth: CGFloat) -> CGFloat {
+        min(maximumSourceDrawerWidth, totalWidth * 0.42)
+    }
+
+    static func signalWidth(totalWidth: CGFloat, sourcesOpen: Bool) -> CGFloat {
+        max(0, totalWidth -
+            (sourcesOpen ? sourceDrawerWidth(totalWidth: totalWidth) + paneSpacing : 0))
     }
 
     static func wideTopHeight(totalHeight: CGFloat, ratio: Double) -> CGFloat {
