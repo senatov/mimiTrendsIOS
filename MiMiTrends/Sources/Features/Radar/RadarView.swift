@@ -166,7 +166,7 @@ struct RadarView: View {
             return
         }
         while !Task.isCancelled {
-            let status = await lsCandidatePool.refreshIfNeeded(settings: RadarScanPreferencesStore.load())
+            let status = await lsCandidatePool.refreshIfNeeded()
             guard !Task.isCancelled else { return }
             lsStatus = status
             do { try await Task.sleep(for: .seconds(30)) }
@@ -233,7 +233,6 @@ struct RadarView: View {
         RadarSignalList(
             signals: recentSignals,
             showingSavedHistory: showingSavedHistory,
-            quoteMoves: lsStatus?.moves ?? [],
             companyNames: marketCycle?.companyNames ?? [:],
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,

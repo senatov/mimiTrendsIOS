@@ -10,7 +10,6 @@ struct RadarSignalList: View {
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
     let showingSavedHistory: Bool
-    let quoteMoves: [LSQuoteMove]
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
     let currencyRates: DisplayCurrencyRates?
@@ -95,31 +94,7 @@ struct RadarSignalList: View {
             if let errorMessage {
                 Text(errorMessage).font(.footnote).foregroundStyle(.red)
             }
-            if !quoteMoves.isEmpty {
-                Text("Preliminary Lang & Schwarz quote moves · trade volume unverified")
-                    .font(.caption)
-                    .foregroundStyle(tableColor(.signalMutedText))
-                ScrollView {
-                    LazyVStack(spacing: 5) {
-                        ForEach(quoteMoves) { move in
-                            HStack(spacing: 8) {
-                                Text(move.quote.name)
-                                    .lineLimit(1)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                Text(String(format: "%+.2f%%", move.changePercent))
-                                    .foregroundStyle(move.changePercent < 0 ? tableColor(.fall) : tableColor(.rise))
-                                Text(currencyRates?.formatted(move.quote.midpointEUR, from: "EUR", to: displayCurrency)
-                                     ?? (displayCurrency == "EUR" ? move.quote.midpointEUR.formatted(.currency(code: "EUR")) : "—"))
-                                    .monospacedDigit()
-                            }
-                            .font(.subheadline)
-                        }
-                    }
-                }
-                .frame(height: min(150, CGFloat(quoteMoves.count) * 27))
-                Divider()
-            }
-            if signals.isEmpty && quoteMoves.isEmpty {
+            if signals.isEmpty {
                 VStack {
                     Spacer(minLength: 16)
                     Text("Waiting for a confirmed rise or drop in minute candles")
@@ -130,7 +105,7 @@ struct RadarSignalList: View {
                     Spacer(minLength: 16)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !signals.isEmpty {
+            } else {
                 if !compact {
                     header
                 }
