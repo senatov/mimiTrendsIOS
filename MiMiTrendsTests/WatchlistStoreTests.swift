@@ -32,6 +32,27 @@ final class WatchlistStoreTests: XCTestCase {
         }
     }
 
+    func testRenamePreservesOrderAndRejectsDuplicate() async throws {
+        let url = temporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let store = try WatchlistStore(url: url)
+        try await store.add("AAPL", atMillis: 1_000)
+        try await store.add("MSFT", atMillis: 2_000)
+
+        try await store.rename("aapl", to: " nvda ")
+        let renamed = try await store.load()
+        XCTAssertEqual(renamed.map(\.symbol), ["NVDA", "MSFT"])
+        XCTAssertEqual(renamed.first?.addedAtMillis, 1_000)
+
+        do {
+            try await store.rename("NVDA", to: "MSFT")
+            XCTFail("Duplicate symbol was accepted")
+        } catch WatchlistStoreError.duplicateSymbol {
+            let unchanged = try await store.load()
+            XCTAssertEqual(unchanged.map(\.symbol), ["NVDA", "MSFT"])
+        }
+    }
+
     func testFutureSchemaIsRejected() throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }

@@ -4,6 +4,7 @@ struct WatchlistEntryRow: View {
     let entry: WatchlistEntry
     let isWorking: Bool
     let onSelect: () -> Void
+    let onEdit: () -> Void
     let onRemove: () -> Void
 
     var body: some View {
@@ -26,6 +27,12 @@ struct WatchlistEntryRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityHint("Show this symbol on Radar")
+            Button(action: onEdit) {
+                Image(systemName: "pencil")
+            }
+            .buttonStyle(TrendsActionButtonStyle(compact: true))
+            .disabled(isWorking)
+            .accessibilityLabel("Edit \(entry.symbol)")
             Button(role: .destructive, action: onRemove) {
                 Image(systemName: "trash").foregroundStyle(.red)
             }

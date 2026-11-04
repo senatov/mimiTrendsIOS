@@ -50,7 +50,7 @@ Radar loads discovery candidates from [miminavi.tech/info1](https://miminavi.tec
 
 Lang & Schwarz now has a foreground quote adapter for its Germany, STOXX 50, and Europe pages. It refreshes about every 30 seconds, accepts only fresh bid/ask rows, converts USD rows using a fresh EUR/USD quote, and saves the normalized EUR observations separately from minute trade bars. Radar displays movements over observed LS quotes as preliminary only; these pages do not supply the trade volume required by the confirmed minute-bar detectors. A failed page refresh retains prior observations for diagnostics and backs off for five minutes. Website quotes can lag executable prices and their use in a distributed app requires a separate rights review.
 
-To save a symbol, tap **Edit watchlist** in Radar, enter its ticker, and tap **Add**. Its native list shows saved symbols and their insertion dates in a card-style layout. Select a saved symbol to put it on Radar; a running feed stops before the selection changes. Use the row's trash button, or swipe the row on iPad, to delete it. These symbols stay in the app's local SQLite container and are not synchronized between devices.
+To save a symbol, tap **Edit watchlist** in Radar, enter its ticker, and tap **Add**. The watchlist sheet shows saved symbols and their insertion dates. Use a row's pencil button to correct its ticker without changing its saved order. Select a saved symbol to put it on Radar; a running feed stops before the selection changes. Use the row's trash button, or swipe the row on iPad, to delete it. These symbols stay in the app's local SQLite container and are not synchronized between devices.
 
 ## Run from the command line
 

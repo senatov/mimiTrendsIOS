@@ -13,6 +13,8 @@ struct WatchlistView: View {
     @State private var newSymbol = ""
     @State private var errorMessage: String?
     @State private var isWorking = false
+    @State private var editingSymbol: String?
+    @State private var editedSymbol = ""
 
     var body: some View {
         NavigationStack {
@@ -27,10 +29,18 @@ struct WatchlistView: View {
                             ContentUnavailableView("Watchlist is empty", systemImage: "star")
                         } else {
                             ForEach(entries) { entry in
-                                WatchlistEntryRow(entry: entry, isWorking: isWorking) {
-                                    onSelect(entry.symbol)
-                                } onRemove: {
-                                    Task { await remove([entry.symbol]) }
+                                if editingSymbol == entry.symbol {
+                                    editRow(entry)
+                                } else {
+                                    WatchlistEntryRow(entry: entry, isWorking: isWorking) {
+                                        onSelect(entry.symbol)
+                                    } onEdit: {
+                                        editingSymbol = entry.symbol
+                                        editedSymbol = entry.symbol
+                                        errorMessage = nil
+                                    } onRemove: {
+                                        Task { await remove([entry.symbol]) }
+                                    }
                                 }
                             }
                             .onDelete { offsets in
@@ -42,17 +52,21 @@ struct WatchlistView: View {
                 }
                 .listStyle(.inset)
                 .scrollContentBackground(.hidden)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(minHeight: 220)
             }
             .background(TrendsColors.canvas)
             .navigationTitle("Watchlist")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } } }
             .task { await load() }
         }
+        #if os(macOS)
+        .frame(minWidth: 520, minHeight: 420)
+        #endif
     }
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Watchlist").font(.title2.weight(.regular))
             Text("\(entries.count) saved symbols on this device")
                 .font(.caption).foregroundStyle(.secondary)
             controlLayout { addControls }
@@ -91,7 +105,28 @@ struct WatchlistView: View {
         TrendsActionButton(title: "Add", systemImage: "plus", tint: .green) {
             Task { await add() }
         }
-        .disabled(isWorking || newSymbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(store == nil || isWorking || newSymbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    private func editRow(_ entry: WatchlistEntry) -> some View {
+        HStack(spacing: 8) {
+            TextField("Ticker symbol", text: $editedSymbol)
+                .textFieldStyle(.roundedBorder)
+                .autocorrectionDisabled()
+                .accessibilityLabel("Edit \(entry.symbol) ticker symbol")
+                .onSubmit { Task { await rename(entry.symbol) } }
+            TrendsActionButton(title: "Save", systemImage: "checkmark", tint: .green) {
+                Task { await rename(entry.symbol) }
+            }
+            .disabled(isWorking || editedSymbol.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Button("Cancel") {
+                editingSymbol = nil
+                errorMessage = nil
+            }
+            .buttonStyle(TrendsActionButtonStyle(compact: true))
+            .disabled(isWorking)
+        }
+        .padding(.vertical, 4)
     }
 
     private func load() async {
@@ -134,6 +169,20 @@ struct WatchlistView: View {
         } catch {
             errorMessage = error.localizedDescription
             if let current = try? await store.load() { entries = current }
+        }
+    }
+
+    private func rename(_ original: String) async {
+        guard let store, !isWorking else { return }
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await store.rename(original, to: editedSymbol)
+            entries = try await store.load()
+            editingSymbol = nil
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

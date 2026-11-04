@@ -92,6 +92,20 @@ actor WatchlistStore {
         }
     }
 
+    func rename(_ oldSymbol: String, to newSymbol: String) throws {
+        let old = try Self.normalize(oldSymbol)
+        let new = try Self.normalize(newSymbol)
+        guard old != new else { return }
+        let statement = try prepare("UPDATE user_watchlist SET symbol = ? WHERE symbol = ?")
+        defer { sqlite3_finalize(statement) }
+        try bind(new, to: 1, in: statement)
+        try bind(old, to: 2, in: statement)
+        let result = sqlite3_step(statement)
+        if result == SQLITE_CONSTRAINT { throw WatchlistStoreError.duplicateSymbol }
+        guard result == SQLITE_DONE else { throw WatchlistStoreError.databaseUnavailable }
+        guard sqlite3_changes(database) > 0 else { throw WatchlistStoreError.entryNotFound }
+    }
+
     static func normalize(_ symbol: String) throws -> String {
         let value = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.:-_")
@@ -173,6 +187,8 @@ actor WatchlistStore {
 enum WatchlistStoreError: LocalizedError {
     case databaseUnavailable
     case invalidSymbol
+    case duplicateSymbol
+    case entryNotFound
     case unsupportedSchema
     case integrityCheckFailed
 
@@ -180,6 +196,8 @@ enum WatchlistStoreError: LocalizedError {
         switch self {
         case .databaseUnavailable: "Watchlist storage is unavailable."
         case .invalidSymbol: "Enter a symbol using letters, numbers, dots, dashes, underscores, or colons."
+        case .duplicateSymbol: "That symbol is already in the watchlist."
+        case .entryNotFound: "That watchlist entry no longer exists. Reload the watchlist and try again."
         case .unsupportedSchema: "This watchlist database was created by a newer app version."
         case .integrityCheckFailed: "Watchlist database integrity check failed."
         }
