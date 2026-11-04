@@ -44,6 +44,10 @@ echo "Current ${current}; next macOS DMG and GitHub Release ${next}; previous re
 if [[ "${dry_run}" == "--dry-run" ]]; then
     exit 0
 fi
+if ! command -v code >/dev/null 2>&1; then
+    echo "The Visual Studio Code 'code' command is required to review release notes." >&2
+    exit 1
+fi
 
 notary_profile="${MIMITRENDS_NOTARY_PROFILE:-MiMiNotary}"
 if ! xcrun notarytool history --keychain-profile "${notary_profile}" --output-format json >/dev/null 2>&1; then
@@ -135,6 +139,8 @@ git tag -a "${tag}" -m "mimiTrends-iOS ${next}"
 notes_file="${release_dir}/release-notes.md"
 /usr/bin/python3 "${SCRIPT_DIR}/release_notes.py" generate \
     --previous "${previous_release}" --current "${tag}" --output "${notes_file}"
+echo "Opening release notes in Visual Studio Code. Close the file to continue publishing."
+code --wait "${notes_file}"
 git push --atomic origin HEAD:main "refs/tags/${tag}"
 gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --notes-file "${notes_file}"
 echo "Published notarized ${dmg} as GitHub Release ${next}."
