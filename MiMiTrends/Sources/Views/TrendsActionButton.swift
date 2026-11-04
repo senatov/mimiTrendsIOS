@@ -6,19 +6,19 @@ struct TrendsActionButton: View {
     var tint: Color = .blue
     var role: ButtonRole? = nil
     let action: () -> Void
+    @AppStorage("controls.button.iconColor.v1") private var iconColor = ControlAppearance.buttonIconColor
 
     var body: some View {
         Button(role: role, action: action) {
             HStack(spacing: 6) {
                 Image(systemName: systemImage)
                     .font(.system(size: 17, weight: .light))
-                    .foregroundStyle(tint)
+                    .foregroundStyle(RadarColorHex.color(iconColor) ?? tint)
                     .frame(width: 18, height: 18)
                 Rectangle()
                     .fill(Color.primary.opacity(0.18))
                     .frame(width: 1, height: 17)
                 Text(title)
-                    .foregroundStyle(.primary)
             }
             .lineLimit(1)
             .truncationMode(.tail)
@@ -58,13 +58,16 @@ private struct TrendsActionButtonBody: View {
     @AppStorage("controls.button.shadowY.v1") private var shadowY = ControlAppearance.buttonShadowY
     @AppStorage("controls.button.borderColor.v1") private var borderColor = ControlAppearance.buttonBorderColor
     @AppStorage("controls.button.shadowColor.v1") private var shadowColor = ControlAppearance.buttonShadowColor
+    @AppStorage("controls.button.fontFamily.v1") private var fontFamily = ControlAppearance.buttonFontFamily
+    @AppStorage("controls.button.textColor.v1") private var textColor = ControlAppearance.buttonTextColor
+    @AppStorage("controls.button.backgroundColor.v1") private var backgroundColor = ControlAppearance.buttonBackgroundColor
 
     private var radius: CGFloat { CGFloat(cornerRadius) }
 
     var body: some View {
         configuration.label
             .font(buttonFont)
-            .foregroundStyle(Color.primary.opacity(contrast == .increased ? 1 : 0.90))
+            .foregroundStyle(RadarColorHex.color(textColor) ?? Color.primary.opacity(contrast == .increased ? 1 : 0.90))
             .padding(.horizontal, tiny ? 6 : compact ? 9 : 12)
             .padding(.vertical, verticalPadding)
             .frame(minWidth: minimumWidth, minHeight: minimumHeight)
@@ -102,6 +105,8 @@ private struct TrendsActionButtonBody: View {
         let colors: [Color]
         if configuration.isPressed {
             colors = [.black.opacity(0.10), .white.opacity(0.12)]
+        } else if let custom = RadarColorHex.color(backgroundColor) {
+            colors = [custom.opacity(isHovered ? 0.82 : 0.72), custom.opacity(isHovered ? 0.96 : 0.90)]
         } else if colorScheme == .dark {
             colors = [.white.opacity(isHovered ? 0.24 : 0.18), .white.opacity(0.04)]
         } else {
@@ -132,7 +137,14 @@ private struct TrendsActionButtonBody: View {
 
     private var buttonFont: Font {
         if dynamicTypeSize.isAccessibilitySize { return .body }
-        return .system(size: CGFloat(tiny ? max(10, fontSize - 3) : fontSize))
+        let size = CGFloat(tiny ? max(10, fontSize - 3) : fontSize)
+        let design: Font.Design = switch fontFamily {
+        case "Rounded": .rounded
+        case "Monospaced": .monospaced
+        case "Serif": .serif
+        default: .default
+        }
+        return .system(size: size, design: design)
     }
 
     private var verticalPadding: CGFloat {

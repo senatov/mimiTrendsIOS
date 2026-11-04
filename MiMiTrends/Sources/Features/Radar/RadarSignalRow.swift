@@ -9,6 +9,7 @@ struct RadarSignalRow: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
+    @AppStorage("controls.button.iconColor.v1") private var actionIconColor = ""
     let signal: ScanResult
     let companyName: String
     let companyMetadata: RadarCompanyMetadata?
@@ -85,7 +86,7 @@ struct RadarSignalRow: View {
                 } label: {
                     Image(systemName: "ear")
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(tableColor(.signalActionAccent))
+                        .foregroundStyle(RadarColorHex.color(actionIconColor) ?? tableColor(.signalActionAccent))
                 }
                 .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                 .fixedSize(horizontal: true, vertical: false)
@@ -93,7 +94,8 @@ struct RadarSignalRow: View {
                 .accessibilityHint("Show recent news and X search")
                 .help("Rumors for \(signal.symbol)")
             }
-            .padding(.horizontal, 6)
+            .padding(.leading, 6)
+            .padding(.trailing, 16)
             .frame(width: widths.event)
             movement
                 .padding(.horizontal, 6)

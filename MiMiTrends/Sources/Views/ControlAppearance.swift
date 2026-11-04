@@ -12,4 +12,8 @@ enum ControlAppearance {
     static let buttonShadowY = 1.5
     static let buttonBorderColor = ""
     static let buttonShadowColor = ""
+    static let buttonFontFamily = "System"
+    static let buttonTextColor = ""
+    static let buttonIconColor = ""
+    static let buttonBackgroundColor = ""
 }

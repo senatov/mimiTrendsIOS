@@ -1,7 +1,11 @@
 import SwiftUI
 
 struct ControlAppearanceSettingsView: View {
+    @AppStorage("controls.button.fontFamily.v1") private var fontFamily = ControlAppearance.buttonFontFamily
     @AppStorage("controls.button.fontSize.v1") private var fontSize = ControlAppearance.buttonFontSize
+    @AppStorage("controls.button.textColor.v1") private var textColor = ControlAppearance.buttonTextColor
+    @AppStorage("controls.button.iconColor.v1") private var iconColor = ControlAppearance.buttonIconColor
+    @AppStorage("controls.button.backgroundColor.v1") private var backgroundColor = ControlAppearance.buttonBackgroundColor
     @AppStorage("controls.button.cornerRadius.v1") private var cornerRadius = ControlAppearance.buttonCornerRadius
     @AppStorage("controls.button.borderWidth.v1") private var borderWidth = ControlAppearance.buttonBorderWidth
     @AppStorage("controls.button.shadowRadius.v1") private var shadowRadius = ControlAppearance.buttonShadowRadius
@@ -14,13 +18,31 @@ struct ControlAppearanceSettingsView: View {
             Text("Button appearance applies across Radar, Watchlist and Settings.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Text("Font family").frame(width: 180, alignment: .trailing)
+                Picker("Font family", selection: $fontFamily) {
+                    Text("System").tag("System")
+                    Text("Rounded").tag("Rounded")
+                    Text("Monospaced").tag("Monospaced")
+                    Text("Serif").tag("Serif")
+                }
+                .labelsHidden()
+                .frame(maxWidth: 200, alignment: .leading)
+                Spacer(minLength: 0)
+            }
             numberRow("Font size", value: $fontSize, range: 10...20)
+            colorRow("Text color", hex: $textColor, fallback: .primary)
+            colorRow("Icon color", hex: $iconColor, fallback: .blue)
+            colorRow("Background color", hex: $backgroundColor, fallback: SettingsColors.group)
+            Text("Default icon colors follow each action; the default button surface follows the system theme.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             numberRow("Corner radius", value: $cornerRadius, range: 0...16)
             numberRow("Border width", value: $borderWidth, range: 0...3, step: 0.25)
             numberRow("Shadow radius", value: $shadowRadius, range: 0...8, step: 0.5)
             numberRow("Shadow offset", value: $shadowY, range: 0...4, step: 0.5)
-            colorRow("Border color", hex: $borderColor, fallback: "595959")
-            colorRow("Shadow color", hex: $shadowColor, fallback: "000000")
+            colorRow("Border color", hex: $borderColor, fallback: .gray)
+            colorRow("Shadow color", hex: $shadowColor, fallback: .black)
             HStack(spacing: 10) {
                 TrendsActionButton(title: "Sources", systemImage: "sidebar.right") {}
                 TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise") {}
@@ -47,12 +69,12 @@ struct ControlAppearanceSettingsView: View {
         }
     }
 
-    private func colorRow(_ title: String, hex: Binding<String>, fallback: String) -> some View {
+    private func colorRow(_ title: String, hex: Binding<String>, fallback: Color) -> some View {
         HStack(spacing: 12) {
             Text(title).frame(width: 180, alignment: .trailing)
             ColorPicker(title, selection: Binding(
-                get: { RadarColorHex.color(hex.wrappedValue) ?? RadarColorHex.color(fallback) ?? .primary },
-                set: { hex.wrappedValue = RadarColorHex.hex($0) ?? fallback }
+                get: { RadarColorHex.color(hex.wrappedValue) ?? fallback },
+                set: { hex.wrappedValue = RadarColorHex.hex($0) ?? "" }
             ), supportsOpacity: false)
             .labelsHidden()
             .frame(width: 34)
@@ -69,7 +91,11 @@ struct ControlAppearanceSettingsView: View {
     }
 
     private func restoreDefaults() {
+        fontFamily = ControlAppearance.buttonFontFamily
         fontSize = ControlAppearance.buttonFontSize
+        textColor = ControlAppearance.buttonTextColor
+        iconColor = ControlAppearance.buttonIconColor
+        backgroundColor = ControlAppearance.buttonBackgroundColor
         cornerRadius = ControlAppearance.buttonCornerRadius
         borderWidth = ControlAppearance.buttonBorderWidth
         shadowRadius = ControlAppearance.buttonShadowRadius
