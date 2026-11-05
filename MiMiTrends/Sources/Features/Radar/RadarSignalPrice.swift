@@ -17,7 +17,7 @@ enum RadarSignalPrice {
             return Presentation(text: "—", explanation: "Waiting for an ECB rate to convert \(sourceCurrency) to \(currency). Source price: \(sourcePrice).", convertedAmount: nil)
         }
         let text = converted.formatted(.currency(code: currency).precision(.fractionLength(2)))
-        return Presentation(text: sourceCurrency == currency ? text : "≈ \(text)",
+        return Presentation(text: text,
                             explanation: sourceCurrency == currency ? "Source price: \(sourcePrice)." :
                                 "Approximate conversion of \(sourcePrice) using ECB reference rates dated \(rates.date).",
                             convertedAmount: converted)
