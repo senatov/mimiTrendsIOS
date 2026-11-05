@@ -54,7 +54,7 @@ struct RadarChartPreview: View {
                 .trendsPanel()
             }
         }
-        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
+        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
         .task(id: "daily|\(symbol)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() } }
         .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
@@ -62,68 +62,17 @@ struct RadarChartPreview: View {
 
     private func chartContent(availableHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Selected alert chart").font(.headline.weight(.regular))
-                Spacer()
-                if !chartTrades.isEmpty {
-                    Toggle("Trades", isOn: $showingTrades)
-                        .toggleStyle(.button)
-                        .help("Show imported trades on the chart")
-                }
-                TradeImportAction(title: "Import trades") {
-                    Task { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
-                }
-                if let signal {
-                    Text(RadarSignalPresentation.title(for: signal.signalSource))
-                        .font(.caption.weight(.regular))
-                        .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
-                }
-            }
-        if chartTrades.count < importedTrades.count {
-            Text("Some imported trades could not be converted to \(displayCurrency).")
-                .font(.caption)
-                .foregroundStyle(TrendsColors.supportingInk)
-        }
-            Divider()
-            HStack {
-                Picker("Range", selection: rangeSelection) {
-                    ForEach(RadarChartRange.allCases) { option in
-                        Text(option.title).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 350)
-                Spacer(minLength: 0)
-            }
-            HStack(alignment: .center, spacing: 8) {
-                if !symbol.isEmpty {
-                    RadarCompanyMark(metadata: companyMetadata, name: companyName,
-                                     size: 22, showsPlaceholder: true)
-                }
-                Text(symbol.isEmpty ? "No symbol selected" : companyName)
-                    .font(.title3.weight(.regular))
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                if !symbol.isEmpty && companyName.caseInsensitiveCompare(symbol) != .orderedSame {
-                    Text(symbol).font(.caption).foregroundStyle(.secondary)
-                }
-                if let signal {
-                    let price = RadarSignalPrice.display(signal, rates: currencyRates,
-                                                         currency: displayCurrency)
-                    Text(price.text)
-                        .font(.title3.monospacedDigit())
-                        .help(price.explanation)
-                    Text("\(signal.windowChangePercent.formatted(.number.precision(.fractionLength(2))))%")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
-                } else if let last = chartData.bars.last {
-                    Text(formattedPrice(last.close))
-                        .font(.title3.monospacedDigit())
-                    Text("latest saved close")
-                        .font(.subheadline.weight(.light))
-                        .foregroundStyle(TrendsColors.supportingInk)
-                }
+            RadarChartHeader(
+                symbol: symbol, companyName: companyName, metadata: companyMetadata,
+                signal: range == .trades ? nil : signal, lastBar: chartData.bars.last, rates: currencyRates,
+                currency: displayCurrency, hasTrades: !chartTrades.isEmpty,
+                outsideTradeCount: outsideTradeCount,
+                showingTrades: $showingTrades, range: rangeSelection,
+                onImport: { Task { await loadImportedTrades() } }
+            )
+            if chartTrades.count < importedTrades.count {
+                Text("Some imported trades could not be converted to \(displayCurrency).")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             cursorDetails
             if range.usesDailyBars ? isLoadingDaily : isLoading {
@@ -140,8 +89,9 @@ struct RadarChartPreview: View {
                 ContentUnavailableView(
                     "No prices in \(range.title)",
                     systemImage: "chart.xyaxis.line",
-                    description: Text(range.usesDailyBars
-                                      ? "FMP has no daily prices for this symbol and period."
+                    description: Text(range == .trades
+                                      ? "Recent minute history is unavailable for these imported trades."
+                                      : range.usesDailyBars ? "FMP has no daily prices for this symbol and period."
                                       : "Start a live feed to collect bars, or choose Latest to view older saved bars.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 180)
@@ -165,6 +115,21 @@ struct RadarChartPreview: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    private var tradeHistoryBounds: ClosedRange<Int64>? {
+        guard let first = importedTrades.map(\.entryEpochSeconds).min() else { return nil }
+        let now = Int64(Date().timeIntervalSince1970)
+        let last = importedTrades.map { $0.exitEpochSeconds ?? now }.max() ?? now
+        let lower = max(first - 1_800, now - 6 * 86_400)
+        let upper = min(last + 1_800, now)
+        return lower <= upper ? lower...upper : nil
+    }
+
+    private var outsideTradeCount: Int {
+        guard let first = chartData.bars.first?.minuteEpochSeconds,
+              let last = chartData.bars.last?.minuteEpochSeconds else { return chartTrades.count }
+        return chartTrades.filter { $0.entryEpochSeconds > last || ($0.exitEpochSeconds ?? Int64.max) < first }.count
+    }
+
     private var chartTrades: [BrokerTradePosition] {
         importedTrades.compactMap { RadarChartCurrency.trade($0, to: displayCurrency, rates: currencyRates) }
     }
@@ -183,9 +148,13 @@ struct RadarChartPreview: View {
             .foregroundStyle(TrendsColors.supportingInk)
             .accessibilityElement(children: .combine)
         } else {
-            Text("Move cursor or drag over a candle · click to pin")
-                .font(.caption)
-                .foregroundStyle(TrendsColors.supportingInk)
+            #if os(macOS)
+            Label("Hover to inspect · click to pin", systemImage: "cursorarrow")
+                .font(.caption).foregroundStyle(.secondary)
+            #else
+            Label("Drag to inspect · release to pin", systemImage: "hand.draw")
+                .font(.caption).foregroundStyle(.secondary)
+            #endif
         }
     }
 
@@ -219,17 +188,19 @@ struct RadarChartPreview: View {
             allBars = []
             return
         }
+        if range == .trades && tradeHistoryBounds == nil { allBars = []; return }
         isLoading = true
         errorMessage = nil
         do {
             let trades = importedTrades
+            let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
                 await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades)
                 let store = try MarketBarStore(url: MarketBarStore.defaultURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,
-                    fromEpochSeconds: 0,
-                    throughEpochSeconds: Int64(Date().timeIntervalSince1970),
+                    fromEpochSeconds: historyBounds?.lowerBound ?? 0,
+                    throughEpochSeconds: historyBounds?.upperBound ?? Int64(Date().timeIntervalSince1970),
                     limit: 2_000
                 )
             }.value

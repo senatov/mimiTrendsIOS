@@ -81,6 +81,16 @@ final class RadarChartDataTests: XCTestCase {
         XCTAssertEqual(RadarChartTimeline(bars: [bars[0]]).position(120), 0)
     }
 
+    func testTradePeriodRetainsHistoricalBarsOutsideRollingDay() {
+        let old = bar(minute: 1, close: 10)
+        let recent = bar(minute: 3_000, close: 12)
+        let day = RadarChartData(allBars: [old, recent], range: .oneDay, nowEpochSeconds: 3_000 * 60)
+        XCTAssertEqual(day.bars.map(\.minuteEpochSeconds), [recent.minuteEpochSeconds])
+        let trades = RadarChartData(allBars: [old, recent], range: .trades, nowEpochSeconds: 3_000 * 60)
+        XCTAssertEqual(trades.bars.map(\.minuteEpochSeconds), [old.minuteEpochSeconds, recent.minuteEpochSeconds])
+        XCTAssertFalse(RadarChartRange.trades.usesDailyBars)
+    }
+
     private func bar(minute: Int64, close: Double) -> MinuteBar {
         MinuteBar(
             symbol: "TEST", minuteEpochSeconds: minute * 60,

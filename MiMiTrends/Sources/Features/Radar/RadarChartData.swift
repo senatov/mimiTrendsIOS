@@ -7,6 +7,7 @@ enum RadarChartRange: String, CaseIterable, Identifiable {
     case oneWeek
     case oneYear
     case latest
+    case trades
 
     var id: Self { self }
 
@@ -18,6 +19,7 @@ enum RadarChartRange: String, CaseIterable, Identifiable {
         case .oneWeek: "1W"
         case .oneYear: "1Y"
         case .latest: "Latest"
+        case .trades: "Trades"
         }
     }
 
@@ -28,7 +30,7 @@ enum RadarChartRange: String, CaseIterable, Identifiable {
         case .oneDay: 86_400
         case .oneWeek: 7 * 86_400
         case .oneYear: 365 * 86_400
-        case .latest: nil
+        case .latest, .trades: nil
         }
     }
 
@@ -62,7 +64,9 @@ struct RadarChartData {
     ) {
         self.range = range
         let selected: [MinuteBar]
-        if let seconds = range.seconds {
+        if range == .trades {
+            selected = allBars
+        } else if let seconds = range.seconds {
             selected = allBars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - seconds }
         } else {
             selected = Array(allBars.suffix(latestLimit))

@@ -34,8 +34,8 @@ struct YahooRadarSource: Sendable {
               let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
             throw RadarSourceError.invalidSymbol
         }
-        let path = "/v8/finance/chart/\(encoded)?period1=\(from)&period2=\(through)&interval=1m&includePrePost=false"
-        return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol)
+        let path = "/v8/finance/chart/\(encoded)?period1=\(from)&period2=\(through)&interval=1m&includePrePost=true"
+        return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol, maximumBars: 1_500)
     }
 
     private func loadWithFallback(path: String) async throws -> [String: Any] {
@@ -104,7 +104,7 @@ struct YahooRadarSource: Sendable {
         .map(\.0)
     }
 
-    static func decodeBars(_ root: [String: Any], symbol: String) throws -> [MinuteBar] {
+    static func decodeBars(_ root: [String: Any], symbol: String, maximumBars: Int = 600) throws -> [MinuteBar] {
         guard let chart = root["chart"] as? [String: Any],
               let result = chart["result"] as? [[String: Any]],
               let first = result.first,
@@ -122,7 +122,7 @@ struct YahooRadarSource: Sendable {
             throw RadarSourceError.invalidResponse
         }
         let count = min(timestamps.count, opens.count, highs.count, lows.count, closes.count, volumes.count)
-        guard count <= 600 else { throw RadarSourceError.invalidResponse }
+        guard count <= maximumBars else { throw RadarSourceError.invalidResponse }
         return (0..<count).compactMap { index in
             guard let open = (opens[index] as? NSNumber)?.doubleValue,
                   let high = (highs[index] as? NSNumber)?.doubleValue,

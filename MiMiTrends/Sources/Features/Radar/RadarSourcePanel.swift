@@ -11,33 +11,24 @@ struct RadarSourcePanel: View {
     let discoveryErrors: Int
     let marketCycle: MarketRadarCycle?
 
-    @State private var showingCandidates = false
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text("Sources")
                     .font(.subheadline.weight(.semibold))
-                Spacer()
-                if discoveryStatus?.snapshot != nil {
-                    TrendsActionButton(title: "Rankings", systemImage: "list.number") {
-                        showingCandidates = true
-                    }
-                }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Divider()
+                RadarSourceTable(sources: telemetrySources)
             }
-            Divider()
-            RadarSourceTable(sources: telemetrySources)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .foregroundStyle(tableColor(.sourceBodyText))
-        .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
-        .trendsPanel()
-        .fixedSize(horizontal: false, vertical: true)
-        .navigationDestination(isPresented: $showingCandidates) {
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .foregroundStyle(tableColor(.sourceBodyText))
+            .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
+            .trendsPanel()
             if let snapshot = discoveryStatus?.snapshot {
-                DiscoveryCandidateList(snapshot: snapshot)
+                RadarScannerDiagnostics(snapshot: snapshot, progress: marketCycle?.progress)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var telemetrySources: [RadarTelemetrySource] {
