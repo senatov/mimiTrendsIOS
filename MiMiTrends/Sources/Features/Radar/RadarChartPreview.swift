@@ -10,6 +10,7 @@ struct RadarChartPreview: View {
     let refreshID: Int
 
     @State private var allBars: [MinuteBar] = []
+    @State private var dailyProvider = ""
     @State private var dailyBars: [MinuteBar] = []
     @State private var dailySymbol = ""
     @State private var dailyLoadedAt: Date?
@@ -76,7 +77,7 @@ struct RadarChartPreview: View {
             }
             cursorDetails
             if range.usesDailyBars ? isLoadingDaily : isLoading {
-                ProgressView(range.usesDailyBars ? "Loading FMP daily prices" : "Loading saved minute bars")
+                ProgressView(range.usesDailyBars ? "Loading daily price history" : "Loading saved minute bars")
                     .frame(maxWidth: .infinity, minHeight: 180)
             } else if let message = range.usesDailyBars ? dailyError : errorMessage {
                 Text(message).foregroundStyle(.red)
@@ -91,7 +92,7 @@ struct RadarChartPreview: View {
                     systemImage: "chart.xyaxis.line",
                     description: Text(range == .trades
                                       ? "Recent minute history is unavailable for these imported trades."
-                                      : range.usesDailyBars ? "FMP has no daily prices for this symbol and period."
+                                      : range.usesDailyBars ? "No daily prices are available for this symbol and period."
                                       : "Start a live feed to collect bars, or choose Latest to view older saved bars.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 180)
@@ -106,7 +107,7 @@ struct RadarChartPreview: View {
                 )
                 .id(displayCurrency)
                 if let last = chartData.bars.last {
-                    Text("\(chartData.bars.count) \(range.usesDailyBars ? "FMP daily" : "saved minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · trading time · closed sessions compressed")
+                    Text("\(chartData.bars.count) \(range.usesDailyBars ? "\(dailyProvider) daily" : "saved minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · trading time · closed sessions compressed")
                         .font(.subheadline.weight(.light))
                         .foregroundStyle(TrendsColors.supportingInk)
                 }
@@ -224,16 +225,13 @@ struct RadarChartPreview: View {
         guard !requestedSymbol.isEmpty else { return }
         if dailySymbol == requestedSymbol, let dailyLoadedAt,
            Date().timeIntervalSince(dailyLoadedAt) < 15 * 60 { return }
-        guard let apiKey = try? ProviderCredentialStore.load(FMPCredential.account) else {
-            dailyError = "Add a Financial Modeling Prep API key in Settings to load 1W and 1Y prices."
-            return
-        }
         isLoadingDaily = true
         dailyError = nil
         do {
-            let loaded = try await FMPHistoricalPriceSource().dailyBars(symbol: requestedSymbol, apiKey: apiKey)
+            let loaded = try await RadarDailyHistoryService.shared.load(symbol: requestedSymbol)
             guard !Task.isCancelled else { return }
-            dailyBars = loaded
+            dailyBars = loaded.bars
+            dailyProvider = loaded.provider
             dailySymbol = requestedSymbol
             dailyLoadedAt = .now
         } catch is CancellationError {

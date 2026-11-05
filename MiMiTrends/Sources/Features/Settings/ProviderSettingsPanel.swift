@@ -34,7 +34,7 @@ struct ProviderSettingsPanel: View {
                 )
                 endpointGroup(
                     "Yahoo Finance",
-                    detail: "Active ticker candidates and minute candles",
+                    detail: "Candidates · minute + daily history · no API key",
                     endpoints: [.yahooPrimary, .yahooAlternate]
                 )
                 endpointGroup(

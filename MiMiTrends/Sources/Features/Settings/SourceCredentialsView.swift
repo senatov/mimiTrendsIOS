@@ -12,10 +12,10 @@ struct SourceCredentialsView: View {
                 TradeImportSettingsSection(width: width)
                 DiscoverySettingsSection()
                 ProviderSettingsPanel(width: width)
-                SettingsGroup(title: "FMP market candidates") {
+                SettingsGroup(title: "FMP · optional") {
                     CredentialEditor(
                         title: "Financial Modeling Prep API key",
-                        detail: "Use FMP JSON movers instead of the TraderFox HTML candidate page.",
+                        detail: "Optional market candidates, company profiles and fallback daily history. Charts work without this key.",
                         load: { try ProviderCredentialStore.load(FMPCredential.account) },
                         save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
                         remove: { try ProviderCredentialStore.delete(FMPCredential.account) }
