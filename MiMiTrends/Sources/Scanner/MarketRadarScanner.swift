@@ -37,6 +37,8 @@ actor MarketRadarScanner {
     private let yahoo = YahooRadarSource()
     private let traderFox = TraderFoxRadarSource()
     private let fmp = FMPCandidateSource()
+    private let baselineSource = RadarBaselineSource()
+    private var baselineCandidates: [RadarCompanyCandidate] = []
     private var yahooCandidates: [RadarCompanyCandidate] = []
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
     private var germanCandidates: [RadarCompanyCandidate] = []
@@ -85,14 +87,16 @@ actor MarketRadarScanner {
         let secondaryGerman = secondaryCandidates.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
         let usSymbols = Self.interleave(yahooCandidates.map(\.symbol), secondaryUS.map(\.symbol), limit: 80)
         let germanSymbols = (germanCandidates + secondaryGerman).map(\.symbol)
-        let pool = Self.interleave(usSymbols, germanSymbols, limit: 16)
+        let supplemental = Self.interleave(usSymbols, germanSymbols, limit: 160)
+        let pool = Self.interleave(baselineCandidates.map(\.symbol), [], limit: 2_000)
+            .appendingUnique(supplemental)
             .filter { !unsupportedSymbols.contains($0) }
         let activePool = pool.filter {
             !MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date())
         }
         if initialScanTotal == 0 { initialScanTotal = pool.count }
         let names = Dictionary(
-            (yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
+            (baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
         if let yahooCooldownUntil, Date() < yahooCooldownUntil {
@@ -258,6 +262,15 @@ actor MarketRadarScanner {
 
     private func refreshSources(fmpKey: String?) async {
         nextDiscoveryAt = Date().addingTimeInterval(30 * 60)
+        do {
+            let loaded = try await baselineSource.loadCandidates()
+            if !loaded.isEmpty { baselineCandidates = loaded }
+            AppDiagnostics.shared.record(.info, "Discovery", "radar-baseline-loaded",
+                                         "resolved=\(baselineCandidates.count)")
+        } catch {
+            AppDiagnostics.shared.record(.warning, "Discovery", "radar-baseline-failed",
+                                         "error=\(String(describing: error))")
+        }
         var yahooRefreshed = false
         do {
             let symbols = try await yahoo.mostActiveCandidates()
@@ -372,4 +385,11 @@ private struct SymbolOutcome: Sendable {
     var rateLimited = false
     var rejectedSymbol: String? = nil
     var skipped = false
+}
+
+private extension Array where Element == String {
+    func appendingUnique(_ other: [String]) -> [String] {
+        var seen = Set(self)
+        return self + other.filter { seen.insert($0).inserted }
+    }
 }
