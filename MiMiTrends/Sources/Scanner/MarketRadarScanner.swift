@@ -39,6 +39,7 @@ actor MarketRadarScanner {
     private let fmp = FMPCandidateSource()
     private var yahooCandidates: [RadarCompanyCandidate] = []
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
+    private var germanCandidates: [RadarCompanyCandidate] = []
     private var fmpCandidates: [RadarCompanyCandidate] = []
     private var activeFMPKey: String?
     private var nextDiscoveryAt: Date = .distantPast
@@ -80,11 +81,18 @@ actor MarketRadarScanner {
             await refreshSources(fmpKey: fmpKey)
         }
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
-        let pool = Self.interleave(yahooCandidates.map(\.symbol), secondaryCandidates.map(\.symbol), limit: 16)
+        let secondaryUS = secondaryCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
+        let secondaryGerman = secondaryCandidates.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
+        let usSymbols = Self.interleave(yahooCandidates.map(\.symbol), secondaryUS.map(\.symbol), limit: 80)
+        let germanSymbols = (germanCandidates + secondaryGerman).map(\.symbol)
+        let pool = Self.interleave(usSymbols, germanSymbols, limit: 16)
             .filter { !unsupportedSymbols.contains($0) }
+        let activePool = pool.filter {
+            !MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date())
+        }
         if initialScanTotal == 0 { initialScanTotal = pool.count }
         let names = Dictionary(
-            (yahooCandidates + secondaryCandidates).map { ($0.symbol, $0.name) },
+            (yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
         if let yahooCooldownUntil, Date() < yahooCooldownUntil {
@@ -97,10 +105,10 @@ actor MarketRadarScanner {
                                     progress: progress())
         }
         yahooCooldownUntil = nil
-        let pending = pool.filter { !initialScanSymbols.contains($0) }
-        let symbols = Self.scanBatch(pool, processed: initialScanSymbols, offset: scanOffset, limit: 4)
-        if pending.isEmpty && !pool.isEmpty {
-            scanOffset = (scanOffset + symbols.count) % pool.count
+        let pending = activePool.filter { !initialScanSymbols.contains($0) }
+        let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 4)
+        if pending.isEmpty && !activePool.isEmpty {
+            scanOffset = (scanOffset + symbols.count) % activePool.count
         }
         guard !symbols.isEmpty else {
             return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
@@ -316,6 +324,20 @@ actor MarketRadarScanner {
                     "error=\(String(describing: type(of: error)))"
                 )
             }
+        }
+        do {
+            let symbols = try await traderFox.germanCandidates()
+            traderFoxTotals.operations += 3
+            traderFoxTotals.received += symbols.count
+            traderFoxTotals.valid += symbols.count
+            if !symbols.isEmpty { germanCandidates = symbols }
+        } catch {
+            traderFoxTotals.operations += 3
+            traderFoxTotals.errors += 1
+            AppDiagnostics.shared.record(
+                .warning, "TraderFox", "german-candidate-refresh-failed",
+                "error=\(String(describing: type(of: error)))"
+            )
         }
     }
 

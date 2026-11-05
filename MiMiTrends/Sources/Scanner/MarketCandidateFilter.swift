@@ -40,4 +40,21 @@ enum MarketCandidateFilter {
         FinnhubBidAskClient.supports(symbol: symbol) ||
             symbol.uppercased().range(of: "^[A-Z0-9]{1,10}\\.DE$", options: .regularExpression) != nil
     }
+
+    static func isGermanSymbol(_ symbol: String) -> Bool {
+        symbol.uppercased().hasSuffix(".DE")
+    }
+}
+
+enum GermanMarketSession {
+    static func isOpen(at date: Date) -> Bool {
+        var calendar = Calendar(identifier: .gregorian)
+        guard let timeZone = TimeZone(identifier: "Europe/Berlin") else { return false }
+        calendar.timeZone = timeZone
+        let parts = calendar.dateComponents([.weekday, .hour, .minute], from: date)
+        guard let weekday = parts.weekday, (2...6).contains(weekday),
+              let hour = parts.hour, let minute = parts.minute else { return false }
+        let minuteOfDay = hour * 60 + minute
+        return (9 * 60..<17 * 60 + 30).contains(minuteOfDay)
+    }
 }

@@ -116,6 +116,39 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(YahooRadarSource.activeSymbols(in: quotes, limit: 10), ["AAPL", "ADR", "SAP.DE"])
     }
 
+    func testGermanTraderFoxCandidatesBecomeYahooSymbolsAndRejectStaleRows() throws {
+        let now: Int64 = 1_800_000_000
+        let html = """
+        <script>var equities = {
+          "1":{"active":"Y","currency":"EUR","symbol":"SAP","name":"SAP SE","v":250,"p":5,"t":1800000000},
+          "2":{"active":"Y","currency":"EUR","symbol":"SIE","name":"Siemens AG","v":220,"p":3,"t":1800000000},
+          "3":{"active":"Y","currency":"USD","symbol":"AAPL","name":"Apple Inc.","v":200,"p":8,"t":1800000000},
+          "4":{"active":"Y","currency":"EUR","symbol":"OLD","name":"Old SE","v":25,"p":9,"t":1700000000},
+          "5":{"active":"N","currency":"EUR","symbol":"OFF","name":"Inactive AG","v":40,"p":7,"t":1800000000}
+        };</script>
+        """
+        XCTAssertEqual(
+            try TraderFoxRadarSource.decodeGermanCandidates(html, limit: 10, nowSeconds: now)
+                .map(\.symbol),
+            ["SAP.DE", "SIE.DE"]
+        )
+    }
+
+    func testGermanMarketSessionUsesBerlinWeekdaysAndXetraHours() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Europe/Berlin")!
+        func date(_ day: Int, _ hour: Int, _ minute: Int) -> Date {
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: day,
+                                               hour: hour, minute: minute))!
+        }
+
+        XCTAssertTrue(GermanMarketSession.isOpen(at: date(5, 9, 0)))
+        XCTAssertTrue(GermanMarketSession.isOpen(at: date(5, 17, 29)))
+        XCTAssertFalse(GermanMarketSession.isOpen(at: date(5, 8, 59)))
+        XCTAssertFalse(GermanMarketSession.isOpen(at: date(5, 17, 30)))
+        XCTAssertFalse(GermanMarketSession.isOpen(at: date(7, 12, 0)))
+    }
+
     func testFMPProfileAcceptsOnlyMatchingCompanyAndProviderImage() {
         let data = Data("""
         [{"symbol":"AAPL","companyName":"Apple Inc.","country":"US",
