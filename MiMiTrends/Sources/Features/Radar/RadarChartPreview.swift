@@ -44,15 +44,19 @@ struct RadarChartPreview: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            ScrollView {
-                chartContent(availableHeight: geometry.size.height)
+        Group {
+            if symbol.hasPrefix("LS:") {
+                LSQuoteHistoryChart(symbol: symbol, companyName: companyName, refreshID: refreshID)
+            } else {
+                GeometryReader { geometry in
+                    ScrollView { chartContent(availableHeight: geometry.size.height) }
+                }
+                .trendsPanel()
             }
         }
-        .trendsPanel()
-        .task(id: "\(symbol)|\(refreshID)") { await loadBars() }
-        .task(id: "daily|\(symbol)|\(range.rawValue)") { await loadDailyBarsIfNeeded() }
-        .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
+        .task(id: "\(symbol)|\(refreshID)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
+        .task(id: "daily|\(symbol)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() } }
+        .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
     }
 
@@ -67,7 +71,7 @@ struct RadarChartPreview: View {
                         .help("Show imported trades on the chart")
                 }
                 TradeImportAction(title: "Import trades") {
-                    Task { await loadImportedTrades() }
+                    Task { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
                 }
                 if let signal {
                     Text(RadarSignalPresentation.title(for: signal.signalSource))

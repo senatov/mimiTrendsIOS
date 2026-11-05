@@ -155,6 +155,27 @@ actor MarketQuoteStore {
         }
     }
 
+    func loadLS(sinceMillis: Int64) throws -> [LSQuoteObservation] {
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, "SELECT instrument_id, observed_at, bid_eur, ask_eur FROM quote_observations WHERE provider = 'LANG_SCHWARZ' AND observed_at >= ? ORDER BY observed_at", -1, &statement, nil) == SQLITE_OK,
+              let statement else { throw MarketQuoteStoreError.databaseUnavailable }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, sinceMillis)
+        var rows: [LSQuoteObservation] = []
+        while true {
+            let status = sqlite3_step(statement)
+            if status == SQLITE_DONE { return rows }
+            guard status == SQLITE_ROW, let id = sqlite3_column_text(statement, 0),
+                  sqlite3_column_type(statement, 2) != SQLITE_NULL,
+                  sqlite3_column_type(statement, 3) != SQLITE_NULL else {
+                throw MarketQuoteStoreError.databaseUnavailable
+            }
+            rows.append(LSQuoteObservation(instrumentID: String(cString: id),
+                observedAtMillis: sqlite3_column_int64(statement, 1),
+                bid: sqlite3_column_double(statement, 2), ask: sqlite3_column_double(statement, 3)))
+        }
+    }
+
     private func bind(_ value: String, at index: Int32, in statement: OpaquePointer) throws {
         guard sqlite3_bind_text(statement, index, value, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self)) == SQLITE_OK else {
             throw MarketQuoteStoreError.databaseUnavailable

@@ -45,11 +45,21 @@ actor LSCandidatePool {
                 guard storageTime - quote.observedAtMillis <= 570_000 else { return false }
                 guard let previous = lastStoredQuotes[quote.identifier] else { return true }
                 let priceChange = abs(quote.midpointEUR / previous.midpointEUR - 1)
-                return priceChange >= 0.0001 ||
+                return storageTime - previous.observedAtMillis >= 30_000 || priceChange >= 0.0001 ||
                     abs(quote.askEUR - quote.bidEUR - (previous.askEUR - previous.bidEUR)) >= 0.0001
             }
             _ = try await store.record(changed.map(MarketQuoteRecord.init), nowMillis: storageTime)
             for quote in changed { lastStoredQuotes[quote.identifier] = quote }
+            let observations = try await store.loadLS(sinceMillis: storageTime - 32 * 60_000)
+            let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
+            let settings = RadarScanPreferencesStore.load()
+            var savedSignals = 0
+            for history in Dictionary(grouping: observations, by: \.instrumentID).values {
+                if let signal = LSQuoteMoveDetector.detect(history, nowMillis: storageTime, settings: settings),
+                   try await signalStore.record(signal) { savedSignals += 1 }
+            }
+            AppDiagnostics.shared.record(.info, "LangSchwarz", "quote-scan-finished",
+                                         "observations=\(observations.count) signals=\(savedSignals)")
             quotes = loaded
             lastSuccessAtMillis = Int64(Date().timeIntervalSince1970 * 1_000)
             lastAttemptSucceeded = true

@@ -105,12 +105,15 @@ struct RadarView: View {
         }
     }
 
+    private var radarCompanyNames: [String: String] {
+        (marketCycle?.companyNames ?? [:]).merging(Dictionary((lsStatus?.quotes ?? []).map { ("LS:" + $0.identifier, $0.name) }, uniquingKeysWith: { first, _ in first }), uniquingKeysWith: { first, _ in first })
+    }
     private var chartSymbol: String {
         selectedSignal?.symbol ?? symbol
     }
 
     private var chartCompanyName: String {
-        companyMetadata[chartSymbol.uppercased()]?.name ?? marketCycle?.companyNames[chartSymbol] ?? chartSymbol
+        companyMetadata[chartSymbol.uppercased()]?.name ?? radarCompanyNames[chartSymbol] ?? chartSymbol
     }
 
     private var companyMetadataRequestKey: String {
@@ -122,7 +125,7 @@ struct RadarView: View {
         let symbols = [chartSymbol] + recentSignals.map(\.symbol)
         companyMetadata = await companyMetadataService.cached(symbols: symbols)
         companyMetadata = await companyMetadataService.load(
-            symbols: symbols, names: marketCycle?.companyNames ?? [:]
+            symbols: symbols, names: radarCompanyNames
         )
     }
 
@@ -166,6 +169,8 @@ struct RadarView: View {
             let status = await lsCandidatePool.refreshIfNeeded()
             guard !Task.isCancelled else { return }
             lsStatus = status
+            if chartSymbol.hasPrefix("LS:") { chartRefreshID += 1 }
+            await refreshSignals()
             do { try await Task.sleep(for: .seconds(30)) }
             catch { return }
         }
@@ -231,7 +236,7 @@ struct RadarView: View {
             signals: recentSignals,
             showingSavedHistory: showingSavedHistory,
             activity: recentSignals.isEmpty ? currentActivity : nil,
-            companyNames: marketCycle?.companyNames ?? [:],
+            companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,
             displayCurrency: displayCurrency,

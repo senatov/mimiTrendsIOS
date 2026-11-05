@@ -4,6 +4,26 @@ import XCTest
 @testable import MiMiTrends
 
 final class MarketQuoteStoreTests: XCTestCase {
+    func testLoadsLSBidAskHistoryInTimeOrder() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try MarketQuoteStore(url: directory.appendingPathComponent("quotes.db"))
+        let now: Int64 = 1_793_617_200_000
+        let quotes = [now, now - 30_000].map { time in
+            MarketPageQuote(identifier: "123", name: "Example", path: "/de/aktie/example",
+                bidEUR: 100, askEUR: 100.1, sourceCurrency: "EUR", sourceBid: 100,
+                sourceAsk: 100.1, euroUSDRate: nil, fxObservedAtMillis: nil, observedAtMillis: time)
+        }
+        _ = try await store.record(quotes.map(MarketQuoteRecord.init), nowMillis: now)
+        let history = try await store.loadLS(sinceMillis: now - 60_000)
+        XCTAssertEqual(history.map(\.observedAtMillis), [now - 30_000, now])
+        XCTAssertEqual(history.first?.instrumentID, "123")
+        XCTAssertEqual(history.first?.bid, 100)
+        XCTAssertEqual(history.first?.ask, 100.1)
+        let recent = try await store.loadLS(sinceMillis: now)
+        XCTAssertEqual(recent.count, 1)
+    }
+
     func testStoresOnlyConvertedEURQuotesAndDeduplicates() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
