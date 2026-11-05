@@ -110,7 +110,7 @@ actor MarketRadarScanner {
         }
         yahooCooldownUntil = nil
         let pending = activePool.filter { !initialScanSymbols.contains($0) }
-        let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 4)
+        let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 16)
         if pending.isEmpty && !activePool.isEmpty {
             scanOffset = (scanOffset + symbols.count) % activePool.count
         }
@@ -144,23 +144,27 @@ actor MarketRadarScanner {
                         do {
                             let bars = try await yahoo.minuteBars(symbol: symbol)
                             try Task.checkCancellation()
+                            let evaluationTime = RadarMarketDataPolicy.evaluationTime(symbol: symbol, now: nowSeconds)
                             guard let last = bars.last,
-                                  last.minuteEpochSeconds >= nowSeconds - 600 else {
+                                  last.minuteEpochSeconds <= nowSeconds + 60,
+                                  last.minuteEpochSeconds >= evaluationTime - 600 else {
+                                RadarMarketDataPolicy.logStale(symbol: symbol, bars: bars, now: nowSeconds)
                                 return SymbolOutcome(symbol: symbol, received: bars.count,
                                                      signalStored: false, failure: nil, skipped: true)
                             }
                             for bar in bars { _ = try await barStore.upsert(bar) }
+                            RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)
                             let recent = try await barStore.loadMinuteBars(
                                 symbol: symbol, fromEpochSeconds: nowSeconds - 21_600
                             )
                             let signal = RapidCrashDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: nowSeconds,
+                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
                                 settings: settings.rapidCrash
                             ) ?? RapidRiseDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: nowSeconds,
+                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
                                 settings: settings.rapidRise
                             ) ?? SustainedMoveDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: nowSeconds,
+                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
                                 settings: settings.sustainedMove
                             )
                             let saved: Bool
@@ -385,11 +389,4 @@ private struct SymbolOutcome: Sendable {
     var rateLimited = false
     var rejectedSymbol: String? = nil
     var skipped = false
-}
-
-private extension Array where Element == String {
-    func appendingUnique(_ other: [String]) -> [String] {
-        var seen = Set(self)
-        return self + other.filter { seen.insert($0).inserted }
-    }
 }

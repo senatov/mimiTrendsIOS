@@ -191,7 +191,7 @@ struct RadarView: View {
                     "error=\(String(describing: type(of: error)))"
                 )
             }
-            do { try await Task.sleep(for: .seconds(60)) }
+            do { try await Task.sleep(for: .seconds(15)) }
             catch { return }
         }
     }

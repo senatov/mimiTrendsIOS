@@ -30,7 +30,7 @@ enum MarketSignalFactory {
             signalAgeMinutes: Int(max(0, nowEpochSeconds - end.minuteEpochSeconds) / 60),
             signalSource: source,
             updatedAtMillis: end.minuteEpochSeconds * 1_000,
-            dataStatus: "LIVE",
+            dataStatus: MarketCandidateFilter.isGermanSymbol(symbol) ? "DELAYED" : "LIVE",
             signalWindowLabel: windowLabel ?? "\(max(1, (end.minuteEpochSeconds - start.minuteEpochSeconds) / 60))m",
             signalPrice: start.close,
             signalEpochMillis: end.minuteEpochSeconds * 1_000,

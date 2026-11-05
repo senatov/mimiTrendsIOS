@@ -26,6 +26,24 @@ final class RapidRiseDetectorTests: XCTestCase {
         XCTAssertNil(RapidRiseDetector.detect(symbol: "STALE", bars: stale, nowEpochSeconds: now))
     }
 
+    func testDelayedGermanCandlesKeepOriginalEventTime() throws {
+        let now: Int64 = 13_000
+        let bars = prices("SAP.DE", endingAt: now - 900, [100, 100.1, 101.8, 100.4])
+        XCTAssertNil(RapidRiseDetector.detect(symbol: "SAP.DE", bars: bars, nowEpochSeconds: now))
+        let signal = try XCTUnwrap(RapidRiseDetector.detect(
+            symbol: "SAP.DE", bars: bars,
+            nowEpochSeconds: RadarMarketDataPolicy.evaluationTime(symbol: "SAP.DE", now: now)
+        ))
+        XCTAssertEqual(signal.signalEpochMillis, (now - 960) * 1_000)
+        XCTAssertEqual(signal.priceCurrency, "EUR")
+        XCTAssertEqual(RadarMarketDataPolicy.evaluationTime(symbol: "AAPL", now: now), now)
+        let stale = prices("SAP.DE", endingAt: now - 86_400, [100, 100.1, 101.8, 100.4])
+        XCTAssertNil(RapidRiseDetector.detect(
+            symbol: "SAP.DE", bars: stale,
+            nowEpochSeconds: RadarMarketDataPolicy.evaluationTime(symbol: "SAP.DE", now: now)
+        ))
+    }
+
     private func prices(
         _ symbol: String, endingAt end: Int64, _ closes: [Double],
         volume: Double = 1_000, status: VolumeStatus = .reported

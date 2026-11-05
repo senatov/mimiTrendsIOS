@@ -184,7 +184,7 @@ struct RadarSignalRow: View {
             let seconds = max(0, Int(context.date.timeIntervalSince(savedAt)))
             Text(isOld
                  ? String(format: "(OLD) %02d:%02d H", seconds / 3_600, (seconds / 60) % 60)
-                 : String(format: "%02d:%02d", seconds / 60, seconds % 60))
+                 : String(format: "%@%02d:%02d", MarketCandidateFilter.isGermanSymbol(signal.symbol) ? "(DELAYED) " : "", seconds / 60, seconds % 60))
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .font(tableTypography.font(size: tableTypography.size * 0.86).monospacedDigit())
