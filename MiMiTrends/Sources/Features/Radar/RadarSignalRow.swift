@@ -16,6 +16,7 @@ struct RadarSignalRow: View {
     let currencyRates: DisplayCurrencyRates?
     let displayCurrency: String
     let compact: Bool
+    var isOld: Bool = false
     let isSelected: Bool
     let widths: RadarSignalColumnWidths
     let onSelect: () -> Void
@@ -181,7 +182,11 @@ struct RadarSignalRow: View {
     private var ageText: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let seconds = max(0, Int(context.date.timeIntervalSince(savedAt)))
-            Text(String(format: "%02d:%02d", seconds / 60, seconds % 60))
+            Text(isOld
+                 ? String(format: "(OLD) %02d:%02d H", seconds / 3_600, (seconds / 60) % 60)
+                 : String(format: "%02d:%02d", seconds / 60, seconds % 60))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .font(tableTypography.font(size: tableTypography.size * 0.86).monospacedDigit())
                 .foregroundStyle(tableColor(.signalMutedText))
         }

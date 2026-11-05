@@ -3,7 +3,8 @@ import Foundation
 enum RadarSignalSelection {
     static func displayHistory(
         _ history: [ScanResult], since cutoff: Int64, limit: Int,
-        preferences: RadarScanPreferences = RadarScanPreferences()
+        preferences: RadarScanPreferences = RadarScanPreferences(),
+        allowSavedFallback: Bool = true
     )
         -> (signals: [ScanResult], savedFallback: Bool) {
         let qualified = history.filter { signal in
@@ -14,8 +15,8 @@ enum RadarSignalSelection {
             return abs(signal.windowChangePercent) >= threshold
         }
         let fresh = qualified.filter { $0.signalEpochMillis >= cutoff }
-        return (latestPerSymbol(fresh.isEmpty ? qualified : fresh, limit: limit),
-                fresh.isEmpty && !qualified.isEmpty)
+        let fallback = allowSavedFallback && fresh.isEmpty && !qualified.isEmpty
+        return (latestPerSymbol(fallback ? qualified : fresh, limit: limit), fallback)
     }
 
     static func latestPerSymbol(_ signals: [ScanResult], limit: Int) -> [ScanResult] {

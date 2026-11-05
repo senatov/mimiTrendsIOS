@@ -178,7 +178,7 @@ struct RadarView: View {
                 let cycle = try await marketScanner.scan(settings: RadarScanPreferencesStore.load())
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
-                if cycle.storedSignals > 0 { await refreshSignals() }
+                await refreshSignals()
                 AppDiagnostics.shared.record(
                     .info, "Radar", "market-scan-finished",
                     "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) signals=\(cycle.storedSignals) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
@@ -269,11 +269,13 @@ struct RadarView: View {
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
             let preferences = RadarScanPreferencesStore.load()
+            let allowSavedFallback = !hasLoadedHistory
             let (loaded, savedFallback) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let history = try await store.loadRecent(limit: min(limit * 10, 500))
                 return RadarSignalSelection.displayHistory(
-                    history, since: cutoff, limit: limit, preferences: preferences
+                    history, since: cutoff, limit: limit, preferences: preferences,
+                    allowSavedFallback: allowSavedFallback
                 )
             }.value
             recentSignals = loaded

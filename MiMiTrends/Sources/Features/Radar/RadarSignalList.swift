@@ -96,13 +96,10 @@ struct RadarSignalList: View {
                     .accessibilityLabel("Refresh saved signals")
             }
             Divider()
-            if showingSavedHistory {
-                Text("Older saved signals · no new confirmed signals yet")
-                    .font(.caption).foregroundStyle(tableColor(.signalMutedText))
-            }
-            Text("Move shows the price change over the listed window. Signals describe recent movement, not what to buy or sell.")
+            Text("Move: price change over the listed window · Signals describe recent movement.")
                 .font(.caption)
                 .foregroundStyle(tableColor(.signalMutedText))
+                .lineLimit(1)
             if let errorMessage {
                 Text(errorMessage).font(.footnote).foregroundStyle(.red)
             }
@@ -138,6 +135,7 @@ struct RadarSignalList: View {
                                     currencyRates: currencyRates,
                                     displayCurrency: displayCurrency,
                                     compact: compact,
+                                    isOld: showingSavedHistory,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
                                     onSelect: { onSelect(item.signal) },
