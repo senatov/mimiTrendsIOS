@@ -3,10 +3,11 @@ import Foundation
 actor DiscoveryPoolController {
     private let cache: DiscoveryRefreshCache
     private var restored = false
+    private var preferences = RadarDiscoveryPreferences.load()
     private var lastSavedAtMillis: Int64?
 
     init() {
-        cache = DiscoveryRefreshCache(source: MiminaviInfo1Source())
+        cache = DiscoveryRefreshCache(source: WallstreetDiscoverySource.shared)
     }
 
     func refresh() async -> DiscoveryRefreshStatus {
@@ -18,7 +19,10 @@ actor DiscoveryPoolController {
                 lastSavedAtMillis = saved.refreshedAtMillis
             }
         }
-        let status = await cache.refreshIfNeeded()
+        let current = RadarDiscoveryPreferences.load()
+        if preferences != current { preferences = current; await cache.cancel() }
+        var status = await cache.refreshIfNeeded()
+        status.rankingSources = await WallstreetDiscoverySource.shared.health()
         if status.lastAttemptSucceeded, let snapshot = status.snapshot,
            lastSavedAtMillis != snapshot.refreshedAtMillis,
            let store = try? snapshotStore() {
@@ -34,6 +38,6 @@ actor DiscoveryPoolController {
     }
 
     private func snapshotStore() throws -> DiscoverySnapshotStore {
-        DiscoverySnapshotStore(url: try DiscoverySnapshotStore.defaultURL(for: "miminavi_info1"))
+        DiscoverySnapshotStore(url: try DiscoverySnapshotStore.defaultURL(for: "wallstreet_rankings"))
     }
 }

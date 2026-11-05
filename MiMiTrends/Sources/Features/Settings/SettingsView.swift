@@ -17,15 +17,15 @@ struct SettingsView: View {
                     ForEach(SettingsSection.allCases) { section in
                         NavigationLink(value: section.rawValue) {
                             Label(section.title, systemImage: section.symbol)
-                                .font(.body.weight(.light))
-                                .foregroundStyle(selectedSection == section.rawValue ? .white : TrendsColors.ink)
+                                .font(SettingsTypography.label)
+                                .foregroundStyle(selectedSection == section.rawValue ? .white : .primary)
                         }
                         .listRowBackground(selectedSection == section.rawValue ? Color.blue : Color.clear)
                     }
                 } header: {
                     Text("Preferences")
-                        .font(.subheadline.weight(.light))
-                        .foregroundStyle(TrendsColors.supportingInk)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Settings")

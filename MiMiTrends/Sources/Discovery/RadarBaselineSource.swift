@@ -2,7 +2,7 @@ import Foundation
 
 /// Resolves the ranking's instrument pages using the publisher's identifiers.
 actor RadarBaselineSource {
-    private let source = MiminaviInfo1Source()
+    private let source = WallstreetDiscoverySource.shared
     private var resolved: [String: RadarCompanyCandidate] = [:]
 
     func loadCandidates() async throws -> [RadarCompanyCandidate] {

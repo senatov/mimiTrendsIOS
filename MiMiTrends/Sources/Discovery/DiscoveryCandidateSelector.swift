@@ -12,6 +12,13 @@ enum DiscoveryCandidateSelector {
         }
         for candidate in input { try candidate.validate() }
 
+        if input.contains(where: { $0.discoveryPriority != nil }) {
+            var seen = Set<String>()
+            return input.sorted {
+                let left = $0.discoveryPriority ?? 0, right = $1.discoveryPriority ?? 0
+                return left == right ? $0.instrumentID < $1.instrumentID : left > right
+            }.filter { seen.insert($0.identity).inserted }
+        }
         let groups = DiscoveryCategory.selectionOrder.map { category in
             input.filter { $0.category == category }
                 .sorted { sortKey($0) < sortKey($1) }

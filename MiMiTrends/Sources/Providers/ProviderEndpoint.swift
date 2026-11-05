@@ -4,7 +4,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
     case finnhubTrades
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope
     case yahooPrimary, yahooAlternate
-    case wallstreetOnline, traderFox
+    case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, traderFox
 
     var id: String { rawValue }
 
@@ -16,7 +16,9 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzEurope: "Europe"
         case .yahooPrimary: "Primary"
         case .yahooAlternate: "Alternate"
-        case .wallstreetOnline: "Discovery"
+        case .wallstreetOnline: "Instrument pages"
+        case .wallstreetWikifolio: "Wikifolio · today"
+        case .wallstreetPerformance: "Performance · 1 day"
         case .traderFox: "Market universe"
         }
     }
@@ -30,6 +32,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .yahooPrimary: "https://query1.finance.yahoo.com"
         case .yahooAlternate: "https://query2.finance.yahoo.com"
         case .wallstreetOnline: "https://www.wallstreet-online.de"
+        case .wallstreetWikifolio: "https://www.wallstreet-online.de/statistik/top-aktien-wikifolio"
+        case .wallstreetPerformance: "https://www.wallstreet-online.de/statistik/top-aktien-performance"
         case .traderFox: "https://markets.traderfox.com/aktien/"
         }
     }
@@ -39,6 +43,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: ""
         case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
+        case .wallstreetWikifolio, .wallstreetPerformance: ""
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
         case .traderFox: "dax-bestandteile"
         }
@@ -108,6 +113,8 @@ struct ProviderEndpointChecker: Sendable {
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: expected = "bidWithCurrencySymbol"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"
         case .wallstreetOnline: expected = "ASML"
+        case .wallstreetWikifolio: expected = "Käufe/Verkäufe"
+        case .wallstreetPerformance: expected = "Perf. %"
         case .traderFox: expected = "equities"
         }
         guard body.localizedCaseInsensitiveContains(expected) else {

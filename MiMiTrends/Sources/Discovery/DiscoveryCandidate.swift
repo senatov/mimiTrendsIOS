@@ -59,11 +59,14 @@ struct DiscoveryCandidate: Codable, Equatable, Sendable {
     let resolved: ResolvedMarketSymbol?
     let origin: DiscoveryRankingOrigin?
     let marketMetrics: DiscoveryMarketMetrics?
+    let rankingEvidence: DiscoveryRankingEvidence?
+    let discoveryPriority: Double?
 
     init(sourceID: String, instrumentID: String, category: DiscoveryCategory,
          rank: Int, observedAtMillis: Int64, resolved: ResolvedMarketSymbol?,
          origin: DiscoveryRankingOrigin? = nil, displayName: String? = nil,
-         marketMetrics: DiscoveryMarketMetrics? = nil) {
+         marketMetrics: DiscoveryMarketMetrics? = nil, rankingEvidence: DiscoveryRankingEvidence? = nil,
+         discoveryPriority: Double? = nil) {
         self.sourceID = sourceID
         self.instrumentID = instrumentID
         self.displayName = displayName
@@ -73,6 +76,8 @@ struct DiscoveryCandidate: Codable, Equatable, Sendable {
         self.resolved = resolved
         self.origin = origin
         self.marketMetrics = marketMetrics
+        self.rankingEvidence = rankingEvidence
+        self.discoveryPriority = discoveryPriority
     }
 
     var identity: String { "\(sourceID):\(instrumentID)" }
@@ -85,6 +90,18 @@ struct DiscoveryCandidate: Codable, Equatable, Sendable {
               rank > 0, rank <= 1_000,
               observedAtMillis > 0 else {
             throw DiscoveryDataError.invalidCandidate
+        }
+        if let evidence = rankingEvidence {
+            guard [evidence.wikifolioRank, evidence.performanceRank].compactMap({ $0 })
+                .allSatisfy({ (1...50).contains($0) }),
+                  evidence.wikifolioTrades.map({ $0 >= 0 }) ?? true else {
+                throw DiscoveryDataError.invalidCandidate
+            }
+        }
+        if let discoveryPriority {
+            guard discoveryPriority.isFinite, (0...100).contains(discoveryPriority) else {
+                throw DiscoveryDataError.invalidCandidate
+            }
         }
         try resolved?.validate()
         try marketMetrics?.validate()

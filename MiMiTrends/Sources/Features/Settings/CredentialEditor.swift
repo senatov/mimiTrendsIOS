@@ -14,8 +14,8 @@ struct CredentialEditor: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(.title3.weight(.light))
-            Text(detail).font(.body.weight(.light)).foregroundStyle(TrendsColors.supportingInk)
+            Text(title).font(SettingsTypography.label).foregroundStyle(.primary)
+            Text(detail).font(.callout).foregroundStyle(.secondary)
             SecretEntryField(title: title, value: $draft)
             HStack(spacing: 8) {
                 TrendsActionButton(title: "Save", systemImage: "checkmark", tint: .green) {
@@ -29,15 +29,15 @@ struct CredentialEditor: View {
                     }
                 }
                 Text(hasStoredValue ? storageStatus : "Not configured")
-                    .font(.body.weight(.light))
-                    .foregroundStyle(TrendsColors.supportingInk)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
             if let message {
-                Text(message).font(.body.weight(.light)).foregroundStyle(TrendsColors.supportingInk)
+                Text(message).font(.callout).foregroundStyle(.secondary)
             }
         }
         .padding(18)
-        .foregroundStyle(TrendsColors.ink)
+        .foregroundStyle(.primary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(SettingsColors.group, in: RoundedRectangle(cornerRadius: 12))
         .overlay {

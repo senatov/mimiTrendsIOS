@@ -17,10 +17,11 @@ struct ProviderSettingsPanel: View {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Active provider addresses")
-                        .font(.title3.weight(.light))
+                        .font(SettingsTypography.sectionTitle)
+                        .foregroundStyle(.indigo)
                     Text("These sources are used by Radar or the live trade feed.")
-                        .font(.body.weight(.light))
-                        .foregroundStyle(TrendsColors.supportingInk)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save addresses", systemImage: "checkmark") { save() }
@@ -37,20 +38,22 @@ struct ProviderSettingsPanel: View {
                     endpoints: [.yahooPrimary, .yahooAlternate]
                 )
                 endpointGroup(
-                    "Discovery",
-                    detail: "Ranking links; TraderFox candidates without an FMP key",
-                    endpoints: [.wallstreetOnline, .traderFox]
+                    "wallstreetONLINE rankings",
+                    detail: "Wikifolio + Performance · shared base pool",
+                    endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline]
                 )
                 endpointGroup(
                     "Lang & Schwarz",
-                    detail: "Preliminary EUR quote observations",
+                    detail: "Fresh bid/ask movement signals · no trade volume",
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )
+                endpointGroup("TraderFox", detail: "Supplemental candidates without an FMP key",
+                              endpoints: [.traderFox])
             }
             if let savingMessage {
                 Label(savingMessage, systemImage: "checkmark.circle")
-                    .font(.body.weight(.light))
-                    .foregroundStyle(TrendsColors.supportingInk)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
             }
         }
         .onAppear {
@@ -67,13 +70,13 @@ struct ProviderSettingsPanel: View {
         SettingsGroup(title: title) {
             HStack(spacing: 8) {
                 Circle().fill(Color.green).frame(width: 8, height: 8)
-                Text("IN USE")
+                Text("CONFIGURED")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(Color.green)
+                    .foregroundStyle(.secondary)
                 Spacer()
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(TrendsColors.supportingInk)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.trailing)
             }
             ForEach(endpoints) { endpoint in
@@ -137,10 +140,12 @@ private struct ProviderEndpointRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(endpoint.title).font(.body.weight(.regular))
+            Text(endpoint.title).font(SettingsTypography.label).foregroundStyle(.primary)
             HStack(spacing: 8) {
                 TextField(endpoint.title, text: $value)
                     .textFieldStyle(.roundedBorder)
+                    .font(SettingsTypography.url)
+                    .foregroundStyle(SettingsColors.url)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
@@ -151,8 +156,8 @@ private struct ProviderEndpointRow: View {
                 }
             }
             Text(status)
-                .font(.subheadline.weight(.light))
-                .foregroundStyle(TrendsColors.supportingInk)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

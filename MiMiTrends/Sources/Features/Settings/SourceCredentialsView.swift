@@ -10,6 +10,7 @@ struct SourceCredentialsView: View {
         ) { width in
             VStack(alignment: .leading, spacing: 18) {
                 TradeImportSettingsSection(width: width)
+                DiscoverySettingsSection()
                 ProviderSettingsPanel(width: width)
                 SettingsGroup(title: "FMP market candidates") {
                     CredentialEditor(
@@ -19,15 +20,15 @@ struct SourceCredentialsView: View {
                         save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
                         remove: { try ProviderCredentialStore.delete(FMPCredential.account) }
                     )
-                    Text("The key switches candidate discovery on the next Radar scan. Yahoo minute candles remain the source of confirmed market signals. FMP mover results do not include a source timestamp.")
-                        .font(.body.weight(.light))
-                        .foregroundStyle(TrendsColors.supportingInk)
+                    Text("The key switches candidate discovery on the next Radar scan. L&S quote signals and Yahoo candle signals retain separate validation. FMP mover results do not include a source timestamp.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
                 SettingsGroup(title: "Finnhub access") {
                     finnhubKeyEditor
                     Text("Required for the live trade feed and optional US bid/ask validation.")
-                        .font(.body.weight(.light))
-                        .foregroundStyle(TrendsColors.supportingInk)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
                 }
             }
         }

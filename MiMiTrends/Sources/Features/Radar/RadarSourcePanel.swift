@@ -74,7 +74,16 @@ struct RadarSourcePanel: View {
                 received: candidateTotals?.received, valid: candidateTotals?.valid,
                 requests: candidateTotals?.operations, errors: candidateTotals?.errors
             )
-        ]
+        ] + (discoveryStatus?.rankingSources ?? []).map { source in
+            let color = tableColor(source.failed ? .sourceAttention : source.enabled ? .sourceActive : .sourceInactive)
+            return RadarTelemetrySource(
+                name: source.kind == .wikifolio ? "wO Wikifolio" : "wO Performance",
+                status: !source.enabled ? "DISABLED" : source.failed ? "REFRESH FAILED" : source.lastSuccess == nil ? "CONNECTING" : "TODAY · RANKING",
+                statusColor: color, dotColor: color,
+                received: source.count, valid: source.enabled && !source.failed ? source.count : nil,
+                requests: nil, errors: source.failed ? 1 : 0
+            )
+        }
     }
 
     private var candidateTotals: RadarSourceTotals? {
@@ -98,7 +107,7 @@ struct RadarSourcePanel: View {
     private var discoveryLabel: String {
         guard let discoveryStatus else { return "CONNECTING" }
         if discoveryStatus.hasFreshSnapshot(atMillis: Int64(Date().timeIntervalSince1970 * 1_000)) {
-            return "RANKING + LINKS"
+            return "SHARED SCAN POOL"
         }
         return discoveryStatus.isAvailable ? "SAVED" : "UNAVAILABLE"
     }
@@ -116,7 +125,7 @@ struct RadarSourcePanel: View {
     }
 
     private var discoveryColor: Color {
-        discoveryLabel == "RANKING + LINKS" ? tableColor(.sourceActive) : tableColor(.sourceInactive)
+        discoveryLabel == "SHARED SCAN POOL" ? tableColor(.sourceActive) : tableColor(.sourceInactive)
     }
 
     private var lsFreshCount: Int {

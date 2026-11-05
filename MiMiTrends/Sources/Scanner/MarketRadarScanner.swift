@@ -43,6 +43,7 @@ actor MarketRadarScanner {
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
     private var germanCandidates: [RadarCompanyCandidate] = []
     private var fmpCandidates: [RadarCompanyCandidate] = []
+    private var discoveryPreferences = RadarDiscoveryPreferences.load()
     private var activeFMPKey: String?
     private var nextDiscoveryAt: Date = .distantPast
     private var yahooCooldownUntil: Date?
@@ -65,6 +66,11 @@ actor MarketRadarScanner {
         onProgress: @Sendable (MarketScanProgress) async -> Void = { _ in }
     ) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
+        let discovery = RadarDiscoveryPreferences.load()
+        if discovery != discoveryPreferences {
+            discoveryPreferences = discovery
+            nextDiscoveryAt = .distantPast
+        }
         let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
         if fmpKey != activeFMPKey {
             activeFMPKey = fmpKey
@@ -94,7 +100,7 @@ actor MarketRadarScanner {
         let activePool = pool.filter {
             !MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date())
         }
-        if initialScanTotal == 0 { initialScanTotal = pool.count }
+        initialScanTotal = pool.count
         let names = Dictionary(
             (baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }

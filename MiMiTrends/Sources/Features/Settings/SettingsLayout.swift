@@ -1,6 +1,29 @@
 import SwiftUI
 
+enum SettingsTypography {
+    static let pageTitle = Font.system(.title2, design: .rounded).weight(.regular)
+    static let sectionTitle = Font.system(.title3, design: .rounded).weight(.regular)
+    static let label = Font.system(.body, design: .default).weight(.regular)
+    static let url = Font.system(.callout, design: .monospaced).weight(.regular)
+}
+
 enum SettingsColors {
+    static var url: Color {
+        #if os(macOS)
+        Color(nsColor: NSColor(name: nil) { appearance in
+            appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                ? NSColor(red: 0.48, green: 0.83, blue: 0.85, alpha: 1)
+                : NSColor(red: 0.02, green: 0.35, blue: 0.40, alpha: 1)
+        })
+        #else
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.48, green: 0.83, blue: 0.85, alpha: 1)
+                : UIColor(red: 0.02, green: 0.35, blue: 0.40, alpha: 1)
+        })
+        #endif
+    }
+
     static var background: Color {
         #if os(macOS)
         Color(nsColor: .windowBackgroundColor)
@@ -28,16 +51,16 @@ struct SettingsPage<Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(title).font(.title2.weight(.light))
-                        Text(subtitle).font(.body.weight(.light))
-                            .foregroundStyle(TrendsColors.supportingInk)
+                        Text(title).font(SettingsTypography.pageTitle).foregroundStyle(.primary)
+                        Text(subtitle).font(.callout)
+                            .foregroundStyle(.secondary)
                     }
                     content(geometry.size.width)
                 }
                 .frame(maxWidth: 1600, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(24)
-                .foregroundStyle(TrendsColors.ink)
+                .foregroundStyle(.primary)
             }
         }
         .background(SettingsColors.background)
@@ -51,7 +74,7 @@ struct SettingsGroup<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(title).font(.title3.weight(.light))
+            Text(title).font(SettingsTypography.sectionTitle).foregroundStyle(.indigo)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -59,7 +82,7 @@ struct SettingsGroup<Content: View>: View {
         .background(SettingsColors.group, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(.primary.opacity(0.09), lineWidth: 1)
+                .strokeBorder(.primary.opacity(0.14), lineWidth: 1)
         }
     }
 }
@@ -74,8 +97,8 @@ struct SettingsValueRow: View {
             Spacer(minLength: 8)
             Text(value)
                 .multilineTextAlignment(.trailing)
-                .foregroundStyle(TrendsColors.ink)
+                .foregroundStyle(.primary)
         }
-        .font(.body.weight(.light))
+        .font(SettingsTypography.label)
     }
 }

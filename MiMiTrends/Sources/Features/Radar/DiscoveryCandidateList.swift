@@ -5,6 +5,7 @@ struct DiscoveryCandidateList: View {
     @AppStorage("display.currency.v1") private var displayCurrency = "EUR"
     let snapshot: DiscoverySnapshot
     @State private var searchText = ""
+    @State private var currentCandidates: [DiscoveryCandidate]?
     @State private var directQuotes: [String: WallstreetOnlineQuote] = [:]
     @State private var quoteMessage: String?
     @State private var currencyRates: DisplayCurrencyRates?
@@ -12,7 +13,7 @@ struct DiscoveryCandidateList: View {
     var body: some View {
         List {
             Section {
-                Text("Prices come from linked wallstreetONLINE pages and display in \(displayCurrency). Rankings do not supply verified trading symbols or scanner signals.")
+                Text("Wikifolio activity and price performance form the shared scan pool. Scan priority measures ranking support, not signal confidence. Prices display in \(displayCurrency).")
                     .font(.callout)
                     .foregroundStyle(TrendsColors.supportingInk)
                 Text("Direct quote checks are limited to the first eight visible candidates. USD prices require a fresh EUR/USD quote; other currencies are omitted.")
@@ -31,6 +32,11 @@ struct DiscoveryCandidateList: View {
         }
         .searchable(text: $searchText, prompt: "Company or instrument path")
         .navigationTitle("Ranking candidates")
+        .task {
+            if let refreshed = try? await WallstreetDiscoverySource.shared.loadCandidates() {
+                currentCandidates = refreshed
+            }
+        }
         .task(id: "\(searchText)|\(scenePhase)") { await loadDirectQuotes() }
         .task {
             let service = DisplayCurrencyService()
@@ -40,8 +46,9 @@ struct DiscoveryCandidateList: View {
     }
 
     private var filteredCandidates: [DiscoveryCandidate] {
-        guard !searchText.isEmpty else { return snapshot.candidates }
-        return snapshot.candidates.filter {
+        let candidates = currentCandidates ?? snapshot.candidates
+        guard !searchText.isEmpty else { return candidates }
+        return candidates.filter {
             ($0.displayName?.localizedCaseInsensitiveContains(searchText) ?? false) ||
                 $0.instrumentID.localizedCaseInsensitiveContains(searchText)
         }
@@ -66,8 +73,20 @@ struct DiscoveryCandidateList: View {
                         .foregroundStyle(change < 0 ? .red : .green)
                 }
             }
+            if let evidence = candidate.rankingEvidence {
+                HStack(spacing: 10) {
+                    if let rank = evidence.wikifolioRank { Text("Wikifolio #\(rank)") }
+                    if let rank = evidence.performanceRank { Text("Performance #\(rank)") }
+                    if let trades = evidence.wikifolioTrades { Text("\(trades) wikifolio trades") }
+                    if let score = candidate.discoveryPriority {
+                        Text("Scan priority \(score, format: .number.precision(.fractionLength(1)))")
+                            .foregroundStyle(.indigo)
+                    }
+                }
+                .font(.caption).foregroundStyle(.secondary)
+            }
             HStack(spacing: 8) {
-                Text("#\(candidate.rank) · \(periodLabel(candidate.origin?.period))")
+                Text(candidate.rankingEvidence == nil ? "#\(candidate.rank) · \(periodLabel(candidate.origin?.period))" : "Today’s rankings")
                 Text(candidate.instrumentID)
                     .lineLimit(1)
                     .truncationMode(.middle)

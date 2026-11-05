@@ -3,6 +3,11 @@ import Foundation
 protocol DiscoveryCandidateSource: Sendable {
     var sourceID: String { get }
     func loadCandidates() async throws -> [DiscoveryCandidate]
+    func refreshIntervalMillis() async -> Int64
+}
+
+extension DiscoveryCandidateSource {
+    func refreshIntervalMillis() async -> Int64 { 30 * 60_000 }
 }
 
 struct DiscoverySnapshot: Codable, Equatable, Sendable {
@@ -34,6 +39,7 @@ struct DiscoveryRefreshStatus: Sendable {
     let snapshot: DiscoverySnapshot?
     let lastAttemptSucceeded: Bool
     let nextAttemptAtMillis: Int64
+    var rankingSources: [RankingSourceHealth] = []
 
     var isAvailable: Bool { snapshot != nil }
 
@@ -111,7 +117,7 @@ actor DiscoveryRefreshCache {
                 sourceID: source.sourceID, refreshedAtMillis: refreshedAt, candidates: selected
             )
             lastAttemptSucceeded = true
-            nextAttemptAtMillis = refreshedAt + 30 * 60_000
+            nextAttemptAtMillis = refreshedAt + (await source.refreshIntervalMillis())
             AppDiagnostics.shared.record(.info, "Discovery", "refresh-success", "source=\(source.sourceID) received=\(loaded.count) selected=\(selected.count)")
         } catch {
             if Task.isCancelled || error is CancellationError { return }
