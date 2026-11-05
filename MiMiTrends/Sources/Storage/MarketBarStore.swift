@@ -137,7 +137,7 @@ actor MarketBarStore {
         try bind(normalized, to: 1, in: statement)
         sqlite3_bind_int64(statement, 2, fromEpochSeconds)
         sqlite3_bind_int64(statement, 3, throughEpochSeconds)
-        sqlite3_bind_int(statement, 4, Int32(min(max(limit, 1), 360)))
+        sqlite3_bind_int(statement, 4, Int32(min(max(limit, 1), 2_000)))
         var bars: [MinuteBar] = []
         while true {
             let result = sqlite3_step(statement)

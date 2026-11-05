@@ -68,6 +68,19 @@ final class RadarChartDataTests: XCTestCase {
         XCTAssertEqual(data.fastEMA.last?.value ?? 0, 10.4, accuracy: 0.0001)
     }
 
+    func testTradingTimelineCompressesOvernightWithoutChangingEventTimes() throws {
+        let bars = [bar(minute: 1, close: 10), bar(minute: 2, close: 11),
+                    bar(minute: 1_442, close: 12)]
+        let timeline = RadarChartTimeline(bars: bars)
+        XCTAssertEqual(timeline.position(60), 0)
+        XCTAssertEqual(timeline.position(120), 60)
+        XCTAssertEqual(timeline.position(1_442 * 60), 120)
+        XCTAssertEqual(timeline.bar(at: 120)?.minuteEpochSeconds, 1_442 * 60)
+        XCTAssertEqual(timeline.position(90), 30)
+        XCTAssertNil(RadarChartTimeline(bars: []).bar(at: 0))
+        XCTAssertEqual(RadarChartTimeline(bars: [bars[0]]).position(120), 0)
+    }
+
     private func bar(minute: Int64, close: Double) -> MinuteBar {
         MinuteBar(
             symbol: "TEST", minuteEpochSeconds: minute * 60,

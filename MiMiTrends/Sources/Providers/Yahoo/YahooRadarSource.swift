@@ -28,6 +28,16 @@ struct YahooRadarSource: Sendable {
         return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol)
     }
 
+    func historicalMinuteBars(symbol: String, from: Int64, through: Int64) async throws -> [MinuteBar] {
+        guard MarketCandidateFilter.supportsYahooBars(symbol: symbol), through > from,
+              through - from <= 86_400,
+              let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            throw RadarSourceError.invalidSymbol
+        }
+        let path = "/v8/finance/chart/\(encoded)?period1=\(from)&period2=\(through)&interval=1m&includePrePost=false"
+        return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol)
+    }
+
     private func loadWithFallback(path: String) async throws -> [String: Any] {
         let primary = URL(string: path, relativeTo: ProviderEndpointStore.url(for: .yahooPrimary))!.absoluteURL
         do {

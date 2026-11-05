@@ -12,6 +12,10 @@ struct RadarChartPlot: View {
     @State private var selectedMinute: Int64?
     @State private var selectedPrice: Double?
     @State private var cursorPinned = false
+    @State private var plotWidth: CGFloat = 800
+    @State private var tradeAnchors: [String: CGPoint] = [:]
+
+    private var timeline: RadarChartTimeline { RadarChartTimeline(bars: data.bars) }
 
     private var selectedBar: MinuteBar? {
         guard let selectedMinute else { return nil }
@@ -22,8 +26,7 @@ struct RadarChartPlot: View {
         guard let first = data.bars.first?.minuteEpochSeconds,
               let last = data.bars.last?.minuteEpochSeconds else { return [] }
         return trades.filter { trade in
-            (first...last).contains(trade.entryEpochSeconds) ||
-                trade.exitEpochSeconds.map { (first...last).contains($0) } == true
+            trade.entryEpochSeconds <= last && (trade.exitEpochSeconds ?? Int64.max) >= first
         }.suffix(100).map { $0 }
     }
 
@@ -31,8 +34,8 @@ struct RadarChartPlot: View {
         VStack(alignment: .leading, spacing: 6) {
             Chart {
                 ForEach(data.bars, id: \.minuteEpochSeconds) { bar in
-                    let time = Date(timeIntervalSince1970: TimeInterval(bar.minuteEpochSeconds))
-                    let halfWidth: TimeInterval = data.range.usesDailyBars ? 9 * 3_600 : 20
+                    let time = timeline.position(bar.minuteEpochSeconds)
+                    let halfWidth: TimeInterval = 20
                     let color: Color = bar.close >= bar.open ? .green : .red
                     RuleMark(
                         x: .value("Minute", time),
@@ -40,28 +43,30 @@ struct RadarChartPlot: View {
                         yEnd: .value("High", bar.high)
                     )
                     .foregroundStyle(color)
+                    .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
                     RectangleMark(
-                        xStart: .value("Start", time.addingTimeInterval(-halfWidth)),
-                        xEnd: .value("End", time.addingTimeInterval(halfWidth)),
+                        xStart: .value("Start", time - halfWidth),
+                        xEnd: .value("End", time + halfWidth),
                         yStart: .value("Open", bar.open),
                         yEnd: .value("Close", bar.close)
                     )
                     .foregroundStyle(color)
+                    .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
                 }
                 ForEach(data.fastEMA) { point in
                     LineMark(
-                        x: .value("Minute", point.date),
+                        x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
                         y: .value("EMA 9", point.value),
-                        series: .value("Overlay segment", "EMA 9-\(point.segment)")
+                        series: .value("Overlay segment", "EMA 9")
                     )
                     .foregroundStyle(.blue)
                     .lineStyle(StrokeStyle(lineWidth: 1.5))
                 }
                 ForEach(data.slowEMA) { point in
                     LineMark(
-                        x: .value("Minute", point.date),
+                        x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
                         y: .value("EMA 21", point.value),
-                        series: .value("Overlay segment", "EMA 21-\(point.segment)")
+                        series: .value("Overlay segment", "EMA 21")
                     )
                     .foregroundStyle(.orange)
                     .lineStyle(StrokeStyle(lineWidth: 1.5))
@@ -70,7 +75,7 @@ struct RadarChartPlot: View {
                     tradeMarks(for: trade)
                 }
                 if let selectedBar, let selectedPrice {
-                    RuleMark(x: .value("Selected time", selectedBar.chartDate))
+                    RuleMark(x: .value("Selected time", timeline.position(selectedBar.minuteEpochSeconds)))
                         .foregroundStyle(.primary.opacity(0.65))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     RuleMark(y: .value("Selected price", selectedPrice))
@@ -78,18 +83,29 @@ struct RadarChartPlot: View {
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                 }
             }
+            .accessibilityLabel("\(data.range.usesDailyBars ? "Daily" : "Minute") candle chart with EMA 9 and EMA 21 for \(symbol)")
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { plotWidth = $0 }
             .chartYScale(domain: priceDomain)
-            .chartXScale(domain: chartTimeDomain)
+            .chartXScale(domain: timeline.domain)
+            .chartXAxis { timelineAxis }
             .chartOverlay { proxy in
-                RadarChartCursorOverlay(
-                    proxy: proxy, bars: data.bars, displayCurrency: displayCurrency, readsPrice: true,
+                ZStack {
+                    RadarChartCursorOverlay(
+                    proxy: proxy, bars: data.bars, timeline: timeline, displayCurrency: displayCurrency, readsPrice: true,
                     selectedBar: selectedBar, selectedPrice: selectedPrice,
                     isPinned: cursorPinned, onSelection: select(bar:price:),
                     onTogglePin: toggleCursorPin, onExit: clearCursor
                 )
+                    RadarTradeAnchorReader(proxy: proxy, timeline: timeline, trades: visibleTrades)
+                }
             }
             .frame(height: priceHeight)
-            .accessibilityLabel("\(data.range.usesDailyBars ? "Daily" : "Minute") candle chart with EMA 9 and EMA 21 for \(symbol)")
+            .padding(.top, RadarTradeCardOverlay.railHeight(count: visibleTrades.count, width: plotWidth))
+            .onPreferenceChange(RadarTradeAnchorPreference.self) { tradeAnchors = $0 }
+            .overlay {
+                RadarTradeCardOverlay(anchors: tradeAnchors, trades: visibleTrades,
+                                      currency: displayCurrency)
+            }
 
             HStack(spacing: 14) {
                 Label("EMA 9", systemImage: "line.diagonal")
@@ -103,21 +119,23 @@ struct RadarChartPlot: View {
                 Chart {
                     ForEach(data.bars.filter { $0.volumeStatus.isReliable }, id: \.minuteEpochSeconds) { bar in
                         BarMark(
-                            x: .value("Minute", bar.chartDate),
+                            x: .value("Minute", timeline.position(bar.minuteEpochSeconds)),
                             y: .value("Reported volume", bar.volume)
                         )
                         .foregroundStyle(bar.close >= bar.open ? .green.opacity(0.55) : .red.opacity(0.55))
+                        .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
                     }
                     if let selectedBar {
-                        RuleMark(x: .value("Selected time", selectedBar.chartDate))
+                        RuleMark(x: .value("Selected time", timeline.position(selectedBar.minuteEpochSeconds)))
                             .foregroundStyle(.primary.opacity(0.65))
                             .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     }
                 }
-                .chartXScale(domain: chartTimeDomain)
+                .chartXScale(domain: timeline.domain)
+            .chartXAxis { timelineAxis }
                 .chartOverlay { proxy in
                     RadarChartCursorOverlay(
-                        proxy: proxy, bars: data.bars, displayCurrency: displayCurrency, readsPrice: false,
+                        proxy: proxy, bars: data.bars, timeline: timeline, displayCurrency: displayCurrency, readsPrice: false,
                         selectedBar: selectedBar, selectedPrice: selectedPrice,
                         isPinned: cursorPinned, onSelection: select(bar:price:),
                         onTogglePin: toggleCursorPin, onExit: clearCursor
@@ -135,13 +153,18 @@ struct RadarChartPlot: View {
         }
     }
 
-    private var chartTimeDomain: ClosedRange<Date> {
-        let first = data.bars.first?.chartDate ?? .now.addingTimeInterval(-60)
-        let last = data.bars.last?.chartDate ?? .now
-        if first == last {
-            return first.addingTimeInterval(-30)...last.addingTimeInterval(30)
+    @AxisContentBuilder
+    private var timelineAxis: some AxisContent {
+        AxisMarks(values: timeline.ticks) { value in
+            AxisGridLine()
+            AxisTick()
+            AxisValueLabel {
+                if let position = value.as(Double.self), let bar = timeline.bar(at: position) {
+                    Text(Date(timeIntervalSince1970: Double(bar.minuteEpochSeconds)),
+                         format: data.range.usesDailyBars ? .dateTime.day().month() : .dateTime.day().month().hour().minute())
+                }
+            }
         }
-        return first...last
     }
 
     private func clearCursor() {
@@ -187,48 +210,36 @@ struct RadarChartPlot: View {
 
     @ChartContentBuilder
     private func tradeMarks(for trade: BrokerTradePosition) -> some ChartContent {
-        let entryDate = Date(timeIntervalSince1970: TimeInterval(trade.entryEpochSeconds))
+        let entryDate = timeline.position(trade.entryEpochSeconds)
         let first = data.bars.first?.minuteEpochSeconds ?? 0
         let last = data.bars.last?.minuteEpochSeconds ?? 0
         let entryVisible = (first...last).contains(trade.entryEpochSeconds)
         let exitVisible = trade.exitEpochSeconds.map { (first...last).contains($0) } == true
-        if let exitEpoch = trade.exitEpochSeconds,
-           let exitPrice = trade.exitPrice,
-           entryVisible,
-           exitVisible {
-            LineMark(
-                x: .value("Buy time", entryDate), y: .value("Buy price", trade.entryPrice),
-                series: .value("Imported trade", trade.id)
-            )
-            .foregroundStyle(tradeColor(trade))
-            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
-            LineMark(
-                x: .value("Sell time", Date(timeIntervalSince1970: TimeInterval(exitEpoch))),
-                y: .value("Sell price", exitPrice), series: .value("Imported trade", trade.id)
-            )
-            .foregroundStyle(tradeColor(trade))
-            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 3]))
+        ForEach(data.bars.filter { bar in
+            bar.minuteEpochSeconds >= trade.entryEpochSeconds &&
+                bar.minuteEpochSeconds <= (trade.exitEpochSeconds ?? Int64.max)
+        }, id: \.minuteEpochSeconds) { bar in
+            LineMark(x: .value("Owned time", timeline.position(bar.minuteEpochSeconds)),
+                     y: .value("Owned price", bar.close), series: .value("Owned interval", "owned-" + trade.id))
+                .foregroundStyle(.orange.opacity(0.65))
+                .lineStyle(StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round))
         }
         if entryVisible {
             PointMark(x: .value("Buy time", entryDate), y: .value("Buy price", trade.entryPrice))
                 .symbolSize(72)
                 .foregroundStyle(.orange)
-                .annotation(position: .top, alignment: .leading, spacing: 4) {
-                    RadarChartTradeCard(trade: trade, chartCurrency: displayCurrency)
-                }
+
         }
         if let exitEpoch = trade.exitEpochSeconds,
            let exitPrice = trade.exitPrice,
            exitVisible {
             PointMark(
-                x: .value("Sell time", Date(timeIntervalSince1970: TimeInterval(exitEpoch))),
+                x: .value("Sell time", timeline.position(exitEpoch)),
                 y: .value("Sell price", exitPrice)
             )
             .symbolSize(72)
             .foregroundStyle(tradeColor(trade))
-            .annotation(position: .top, alignment: .leading, spacing: 4) {
-                if !entryVisible { RadarChartTradeCard(trade: trade, chartCurrency: displayCurrency) }
-            }
+
         }
     }
 
@@ -237,140 +248,4 @@ struct RadarChartPlot: View {
         return profit >= 0 ? .green : .red
     }
 
-}
-
-private struct RadarChartTradeCard: View {
-    let trade: BrokerTradePosition
-    let chartCurrency: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("\(trade.symbol) · BUY \(price(trade.entryPrice)) · \(time(trade.entryEpochSeconds))")
-            if let exitPrice = trade.exitPrice, let exitEpoch = trade.exitEpochSeconds {
-                Text("SELL \(price(exitPrice)) · \(time(exitEpoch))")
-                if let profit = trade.profitAmount {
-                    let profitText = "\(profit >= 0 ? "+" : "−")\(abs(profit).formatted(.currency(code: chartCurrency).precision(.fractionLength(2))))"
-                    let percentText = trade.profitPercent.map {
-                        " · \($0 >= 0 ? "+" : "−")\(abs($0).formatted(.number.precision(.fractionLength(2))))%"
-                    } ?? ""
-                    Text(profitText + percentText)
-                        .foregroundStyle(profit >= 0 ? .green : .red)
-                }
-            } else {
-                Text("OPEN · \(trade.quantity.formatted(.number.precision(.fractionLength(0...4)))) shares")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .font(.caption2.monospacedDigit())
-        .padding(6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5))
-        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.orange.opacity(0.75), lineWidth: 1))
-        .fixedSize()
-    }
-
-    private func price(_ value: Double) -> String {
-        value.formatted(.currency(code: chartCurrency).precision(.fractionLength(2)))
-    }
-
-    private func time(_ epochSeconds: Int64) -> String {
-        Date(timeIntervalSince1970: TimeInterval(epochSeconds))
-            .formatted(.dateTime.day().month(.twoDigits).hour().minute())
-    }
-}
-
-private struct RadarChartCursorOverlay: View {
-    let proxy: ChartProxy
-    let bars: [MinuteBar]
-    let displayCurrency: String
-    let readsPrice: Bool
-    let selectedBar: MinuteBar?
-    let selectedPrice: Double?
-    let isPinned: Bool
-    let onSelection: (MinuteBar, Double) -> Void
-    let onTogglePin: () -> Void
-    let onExit: () -> Void
-
-    var body: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .topLeading) {
-                Rectangle()
-                    .fill(.clear)
-                    .contentShape(Rectangle())
-                    #if os(macOS)
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case .active(let location):
-                            if !isPinned { select(at: location, in: geometry) }
-                        case .ended:
-                            if !isPinned { onExit() }
-                        }
-                    }
-                    .onTapGesture(perform: onTogglePin)
-                    #else
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { select(at: $0.location, in: geometry) }
-                            .onEnded { _ in onTogglePin() }
-                    )
-                    #endif
-                axisLabels(in: geometry)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func axisLabels(in geometry: GeometryProxy) -> some View {
-        if let selectedBar, let selectedPrice, let plotFrameAnchor = proxy.plotFrame {
-            let plotFrame = geometry[plotFrameAnchor]
-            if readsPrice, let y = proxy.position(forY: selectedPrice) {
-                cursorTag(selectedPrice.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
-                    .position(
-                        x: geometry.size.width - 28,
-                        y: min(max(plotFrame.minY + y, 14), plotFrame.maxY - 14)
-                    )
-                    .accessibilityHidden(true)
-            } else if !readsPrice, let x = proxy.position(forX: selectedBar.chartDate) {
-                cursorTag(selectedBar.chartDate.formatted(
-                    .dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute()
-                ))
-                .position(
-                    x: min(max(plotFrame.minX + x, 72), geometry.size.width - 72),
-                    y: geometry.size.height - 12
-                )
-                .accessibilityHidden(true)
-            }
-        }
-    }
-
-    private func cursorTag(_ value: String) -> some View {
-        Text(value)
-            .font(.caption2.monospacedDigit())
-            .foregroundStyle(TrendsColors.ink)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(Color.yellow.opacity(0.2), in: RoundedRectangle(cornerRadius: 3))
-            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.blue.opacity(0.7), lineWidth: 1))
-            .fixedSize()
-            .allowsHitTesting(false)
-    }
-
-    private func select(at location: CGPoint, in geometry: GeometryProxy) {
-        guard let plotFrameAnchor = proxy.plotFrame else { return }
-        let plotFrame = geometry[plotFrameAnchor]
-        guard plotFrame.contains(location) else { return }
-        let plotPoint = CGPoint(
-            x: location.x - plotFrame.minX,
-            y: location.y - plotFrame.minY
-        )
-        guard let date = proxy.value(atX: plotPoint.x, as: Date.self),
-              let bar = RadarChartData.nearestBar(to: date, in: bars) else { return }
-        let price = readsPrice
-            ? proxy.value(atY: plotPoint.y, as: Double.self) ?? bar.close
-            : bar.close
-        onSelection(bar, price)
-    }
-}
-
-private extension MinuteBar {
-    var chartDate: Date { Date(timeIntervalSince1970: TimeInterval(minuteEpochSeconds)) }
 }

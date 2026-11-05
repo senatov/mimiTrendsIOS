@@ -54,7 +54,7 @@ struct RadarChartPreview: View {
                 .trendsPanel()
             }
         }
-        .task(id: "\(symbol)|\(refreshID)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
+        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
         .task(id: "daily|\(symbol)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() } }
         .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
@@ -156,7 +156,7 @@ struct RadarChartPreview: View {
                 )
                 .id(displayCurrency)
                 if let last = chartData.bars.last {
-                    Text("\(chartData.bars.count) \(range.usesDailyBars ? "FMP daily" : "saved minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · gaps are not filled")
+                    Text("\(chartData.bars.count) \(range.usesDailyBars ? "FMP daily" : "saved minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · trading time · closed sessions compressed")
                         .font(.subheadline.weight(.light))
                         .foregroundStyle(TrendsColors.supportingInk)
                 }
@@ -222,13 +222,15 @@ struct RadarChartPreview: View {
         isLoading = true
         errorMessage = nil
         do {
+            let trades = importedTrades
             let loaded = try await Task.detached(priority: .userInitiated) {
+                await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades)
                 let store = try MarketBarStore(url: MarketBarStore.defaultURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,
                     fromEpochSeconds: 0,
                     throughEpochSeconds: Int64(Date().timeIntervalSince1970),
-                    limit: 360
+                    limit: 2_000
                 )
             }.value
             guard !Task.isCancelled else { return }
