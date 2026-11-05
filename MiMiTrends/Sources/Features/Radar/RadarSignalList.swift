@@ -41,8 +41,8 @@ struct RadarSignalList: View {
             let comparison: ComparisonResult
             switch sortColumn {
             case .company:
-                comparison = (companyNames[left.symbol] ?? left.symbol)
-                    .localizedStandardCompare(companyNames[right.symbol] ?? right.symbol)
+                comparison = companyDisplayName(for: left.symbol)
+                    .localizedStandardCompare(companyDisplayName(for: right.symbol))
             case .event:
                 comparison = left.signalSource.localizedStandardCompare(right.signalSource)
             case .movement:
@@ -130,7 +130,7 @@ struct RadarSignalList: View {
                             ForEach(sortedSignals.map(RadarSignalItem.init)) { item in
                                 RadarSignalRow(
                                     signal: item.signal,
-                                    companyName: companyNames[item.signal.symbol] ?? item.signal.symbol,
+                                    companyName: companyDisplayName(for: item.signal.symbol),
                                     companyMetadata: companyMetadata[item.signal.symbol],
                                     currencyRates: currencyRates,
                                     displayCurrency: displayCurrency,
@@ -240,7 +240,7 @@ struct RadarSignalList: View {
     }
 
     private func autoFit(_ column: RadarSortColumn) {
-        let names = signals.map { companyNames[$0.symbol] ?? $0.symbol }
+        let names = signals.map { companyDisplayName(for: $0.symbol) }
         let contentWidths = RadarSignalColumnWidths.contentWidths(
             signals: signals, companyNames: names, currencyRates: currencyRates,
             displayCurrency: displayCurrency,
@@ -252,7 +252,7 @@ struct RadarSignalList: View {
     private func fittedWidths(availableWidth: CGFloat) -> RadarSignalColumnWidths {
         RadarSignalColumnWidths.fit(
             signals: signals,
-            companyNames: signals.map { companyNames[$0.symbol] ?? $0.symbol },
+            companyNames: signals.map { companyDisplayName(for: $0.symbol) },
             currencyRates: currencyRates,
             displayCurrency: displayCurrency,
             availableWidth: availableWidth,
@@ -276,6 +276,11 @@ struct RadarSignalList: View {
         signal.symbol == selected?.symbol &&
             signal.signalSource == selected?.signalSource &&
             signal.signalEpochMillis == selected?.signalEpochMillis
+    }
+
+    private func companyDisplayName(for symbol: String) -> String {
+        let source = companyMetadata[symbol]?.name ?? companyNames[symbol] ?? symbol
+        return RadarSearchKeyword.cleanedCompanyName(source, symbol: symbol)
     }
 }
 

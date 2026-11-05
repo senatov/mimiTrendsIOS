@@ -241,6 +241,10 @@ enum RadarSearchKeyword {
         }.joined(separator: " ")
     }
 
+    static func cleanedCompanyName(_ companyName: String, symbol: String) -> String {
+        displayName(companyName, symbol: symbol) ?? companyName.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private static func isRemovableSuffix(_ word: String) -> Bool {
         let normalized = word.filter { $0.isLetter || $0.isNumber }.uppercased()
         return legalSuffixes.contains(normalized) ||
