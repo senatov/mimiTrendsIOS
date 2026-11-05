@@ -70,18 +70,20 @@ struct RadarSignalList: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(showingSavedHistory ? "Saved radar" : "Live radar")
-                    .font(.subheadline.weight(.semibold))
-                Text("\(signals.count) signals")
-                    .font(.subheadline)
+        VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center, spacing: 10) {
+                Label(showingSavedHistory ? "SAVED RADAR" : "LIVE RADAR", systemImage: "dot.radiowaves.left.and.right")
+                    .font(.system(.subheadline, design: .monospaced).weight(.bold))
+                    .tracking(0.7)
+                    .foregroundStyle(.primary)
+                Text("\(signals.count) SIGNALS")
+                    .font(.system(.caption, design: .monospaced).weight(.medium))
                     .foregroundStyle(tableColor(.signalMutedText))
                 Text(displayCurrency)
-                    .font(.caption.weight(.medium))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(tableColor(.signalHeaderFill), in: Capsule())
+                    .font(.system(.caption2, design: .monospaced).weight(.bold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(tableColor(.signalHeaderFill), in: RoundedRectangle(cornerRadius: 5))
                     .help(currencyRates.map { "ECB reference rates dated \($0.date)" } ?? "Waiting for ECB exchange rates")
                 Spacer()
                 TrendsActionButton(

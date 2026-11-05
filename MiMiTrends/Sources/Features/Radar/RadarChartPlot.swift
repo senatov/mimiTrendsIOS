@@ -101,6 +101,15 @@ struct RadarChartPlot: View {
             }
             .frame(height: priceHeight)
             .padding(.top, RadarTradeCardOverlay.railHeight(count: visibleTrades.count, width: plotWidth))
+            .background {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .fill(Color.primary.opacity(0.018))
+                    .shadow(color: .black.opacity(0.09), radius: 5, x: 0, y: 2)
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.7)
+            }
             .onPreferenceChange(RadarTradeAnchorPreference.self) { tradeAnchors = $0 }
             .overlay {
                 RadarTradeCardOverlay(anchors: tradeAnchors, trades: visibleTrades,
@@ -142,6 +151,15 @@ struct RadarChartPlot: View {
                     )
                 }
                 .frame(height: volumeHeight)
+                .background {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Color.primary.opacity(0.018))
+                        .shadow(color: .black.opacity(0.07), radius: 3, x: 0, y: 1)
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.07), lineWidth: 0.6)
+                }
                 .accessibilityLabel("Reported minute volume for \(symbol)")
             }
         }
