@@ -20,6 +20,17 @@ final class RapidCrashDetectorTests: XCTestCase {
         XCTAssertNil(RapidCrashDetector.detect(symbol: "PULLBACK", bars: bars, nowEpochSeconds: now))
     }
 
+    func testRecoveredDropIsNotReportedAsCurrentRapidCrash() {
+        let now: Int64 = 12_000
+        let bars = prices(
+            "RECOVERED", endingAt: now,
+            [99.0, 100.0, 100.1, 100.0, 99.8, 99.4, 98.9, 99.8, 100.2, 101.0, 101.0, 101.0],
+            volume: 3_000
+        )
+
+        XCTAssertNil(RapidCrashDetector.detect(symbol: "RECOVERED", bars: bars, nowEpochSeconds: now))
+    }
+
     func testGradualDeclineNeedsAcceleration() throws {
         let ordinaryNow: Int64 = 40_000
         let ordinary = prices("ORDINARY", endingAt: ordinaryNow, [

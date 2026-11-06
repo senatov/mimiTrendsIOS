@@ -18,26 +18,17 @@ enum RapidCrashDetector {
         guard let latest = recent.last,
               latest.minuteEpochSeconds >= nowEpochSeconds - 600 else { return nil }
 
-        var strongest: Candidate?
-        for end in recent where end.minuteEpochSeconds >= nowEpochSeconds - settings.sustainedCrashWindowMinutes * 60 {
-            let candidates = [
-                crashEndingAt(end, bars: recent, settings: settings,
-                              windowMinutes: settings.crashWindowMinutes,
-                              minimumDropPercent: settings.crashPercent, anchorAtPeak: false),
-                crashEndingAt(end, bars: recent, settings: settings,
-                              windowMinutes: settings.sustainedCrashWindowMinutes,
-                              minimumDropPercent: settings.sustainedCrashPercent, anchorAtPeak: true)
-            ]
-            for candidate in candidates.compactMap({ $0 }) {
-                if let current = strongest,
-                   candidate.change > current.change ||
-                    (candidate.change == current.change && candidate.end.minuteEpochSeconds <= current.end.minuteEpochSeconds) {
-                    continue
-                }
-                strongest = candidate
-            }
-        }
-        guard let move = strongest else { return nil }
+        // Use the newest available bar as the event end; otherwise a recovered
+        // drop in the trailing window can be presented as the current signal.
+        let latestCandidates = [
+            crashEndingAt(latest, bars: recent, settings: settings,
+                          windowMinutes: settings.crashWindowMinutes,
+                          minimumDropPercent: settings.crashPercent, anchorAtPeak: false),
+            crashEndingAt(latest, bars: recent, settings: settings,
+                          windowMinutes: settings.sustainedCrashWindowMinutes,
+                          minimumDropPercent: settings.sustainedCrashPercent, anchorAtPeak: true)
+        ].compactMap { $0 }
+        guard let move = latestCandidates.min(by: { $0.change < $1.change }) else { return nil }
         return MarketSignalFactory.make(
             symbol: symbol, bars: recent, start: move.start, end: move.end,
             eventBarCount: move.count, changePercent: move.change,
