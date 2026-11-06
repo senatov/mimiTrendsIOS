@@ -17,7 +17,7 @@ final class RadarSignalSelectionTests: XCTestCase {
 
     func testRestoresOlderSignalsOnlyWhenNoFreshSignalsExist() {
         let history = [event("OLD", source: "Rapid rise", at: 100),
-                       event("NEW", source: "Rapid crash", at: 300)]
+                       event("NEW", source: "Rapid crash", at: 300, change: -2.2)]
 
         let restored = RadarSignalSelection.displayHistory(history, since: 400, limit: 10)
         XCTAssertTrue(restored.savedFallback)

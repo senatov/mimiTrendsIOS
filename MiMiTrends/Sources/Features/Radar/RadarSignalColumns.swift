@@ -138,9 +138,9 @@ enum RadarSignalPresentation {
     static func title(for source: String) -> String {
         switch source.lowercased() {
         case "rapid crash": "Rapid drop"
-        case "rapid rise": "Rapid rise"
+        case "rapid rise", "sharp rebound": "Sharp rebound"
         case "sustained drop": "Sustained drop"
-        case "sustained rise": "Sustained rise"
+        case "sustained rise", "smooth rise": "Smooth rise"
         case "tradable corridor": "Tradable corridor"
         default: source.replacingOccurrences(of: "_", with: " ").capitalized
         }
@@ -151,9 +151,9 @@ enum RadarSignalPresentation {
         case "l&s quote rise": "↑ L&S QUOTE · NO VOLUME"
         case "l&s quote drop": "↓ L&S QUOTE · NO VOLUME"
         case "rapid crash": "↓ RAPID DROP"
-        case "rapid rise": "↑ RAPID RISE"
+        case "rapid rise", "sharp rebound": "↑ SHARP REBOUND"
         case "sustained drop": "↓ SUSTAINED DROP"
-        case "sustained rise": "↑ SUSTAINED RISE"
+        case "sustained rise", "smooth rise": "↑ SMOOTH RISE"
         case "tradable corridor": "▰ CORRIDOR"
         default: title(for: source).uppercased()
         }

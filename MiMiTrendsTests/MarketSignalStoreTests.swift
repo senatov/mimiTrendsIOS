@@ -64,7 +64,7 @@ final class MarketSignalStoreTests: XCTestCase {
     }
 
     private func bars(symbol: String = "RISE", start: Int64 = 12_000) -> [MinuteBar] {
-        [100.0, 100.1, 101.8, 100.4].enumerated().map { index, close in
+        [100.0, 100.1, 100.5, 101.8].enumerated().map { index, close in
             MinuteBar(
                 symbol: symbol, minuteEpochSeconds: start + Int64(index) * 60,
                 open: close, high: close, low: close, close: close,

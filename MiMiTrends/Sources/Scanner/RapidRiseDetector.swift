@@ -1,5 +1,5 @@
 struct RapidRiseSettings: Sendable {
-    var risePercent = 0.60
+    var risePercent = RadarScanThresholdDefaults.sharpReboundPercent
     var riseWindowMinutes: Int64 = 5
     var minimumPrice = 5.0
     var minimumTurnover = 250_000.0
@@ -16,32 +16,23 @@ enum RapidRiseDetector {
         guard let latest = recent.last,
               latest.minuteEpochSeconds >= nowEpochSeconds - 600 else { return nil }
 
-        var strongest: (start: MinuteBar, end: MinuteBar, change: Double, count: Int)?
-        for end in recent where end.minuteEpochSeconds >= nowEpochSeconds - 900 {
-            guard end.volumeStatus == .reported, end.volume > 0 else { continue }
-            let window = recent.filter {
-                $0.minuteEpochSeconds >= end.minuteEpochSeconds - settings.riseWindowMinutes * 60 &&
-                    $0.minuteEpochSeconds < end.minuteEpochSeconds
-            }
-            guard let start = window.min(by: { $0.close < $1.close }) else { continue }
-            let change = (end.close / start.close - 1) * 100
-            guard change >= settings.risePercent - 1e-9 else { continue }
-            let eventBars = recent.filter {
-                $0.minuteEpochSeconds >= start.minuteEpochSeconds &&
-                    $0.minuteEpochSeconds <= end.minuteEpochSeconds
-            }
-            guard hasReliableActivity(recent, eventBars: eventBars, end: end, settings: settings) else { continue }
-            if let current = strongest,
-               change < current.change || (change == current.change && end.minuteEpochSeconds <= current.end.minuteEpochSeconds) {
-                continue
-            }
-            strongest = (start, end, change, eventBars.count)
+        guard latest.volumeStatus == .reported, latest.volume > 0 else { return nil }
+        let window = recent.filter {
+            $0.minuteEpochSeconds >= latest.minuteEpochSeconds - settings.riseWindowMinutes * 60 &&
+                $0.minuteEpochSeconds < latest.minuteEpochSeconds
         }
-        guard let move = strongest else { return nil }
+        guard let start = window.min(by: { $0.close < $1.close }) else { return nil }
+        let change = (latest.close / start.close - 1) * 100
+        guard change >= settings.risePercent - 1e-9 else { return nil }
+        let eventBars = recent.filter {
+            $0.minuteEpochSeconds >= start.minuteEpochSeconds &&
+                $0.minuteEpochSeconds <= latest.minuteEpochSeconds
+        }
+        guard hasReliableActivity(recent, eventBars: eventBars, end: latest, settings: settings) else { return nil }
         return MarketSignalFactory.make(
-            symbol: symbol, bars: recent, start: move.start, end: move.end,
-            eventBarCount: move.count, changePercent: move.change,
-            source: "Rapid rise", displayPrice: latest.close,
+            symbol: symbol, bars: recent, start: start, end: latest,
+            eventBarCount: eventBars.count, changePercent: change,
+            source: "Sharp rebound", displayPrice: latest.close,
             nowEpochSeconds: nowEpochSeconds
         )
     }

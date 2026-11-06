@@ -4,8 +4,10 @@ import XCTest
 final class LSQuoteMoveDetectorTests: XCTestCase {
     func testDropUsesExecutableSidesAndDoesNotInventVolume() throws {
         let rows = quotes()
+        var settings = RadarScanPreferences()
+        settings.crashPercent = 1.5
         let signal = try XCTUnwrap(LSQuoteMoveDetector.detect(rows, nowMillis: 1_000_000,
-                                                            settings: RadarScanPreferences()))
+                                                            settings: settings))
         XCTAssertEqual(signal.symbol, "LS:123")
         XCTAssertEqual(signal.signalSource, "L&S quote drop")
         XCTAssertEqual(signal.dataStatus, "QUOTE_NO_VOLUME")

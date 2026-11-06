@@ -39,9 +39,9 @@ struct FinnhubRadarPipeline: Sendable {
         ) ?? RapidRiseDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
             settings: settings.rapidRise
-        ) ?? SustainedMoveDetector.detect(
+        ) ?? SmoothRiseDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
-            settings: settings.sustainedMove
+            settings: settings.smoothRise
         ) ?? TradableCorridorDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds
         )

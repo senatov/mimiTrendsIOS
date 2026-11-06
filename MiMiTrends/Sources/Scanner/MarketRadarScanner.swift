@@ -169,9 +169,9 @@ actor MarketRadarScanner {
                             ) ?? RapidRiseDetector.detect(
                                 symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
                                 settings: settings.rapidRise
-                            ) ?? SustainedMoveDetector.detect(
+                            ) ?? SmoothRiseDetector.detect(
                                 symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
-                                settings: settings.sustainedMove
+                                settings: settings.smoothRise
                             )
                             let saved: Bool
                             if let signal {

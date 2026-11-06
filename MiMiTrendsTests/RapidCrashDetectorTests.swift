@@ -4,14 +4,14 @@ import XCTest
 final class RapidCrashDetectorTests: XCTestCase {
     func testConfiguredShortDropThresholdIncludesBoundary() throws {
         let now: Int64 = 12_000
-        let bars = prices("THRESHOLD", endingAt: now, [100, 100.15, 99.50, 99.0])
+        let bars = prices("THRESHOLD", endingAt: now, [100, 100.15, 99.0, 98.0])
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
             symbol: "THRESHOLD", bars: bars, nowEpochSeconds: now
         ))
         XCTAssertEqual(signal.signalSource, "Rapid crash")
-        XCTAssertEqual(signal.windowChangePercent, -1.0, accuracy: 1e-9)
+        XCTAssertEqual(signal.windowChangePercent, -2.0, accuracy: 1e-9)
         XCTAssertEqual(signal.signalPrice, 100)
-        XCTAssertEqual(signal.price, 99.0)
+        XCTAssertEqual(signal.price, 98.0)
     }
 
     func testModeratePullbackDoesNotQualifyAsRapidCrash() {
@@ -46,8 +46,12 @@ final class RapidCrashDetectorTests: XCTestCase {
             100, 99.94, 99.88, 99.82, 99.76, 99.70, 99.64, 99.58,
             99.52, 99.46, 99.40, 99.40, 99.40, 99.20, 98.80, 98.41
         ])
+        var settings = RapidCrashSettings()
+        settings.crashPercent = 20
+        settings.sustainedCrashPercent = 1.5
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
-            symbol: "ACCELERATING", bars: accelerating, nowEpochSeconds: acceleratingNow
+            symbol: "ACCELERATING", bars: accelerating, nowEpochSeconds: acceleratingNow,
+            settings: settings
         ))
         XCTAssertEqual(signal.windowChangePercent, -1.59, accuracy: 1e-9)
     }
@@ -61,7 +65,7 @@ final class RapidCrashDetectorTests: XCTestCase {
         }
         XCTAssertNil(RapidCrashDetector.detect(symbol: "SPIKE", bars: bars, nowEpochSeconds: now))
 
-        let breakBars = zip(times, [100.0, 101.0, 100.8, 100.4, 98.5]).map { time, price in
+        let breakBars = zip(times, [100.0, 101.0, 100.8, 100.4, 97.0]).map { time, price in
             bar("BREAK", time, price)
         }
         let signal = try XCTUnwrap(RapidCrashDetector.detect(

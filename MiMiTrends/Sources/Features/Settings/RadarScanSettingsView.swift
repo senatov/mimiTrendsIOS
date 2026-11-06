@@ -38,13 +38,13 @@ struct RadarScanSettingsView: View {
     }
 
     private var crashGroup: some View {
-        section("Rapid drops") {
+        section("Very sharp drops") {
             Text(crashDescription)
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
-            doubleRow("Short drop", value: $draft.crashPercent, range: 0.05...20, step: 0.05, unit: "%")
+            doubleRow("Short-window drop", value: $draft.crashPercent, range: 0.05...20, step: 0.05, unit: "%")
             intRow("Short window", value: $draft.crashWindowMinutes, range: 4...15, unit: "min")
-            doubleRow("Sustained drop", value: $draft.sustainedCrashPercent, range: 0.05...20, step: 0.05, unit: "%")
+            doubleRow("Long-window drop", value: $draft.sustainedCrashPercent, range: 0.05...20, step: 0.05, unit: "%")
             intRow("Long window", value: $draft.sustainedCrashWindowMinutes, range: 5...30, unit: "min")
         }
     }
@@ -56,16 +56,23 @@ struct RadarScanSettingsView: View {
     }
 
     private var riseGroup: some View {
-        section("Rapid rises") {
+        section("Sharp rebounds") {
+            Text("A rebound must still be rising in the latest available bar after a recent low. This confirms a move already observed; it cannot guarantee what happens next.")
+                .font(.body.weight(.light))
+                .foregroundStyle(TrendsColors.supportingInk)
             doubleRow("Minimum rise", value: $draft.risePercent, range: 0.05...20, step: 0.05, unit: "%")
             intRow("Rise window", value: $draft.riseWindowMinutes, range: 1...15, unit: "min")
         }
     }
 
     private var sustainedGroup: some View {
-        section("Liquid sustained moves") {
-            doubleRow("Minimum move", value: $draft.sustainedMovePercent, range: 0.1...20, step: 0.1, unit: "%")
-            intRow("Move window", value: $draft.sustainedMoveWindowMinutes, range: 30...360, unit: "min")
+        section("Smooth upward trend") {
+            Text("Looks for a steady rise with limited pullbacks across 5-minute samples. No market signal can guarantee a future gain.")
+                .font(.body.weight(.light))
+                .foregroundStyle(TrendsColors.supportingInk)
+            doubleRow("Minimum rise", value: $draft.sustainedMovePercent, range: 0.1...20, step: 0.1, unit: "%")
+            intRow("Trend window", value: $draft.sustainedMoveWindowMinutes, range: 30...360, unit: "min")
+            doubleRow("Maximum pullback", value: $draft.smoothRiseMaximumPullbackPercent, range: 0.1...5, step: 0.05, unit: "%")
             amountRow("Window turnover", value: $draft.sustainedMoveMinimumTurnover)
         }
     }

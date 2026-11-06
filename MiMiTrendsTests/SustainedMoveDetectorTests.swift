@@ -2,29 +2,47 @@ import XCTest
 @testable import MiMiTrends
 
 final class SustainedMoveDetectorTests: XCTestCase {
-    func testDesktopGradualRiseFixture() throws {
+    func testSmoothGradualRiseIsDetected() throws {
         let now: Int64 = 80_000
         let bars = prices("AAPL", now: now, volume: 20_000) { 100 + Double($0) * 0.02 }
 
-        let signal = try XCTUnwrap(SustainedMoveDetector.detect(
+        let signal = try XCTUnwrap(SmoothRiseDetector.detect(
             symbol: "AAPL", bars: bars, nowEpochSeconds: now
         ))
-        XCTAssertEqual(signal.signalSource, "Sustained rise")
+        XCTAssertEqual(signal.signalSource, "Smooth rise")
         XCTAssertEqual(signal.anomalyScore, 90)
         XCTAssertEqual(signal.windowChangePercent, 1.2, accuracy: 1e-9)
         XCTAssertEqual(signal.signalWindowLabel, "60m")
         XCTAssertEqual(signal.signalPrice, 100)
     }
 
-    func testGradualDropIsDetected() throws {
+    func testGradualDropDoesNotEmitSmoothRise() {
         let now: Int64 = 80_000
         let bars = prices("DROP", now: now, volume: 20_000) { 101.2 - Double($0) * 0.02 }
 
-        let signal = try XCTUnwrap(SustainedMoveDetector.detect(
+        XCTAssertNil(SmoothRiseDetector.detect(
             symbol: "DROP", bars: bars, nowEpochSeconds: now
         ))
-        XCTAssertEqual(signal.signalSource, "Sustained drop")
-        XCTAssertEqual(signal.windowChangePercent, (100 / 101.2 - 1) * 100, accuracy: 1e-9)
+    }
+
+    func testChoppyGainIsNotReportedAsSmoothRise() {
+        let now: Int64 = 80_000
+        let bars = prices("CHOPPY", now: now, volume: 20_000) { minute in
+            100 + Double(minute) * 0.02 + ((minute / 5).isMultiple(of: 2) ? 0.30 : 0)
+        }
+
+        XCTAssertNil(SmoothRiseDetector.detect(
+            symbol: "CHOPPY", bars: bars, nowEpochSeconds: now
+        ))
+    }
+
+    func testSingleSharpSpikeIsNotReportedAsSmoothRise() {
+        let now: Int64 = 80_000
+        let bars = prices("SPIKE", now: now, volume: 20_000) { $0 == 60 ? 102 : 100 }
+
+        XCTAssertNil(SmoothRiseDetector.detect(
+            symbol: "SPIKE", bars: bars, nowEpochSeconds: now
+        ))
     }
 
     func testThinMissingStaleAndSparseBarsAreRejected() {
@@ -39,10 +57,10 @@ final class SustainedMoveDetectorTests: XCTestCase {
         let sparse = prices("SPARSE", now: now, volume: 20_000) { 100 + Double($0) * 0.02 }
             .filter { $0.minuteEpochSeconds <= now - 1_800 || $0.minuteEpochSeconds >= now - 1_440 }
 
-        XCTAssertNil(SustainedMoveDetector.detect(symbol: "THIN", bars: thin, nowEpochSeconds: now))
-        XCTAssertNil(SustainedMoveDetector.detect(symbol: "THIN", bars: missing, nowEpochSeconds: now))
-        XCTAssertNil(SustainedMoveDetector.detect(symbol: "STALE", bars: stale, nowEpochSeconds: now))
-        XCTAssertNil(SustainedMoveDetector.detect(symbol: "SPARSE", bars: sparse, nowEpochSeconds: now))
+        XCTAssertNil(SmoothRiseDetector.detect(symbol: "THIN", bars: thin, nowEpochSeconds: now))
+        XCTAssertNil(SmoothRiseDetector.detect(symbol: "THIN", bars: missing, nowEpochSeconds: now))
+        XCTAssertNil(SmoothRiseDetector.detect(symbol: "STALE", bars: stale, nowEpochSeconds: now))
+        XCTAssertNil(SmoothRiseDetector.detect(symbol: "SPARSE", bars: sparse, nowEpochSeconds: now))
     }
 
     private func prices(

@@ -14,7 +14,7 @@ final class FinnhubRadarPipelineTests: XCTestCase {
         )
         var last: FinnhubRadarPipeline.Update?
         for (second, price) in [(12_000, 100.0), (12_060, 100.1),
-                                (12_120, 101.8), (12_180, 100.4)] {
+                                (12_120, 101.8), (12_180, 101.8)] {
             last = try await pipeline.accept(
                 TradeTick(symbol: "RISE", price: price,
                           timestampMillis: Int64(second) * 1_000 + 1, volume: 1_000),
@@ -31,7 +31,7 @@ final class FinnhubRadarPipelineTests: XCTestCase {
         let url = directory.appendingPathComponent("market.db")
         let pipeline = try FinnhubRadarPipeline(databaseURL: url)
         let observations: [(Int64, Double)] = [
-            (12_000, 100), (12_060, 100.1), (12_120, 101.8), (12_180, 100.4)
+            (12_000, 100), (12_060, 100.1), (12_120, 101.8), (12_180, 101.8)
         ]
         var updates: [FinnhubRadarPipeline.Update] = []
         for (second, price) in observations {
@@ -61,7 +61,7 @@ final class FinnhubRadarPipelineTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let pipeline = try FinnhubRadarPipeline(databaseURL: directory.appendingPathComponent("market.db"))
         let observations: [(Int64, Double)] = [
-            (12_000, 100), (12_060, 100.1), (12_120, 101.8), (12_180, 100.4)
+            (12_000, 100), (12_060, 100.1), (12_120, 101.8), (12_180, 101.8)
         ]
         var finalUpdate: FinnhubRadarPipeline.Update?
         for (second, price) in observations {
