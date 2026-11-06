@@ -234,6 +234,12 @@ enum RadarSearchKeyword {
         while words.last?.caseInsensitiveCompare("The") == .orderedSame { words.removeLast() }
         while let last = words.last, isRemovableSuffix(last) || last == "&" { words.removeLast() }
 
+        // Long hyphenated legal names often contain several administrative words
+        // that make a poor web search. The first name is a useful keyword here.
+        if words.contains(where: { $0.contains("-") && $0.count >= 16 }), let first = words.first {
+            return first
+        }
+
         let cleaned = words.joined(separator: " ")
         guard !cleaned.isEmpty else { return nil }
         if cleaned.contains(where: \.isLowercase) { return cleaned }

@@ -8,4 +8,14 @@ final class RadarSearchKeywordTests: XCTestCase {
         XCTAssertEqual(RadarSearchKeyword.from(companyName: "Booking.com Holdings, Inc.", symbol: "BKNG"), "Booking Holdings")
         XCTAssertEqual(RadarSearchKeyword.from(companyName: "Comcast Corporation", symbol: "CMCSA"), "Comcast")
     }
+
+    func testLongHyphenatedCompanyNameUsesFirstWordAsSearchKeyword() {
+        XCTAssertEqual(
+            RadarSearchKeyword.from(
+                companyName: "Münchener Rückversicherungs-Gesellschaft AG in München",
+                symbol: "MUV2.DE"
+            ),
+            "Münchener"
+        )
+    }
 }
