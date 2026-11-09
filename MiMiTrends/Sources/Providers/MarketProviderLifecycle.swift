@@ -68,6 +68,10 @@ enum MarketProviderAccess {
         defaults.string(forKey: provider.healthKey) ?? "Not checked"
     }
 
+    static func isOperational(_ provider: MarketProvider, defaults: UserDefaults = .standard) -> Bool {
+        isEnabled(provider, defaults: defaults) && health(provider, defaults: defaults) != "Needs attention"
+    }
+
     static func setHealth(_ status: String, for provider: MarketProvider, defaults: UserDefaults = .standard) {
         defaults.set(status, forKey: provider.healthKey)
         defaults.set(defaults.integer(forKey: "provider.healthRevision.v1") + 1,

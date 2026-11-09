@@ -11,6 +11,7 @@ actor MarketRadarScanner {
     private var germanCandidates: [RadarCompanyCandidate] = []
     private var fmpCandidates: [RadarCompanyCandidate] = []
     private var discoveryPreferences = RadarDiscoveryPreferences.load()
+    private var previousEnabledProviders: Set<MarketProvider>?
     private var activeFMPKey: String?
     private var nextDiscoveryAt: Date = .distantPast
     private var yahooCooldownUntil: Date?
@@ -34,6 +35,27 @@ actor MarketRadarScanner {
         onProgress: @Sendable (MarketScanProgress) async -> Void = { _ in }
     ) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
+        if previousEnabledProviders != enabledProviders {
+            let previous = previousEnabledProviders
+            previousEnabledProviders = enabledProviders
+            nextDiscoveryAt = .distantPast
+            if !enabledProviders.contains(.wallstreetOnline) { baselineCandidates = [] }
+            if !enabledProviders.contains(.yahoo) { yahooCandidates = [] }
+            if !enabledProviders.contains(.traderFox) {
+                traderFoxCandidates = []
+                germanCandidates = []
+            }
+            if !enabledProviders.contains(.fmp) { fmpCandidates = [] }
+            initialScanSymbols = []
+            initialScanTotal = 0
+            initialSuccessful = 0
+            initialSkipped = 0
+            initialNoRecentBars = 0
+            initialUnsupported = 0
+            initialErrors = 0
+            AppDiagnostics.shared.record(.info, "Discovery", "provider-selection-changed",
+                "enabled=\(enabledProviders.map(\.rawValue).sorted().joined(separator: ",")) previous=\(previous?.map(\.rawValue).sorted().joined(separator: ",") ?? "initial") refresh=immediate")
+        }
         let discovery = RadarDiscoveryPreferences.load()
         if discovery != discoveryPreferences {
             discoveryPreferences = discovery
@@ -158,7 +180,7 @@ actor MarketRadarScanner {
                     active.removeAll { $0 == outcome.symbol }
                     completed += 1
                     yahooTotals.received += outcome.received
-                    yahooTotals.valid += outcome.received
+                    if !outcome.skipped { yahooTotals.valid += outcome.received }
                     yahooTotals.operations += 1
                     if let failure = outcome.failure {
                         yahooTotals.errors += 1
@@ -335,7 +357,10 @@ actor MarketRadarScanner {
                 "error=\(String(describing: type(of: error)))"
             )
           }
-        } else { germanCandidates = [] }
+        } else {
+            germanCandidates = []
+            traderFoxCandidates = []
+        }
         traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
             ? nil : traderFoxRefreshErrors.joined(separator: "\n")
     }

@@ -16,7 +16,7 @@ extension RadarView {
             return
         }
         guard await ensureAutomaticProvidersReady() else { return }
-        guard MarketProviderAccess.isEnabled(.wallstreetOnline) else {
+        guard MarketProviderAccess.isOperational(.wallstreetOnline) else {
             discoveryRefreshID = nil
             await discoveryController.stop()
             return
@@ -52,7 +52,7 @@ extension RadarView {
             return
         }
         guard await ensureAutomaticProvidersReady() else { return }
-        guard MarketProviderAccess.isEnabled(.langSchwarz) else {
+        guard MarketProviderAccess.isOperational(.langSchwarz) else {
             lsStatus = await lsCandidatePool.stop()
             return
         }
@@ -72,7 +72,7 @@ extension RadarView {
         guard await ensureAutomaticProvidersReady() else { return }
         while !Task.isCancelled {
             do {
-                let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
+                let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isOperational($0) })
                 let cycle = try await marketScanner.scan(
                     settings: RadarScanPreferencesStore.load(), enabledProviders: enabledProviders
                 )
@@ -97,7 +97,7 @@ extension RadarView {
     }
 
     func refreshDisplayCurrency() async {
-        guard scenePhase == .active, await ensureAutomaticProvidersReady() else { return }
+        guard scenePhase == .active else { return }
         currencyRates = await currencyService.cached()
         do { currencyRates = try await currencyService.latest() }
         catch { AppDiagnostics.shared.record(.warning, "ECB", "fx-rate-unavailable",
@@ -107,8 +107,12 @@ extension RadarView {
     func ensureAutomaticProvidersReady() async -> Bool {
         let issues = await MarketProviderStartupGate.shared.check(revision: providerConfigurationRevision)
         providerIssue = issues.first
-        providerStartupReady = issues.isEmpty
-        return providerStartupReady
+        providerStartupReady = true
+        if !issues.isEmpty {
+            AppDiagnostics.shared.record(.warning, "Providers", "preflight-partial",
+                "unavailable=\(issues.map { $0.provider.rawValue }.joined(separator: ",")) availableSourcesContinue=true")
+        }
+        return true
     }
 
     func retryProvider(_ provider: MarketProvider) {

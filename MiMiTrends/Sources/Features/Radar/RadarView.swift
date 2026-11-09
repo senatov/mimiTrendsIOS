@@ -62,8 +62,8 @@ struct RadarView: View {
                             displayCurrency: displayCurrency,
                             refreshID: chartRefreshID,
                             providersReady: providerStartupReady,
-                            yahooEnabled: MarketProviderAccess.isEnabled(.yahoo),
-                            fmpEnabled: MarketProviderAccess.isEnabled(.fmp),
+                            yahooEnabled: MarketProviderAccess.isOperational(.yahoo),
+                            fmpEnabled: MarketProviderAccess.isOperational(.fmp),
                             providerRevision: providerConfigurationRevision
                         )
                     },
@@ -151,7 +151,6 @@ struct RadarView: View {
     }
 
     private func detectInitialCurrency() async {
-        guard await ensureAutomaticProvidersReady() else { return }
         guard !UserDefaults.standard.bool(forKey: "display.currency.initialized.v1") else { return }
         guard let detected = try? await IPLocationCurrencySource().detect(),
               !Task.isCancelled,
@@ -192,7 +191,7 @@ struct RadarView: View {
                 symbol = signal.symbol
             },
             onVisibleSignal: { visibleSymbol in
-                guard providerStartupReady, MarketProviderAccess.isEnabled(.yahoo) else { return }
+                guard providerStartupReady, MarketProviderAccess.isOperational(.yahoo) else { return }
                 if await signalBarBackfill.fillIfMissing(symbol: visibleSymbol) {
                     chartRefreshID += 1
                 }

@@ -38,8 +38,12 @@ struct WallstreetOnlineQuoteSource: Sendable {
                                 relativeTo: baseURL)?.absoluteURL else {
                 continue
             }
-            if let data = try? await load(url, expectedPath: candidate.instrumentID) {
+            do {
+                let data = try await load(url, expectedPath: candidate.instrumentID)
                 pages.append((candidate.instrumentID, data))
+            } catch {
+                AppDiagnostics.shared.record(.warning, "wallstreetONLINE", "quote-page-fetch-failed",
+                    "path=\(candidate.instrumentID) error=\(String(describing: error))")
             }
         }
         let needsFX = pages.contains { _, data in
@@ -47,16 +51,38 @@ struct WallstreetOnlineQuoteSource: Sendable {
         }
         let fx: (rate: Double, observedAt: Int64)?
         if needsFX {
-            fx = try? await loadEURUSD()
+            do {
+                fx = try await loadEURUSD()
+                if let fx {
+                    AppDiagnostics.shared.record(.info, "wallstreetONLINE", "usd-fx-loaded",
+                        "rate=\(fx.rate) observedAt=\(fx.observedAt)")
+                }
+            } catch {
+                fx = nil
+                AppDiagnostics.shared.record(.warning, "wallstreetONLINE", "usd-fx-unavailable",
+                    "error=\(String(describing: error)) usdQuotesWillBeSkipped=true")
+            }
         } else {
             fx = nil
         }
         var result: [String: WallstreetOnlineQuote] = [:]
+        var decodeFailures = 0
+        var skippedUSD = 0
         for (path, data) in pages {
-            if let quote = try? Self.decode(data, instrumentID: path, euroUSD: fx, now: Date()) {
+            do {
+                let quote = try Self.decode(data, instrumentID: path, euroUSD: fx, now: Date())
                 result[path] = quote
+            } catch {
+                decodeFailures += 1
+                if String(data: data, encoding: .utf8).map({ Self.currency(in: $0) == "USD" }) == true {
+                    skippedUSD += 1
+                }
+                AppDiagnostics.shared.record(.warning, "wallstreetONLINE", "quote-page-decode-failed",
+                    "path=\(path) error=\(String(describing: error))")
             }
         }
+        AppDiagnostics.shared.record(.info, "wallstreetONLINE", "quote-batch-complete",
+            "requested=\(selected.count) fetched=\(pages.count) decoded=\(result.count) failures=\(decodeFailures) usdSkipped=\(skippedUSD)")
         return result
     }
 

@@ -9,28 +9,61 @@ struct LangSchwarzQuoteSource: Sendable {
     init(session: URLSession = .shared) { self.session = session }
 
     func loadQuotes() async throws -> [MarketPageQuote] {
-        var quotes: [String: MarketPageQuote] = [:]
-        var pages: [String] = []
-        for endpoint in endpoints {
-            try Task.checkCancellation()
-            var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
-            request.timeoutInterval = 15
-            request.cachePolicy = .reloadIgnoringLocalCacheData
-            request.setValue("text/html", forHTTPHeaderField: "Accept")
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  http.url?.scheme == "https", http.url?.host == "www.ls-tc.de",
-                  data.count <= 3_000_000, let html = String(data: data, encoding: .utf8) else {
-                throw LangSchwarzQuoteError.invalidPage
+        let pages = await withTaskGroup(of: (ProviderEndpoint, String?).self) { tasks in
+            for endpoint in endpoints {
+                tasks.addTask { [session] in
+                    do {
+                        var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
+                        request.timeoutInterval = 15
+                        request.cachePolicy = .reloadIgnoringLocalCacheData
+                        request.setValue("text/html", forHTTPHeaderField: "Accept")
+                        let (data, response) = try await session.data(for: request)
+                        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                              http.url?.scheme == "https", http.url?.host == "www.ls-tc.de",
+                              data.count <= 3_000_000, let html = String(data: data, encoding: .utf8) else {
+                            throw LangSchwarzQuoteError.invalidPage
+                        }
+                        return (endpoint, html)
+                    } catch {
+                        AppDiagnostics.shared.record(.warning, "Lang & Schwarz", "page-fetch-failed",
+                            "endpoint=\(endpoint.rawValue) error=\(String(describing: error))")
+                        return (endpoint, nil)
+                    }
+                }
             }
-            pages.append(html)
+            var result: [(ProviderEndpoint, String)] = []
+            for await (endpoint, html) in tasks {
+                if let html { result.append((endpoint, html)) }
+            }
+            return result
         }
-        let needsFX = pages.contains { $0.contains("$</span>") || $0.contains("$&nbsp;") }
-        let fx = needsFX ? try? await WallstreetOnlineQuoteSource(session: session).loadEURUSD() : nil
-        for html in pages {
-            let pageQuotes = try Self.decode(html, now: Date(), euroUSD: fx)
-            for quote in pageQuotes { quotes[quote.identifier] = quote }
+        guard !pages.isEmpty else { throw LangSchwarzQuoteError.invalidPage }
+        let needsFX = pages.contains { $0.1.contains("$") }
+        let fx: (rate: Double, observedAt: Int64)?
+        if needsFX {
+            do { fx = try await WallstreetOnlineQuoteSource(session: session).loadEURUSD() }
+            catch {
+                fx = nil
+                AppDiagnostics.shared.record(.warning, "Lang & Schwarz", "usd-fx-unavailable",
+                    "error=\(String(describing: error)) usdQuotesWillBeSkipped=true")
+            }
+        } else { fx = nil }
+        var quotes: [String: MarketPageQuote] = [:]
+        for (endpoint, html) in pages {
+            do {
+                let decoded = try Self.decode(html, now: Date(), euroUSD: fx)
+                for quote in decoded {
+                    if let old = quotes[quote.identifier], old.observedAtMillis > quote.observedAtMillis { continue }
+                    quotes[quote.identifier] = quote
+                }
+                AppDiagnostics.shared.record(.info, "Lang & Schwarz", "page-quotes-decoded",
+                    "endpoint=\(endpoint.rawValue) quotes=\(decoded.count)")
+            } catch {
+                AppDiagnostics.shared.record(.warning, "Lang & Schwarz", "page-decode-failed",
+                    "endpoint=\(endpoint.rawValue) error=\(String(describing: error))")
+            }
         }
+        guard !quotes.isEmpty else { throw LangSchwarzQuoteError.noFreshQuotes }
         return quotes.values.sorted { $0.name < $1.name }
     }
 
