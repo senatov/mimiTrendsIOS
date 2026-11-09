@@ -1,38 +1,5 @@
 import Foundation
 
-struct RadarSourceTotals: Sendable {
-    var received = 0
-    var valid = 0
-    var operations = 0
-    var errors = 0
-    var lastErrorMessage: String?
-}
-
-struct MarketRadarCycle: Sendable {
-    let yahoo: RadarSourceTotals
-    let traderFox: RadarSourceTotals
-    let fmp: RadarSourceTotals
-    let usesFMP: Bool
-    let yahooCooldownUntil: Date?
-    let initialScanProcessed: Int
-    let initialScanTotal: Int
-    let scannedSymbols: Int
-    let companyNames: [String: String]
-    let progress: MarketScanProgress
-}
-
-struct MarketScanProgress: Sendable, Equatable {
-    let processed: Int
-    let total: Int
-    let successful: Int
-    let skipped: Int
-    let noRecentBars: Int
-    let unsupported: Int
-    let errors: Int
-    let activeSymbols: [String]
-    let lastUpdatedAt: Date?
-}
-
 actor MarketRadarScanner {
     private let yahoo = YahooRadarSource()
     private let traderFox = TraderFoxRadarSource()
@@ -63,6 +30,7 @@ actor MarketRadarScanner {
 
     func scan(
         settings: RadarScanPreferences,
+        enabledProviders: Set<MarketProvider> = Set(MarketProvider.allCases),
         onProgress: @Sendable (MarketScanProgress) async -> Void = { _ in }
     ) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
@@ -71,7 +39,8 @@ actor MarketRadarScanner {
             discoveryPreferences = discovery
             nextDiscoveryAt = .distantPast
         }
-        let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
+        let fmpKey = enabledProviders.contains(.fmp)
+            ? try? ProviderCredentialStore.load(FMPCredential.account) : nil
         if fmpKey != activeFMPKey {
             activeFMPKey = fmpKey
             fmpCandidates = []
@@ -86,7 +55,7 @@ actor MarketRadarScanner {
         }
         let usesFMP = fmpKey != nil
         if Date() >= nextDiscoveryAt {
-            await refreshSources(fmpKey: fmpKey)
+            await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders)
         }
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
         let secondaryUS = secondaryCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
@@ -115,6 +84,15 @@ actor MarketRadarScanner {
                                     progress: progress())
         }
         yahooCooldownUntil = nil
+        guard enabledProviders.contains(.yahoo) else {
+            return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
+                                    fmp: fmpTotals, usesFMP: usesFMP,
+                                    yahooCooldownUntil: nil,
+                                    initialScanProcessed: initialScanSymbols.count,
+                                    initialScanTotal: initialScanTotal,
+                                    scannedSymbols: 0, companyNames: names,
+                                    progress: progress())
+        }
         let pending = activePool.filter { !initialScanSymbols.contains($0) }
         let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 16)
         if pending.isEmpty && !activePool.isEmpty {
@@ -170,7 +148,7 @@ actor MarketRadarScanner {
                         } catch {
                             return SymbolOutcome(
                                 symbol: symbol, received: 0,
-                                failure: Self.errorMessage(error, provider: "Yahoo (\(symbol))"),
+                                failure: MarketRadarErrorDescription.message(error, provider: "Yahoo (\(symbol))"),
                                 rateLimited: false
                             )
                         }
@@ -248,20 +226,25 @@ actor MarketRadarScanner {
         )
     }
 
-    private func refreshSources(fmpKey: String?) async {
+    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>) async {
         nextDiscoveryAt = Date().addingTimeInterval(30 * 60)
-        do {
+        if enabledProviders.contains(.wallstreetOnline) && enabledProviders.contains(.yahoo) {
+            do {
             let loaded = try await baselineSource.loadCandidates()
             if !loaded.isEmpty { baselineCandidates = loaded }
             AppDiagnostics.shared.record(.info, "Discovery", "radar-baseline-loaded",
                                          "resolved=\(baselineCandidates.count)")
-        } catch {
+            } catch {
             AppDiagnostics.shared.record(.warning, "Discovery", "radar-baseline-failed",
                                          "error=\(String(describing: error))")
+            }
+        } else {
+            baselineCandidates = []
         }
         var yahooRefreshed = false
         var traderFoxRefreshErrors: [String] = []
-        do {
+        if enabledProviders.contains(.yahoo) {
+          do {
             let symbols = try await yahoo.mostActiveCandidates()
             yahooTotals.operations += 1
             if !symbols.isEmpty {
@@ -271,22 +254,23 @@ actor MarketRadarScanner {
                 unsupportedSymbols.removeAll()
                 scanOffset = 0
             }
-        } catch RadarSourceError.rateLimited {
+          } catch RadarSourceError.rateLimited {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
             yahooTotals.lastErrorMessage = "Yahoo temporarily limited requests (HTTP 429). Radar pauses Yahoo scanning for 30 minutes, then retries automatically."
             yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
             AppDiagnostics.shared.record(.warning, "Yahoo", "candidate-rate-limited",
                                          "cooldownMinutes=30")
-        } catch {
+          } catch {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
-            yahooTotals.lastErrorMessage = Self.errorMessage(error, provider: "Yahoo")
+            yahooTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "Yahoo")
             AppDiagnostics.shared.record(
                 .warning, "Yahoo", "candidate-refresh-failed",
                 "error=\(String(describing: type(of: error)))"
             )
-        }
+          }
+        } else { yahooCandidates = [] }
         if let fmpKey {
             do {
                 let symbols = try await fmp.activeCandidates(apiKey: fmpKey)
@@ -303,20 +287,20 @@ actor MarketRadarScanner {
             } catch let failure as FMPCandidateFailure {
                 fmpTotals.operations += failure.requests
                 fmpTotals.errors += 1
-                fmpTotals.lastErrorMessage = Self.errorMessage(failure, provider: "FMP")
+                fmpTotals.lastErrorMessage = MarketRadarErrorDescription.message(failure, provider: "FMP")
                 AppDiagnostics.shared.record(
                     .warning, "FMP", "candidate-refresh-failed",
                     "requests=\(failure.requests) error=\(failure.reason)"
                 )
             } catch {
                 fmpTotals.errors += 1
-                fmpTotals.lastErrorMessage = Self.errorMessage(error, provider: "FMP")
+                fmpTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "FMP")
                 AppDiagnostics.shared.record(
                     .warning, "FMP", "candidate-refresh-failed",
                     "error=\(String(describing: type(of: error)))"
                 )
             }
-        } else {
+        } else if enabledProviders.contains(.traderFox) {
             do {
                 let symbols = try await traderFox.activeCandidates()
                 traderFoxTotals.operations += 1
@@ -326,7 +310,7 @@ actor MarketRadarScanner {
             } catch {
                 traderFoxTotals.operations += 1
                 traderFoxTotals.errors += 1
-                traderFoxTotals.lastErrorMessage = Self.errorMessage(error, provider: "TraderFox US candidates")
+                traderFoxTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "TraderFox US candidates")
                 traderFoxRefreshErrors.append(traderFoxTotals.lastErrorMessage ?? "TraderFox request failed.")
                 AppDiagnostics.shared.record(
                     .warning, "TraderFox", "candidate-refresh-failed",
@@ -334,56 +318,26 @@ actor MarketRadarScanner {
                 )
             }
         }
-        do {
+        if enabledProviders.contains(.traderFox) {
+          do {
             let symbols = try await traderFox.germanCandidates()
             traderFoxTotals.operations += 3
             traderFoxTotals.received += symbols.count
             traderFoxTotals.valid += symbols.count
             if !symbols.isEmpty { germanCandidates = symbols }
-        } catch {
+          } catch {
             traderFoxTotals.operations += 3
             traderFoxTotals.errors += 1
-            traderFoxTotals.lastErrorMessage = Self.errorMessage(error, provider: "TraderFox German candidates")
+            traderFoxTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "TraderFox German candidates")
             traderFoxRefreshErrors.append(traderFoxTotals.lastErrorMessage ?? "TraderFox request failed.")
             AppDiagnostics.shared.record(
                 .warning, "TraderFox", "german-candidate-refresh-failed",
                 "error=\(String(describing: type(of: error)))"
             )
-        }
+          }
+        } else { germanCandidates = [] }
         traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
             ? nil : traderFoxRefreshErrors.joined(separator: "\n")
-    }
-
-    private static func errorMessage(_ error: Error, provider: String) -> String {
-        if let sourceError = error as? RadarSourceError {
-            switch sourceError {
-            case .rateLimited:
-                return "\(provider) temporarily limited requests (HTTP 429). Radar will retry after its cooldown."
-            case .httpStatus(let status) where status == 401 || status == 403:
-                return "\(provider) denied access (HTTP \(status)). Check that the source address is correct and that the provider permits requests from this app."
-            case .httpStatus(let status) where status >= 500:
-                return "\(provider) returned a server error (HTTP \(status)). This is usually temporary; Radar retries automatically."
-            case .httpStatus(let status):
-                return "\(provider) returned HTTP \(status). Check provider availability and the configured address."
-            case .invalidResponse:
-                return "\(provider) returned data in a format Radar could not read. The page or response format may have changed."
-            case .invalidSymbol:
-                return "\(provider) does not support this symbol. Radar skips unsupported symbols automatically."
-            }
-        }
-        if let urlError = error as? URLError {
-            switch urlError.code {
-            case .timedOut:
-                return "The request to \(provider) timed out. Check the internet connection or try again later."
-            case .notConnectedToInternet, .networkConnectionLost:
-                return "The device could not reach \(provider). Check the internet connection; Radar retries automatically."
-            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-                return "The device could not connect to \(provider). Check the configured address or try again later."
-            default:
-                return "The request to \(provider) failed: \(urlError.localizedDescription)"
-            }
-        }
-        return "The request to \(provider) failed (\(String(describing: type(of: error)))). Check the network and retry; Radar retries automatically."
     }
 
     static func interleave(_ first: [String], _ second: [String], limit: Int) -> [String] {

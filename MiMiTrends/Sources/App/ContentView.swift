@@ -8,16 +8,23 @@ struct ContentView: View {
     @State private var tableTypography = RadarTableTypographyStore()
     @AppStorage("selected.symbol.v1") private var radarSymbol = "ORCL"
     @AppStorage("appearance.theme.v1") private var theme = "light"
+    @State private var selectedTab = "radar"
 
     var body: some View {
-        TabView {
-            Tab("Radar", systemImage: "waveform.path.ecg") {
-                RadarView(symbol: $radarSymbol, watchlistRevision: watchlistRevision) {
-                    showingWatchlist = true
-                }
+        TabView(selection: $selectedTab) {
+            Tab("Radar", systemImage: "waveform.path.ecg", value: "radar") {
+                RadarView(
+                    symbol: $radarSymbol,
+                    watchlistRevision: watchlistRevision,
+                    onManageWatchlist: { showingWatchlist = true },
+                    onOpenProviderSettings: {
+                        UserDefaults.standard.set("providers", forKey: "settings.section.v1")
+                        selectedTab = "settings"
+                    }
+                )
             }
 
-            Tab("Settings", systemImage: "gearshape") {
+            Tab("Settings", systemImage: "gearshape", value: "settings") {
                 SettingsView()
             }
         }

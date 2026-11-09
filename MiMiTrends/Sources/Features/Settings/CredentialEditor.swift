@@ -7,6 +7,7 @@ struct CredentialEditor: View {
     let load: () throws -> String?
     let save: (String) throws -> Void
     let remove: () throws -> Void
+    var onSave: () -> Void = {}
     var onRemove: () -> Void = {}
 
     @State private var draft = ""
@@ -86,6 +87,7 @@ struct CredentialEditor: View {
     private func saveDraft() {
         do {
             try save(draft)
+            onSave()
             reload()
             message = "Saved on this device."
         } catch {

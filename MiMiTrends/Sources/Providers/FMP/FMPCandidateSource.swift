@@ -11,6 +11,22 @@ struct FMPCandidateSource: Sendable {
 
     init(session: URLSession = .shared) { self.session = session }
 
+    func check(apiKey: String) async throws {
+        var components = URLComponents(url: baseURL.appendingPathComponent("most-actives"),
+                                       resolvingAgainstBaseURL: false)!
+        components.queryItems = [URLQueryItem(name: "apikey", value: apiKey)]
+        var request = URLRequest(url: components.url!)
+        request.timeoutInterval = 12
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+              data.count <= 2_000_000,
+              (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]) != nil else {
+            throw FMPCandidateError.invalidResponse
+        }
+    }
+
     func activeCandidates(apiKey: String, limit: Int = 40) async throws -> [RadarCompanyCandidate] {
         var lists: [[RadarCompanyCandidate]] = []
         var requests = 0

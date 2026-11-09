@@ -6,6 +6,8 @@ struct ProviderSettingsPanel: View {
     @State private var drafts: [ProviderEndpoint: String] = [:]
     @State private var checks: [ProviderEndpoint: String] = [:]
     @State private var savingMessage: String?
+    @AppStorage("provider.configurationRevision.v1") private var providerConfigurationRevision = 0
+    @AppStorage("provider.healthRevision.v1") private var providerHealthRevision = 0
 
     private var columns: [GridItem] {
         width >= 980
@@ -23,6 +25,9 @@ struct ProviderSettingsPanel: View {
                     Text("Each provider's addresses, credentials and options are grouped together.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
+                    Text("Technical checks do not grant data rights. Review each provider's terms before enabling it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }
@@ -31,27 +36,32 @@ struct ProviderSettingsPanel: View {
                 providerGroup(
                     "Finnhub",
                     detail: "Live US trade feed",
+                    provider: .finnhub,
                     endpoints: [.finnhubTrades]
                 )
                 providerGroup(
                     "Yahoo Finance",
                     detail: "Candidates · minute + daily history · no API key",
+                    provider: .yahoo,
                     endpoints: [.yahooPrimary, .yahooAlternate]
                 )
                 providerGroup(
                     "wallstreetONLINE rankings",
                     detail: "Wikifolio + Performance · shared base pool",
+                    provider: .wallstreetOnline,
                     endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline],
                     includesDiscoverySettings: true
                 )
                 providerGroup(
                     "Lang & Schwarz",
                     detail: "Fresh bid/ask movement signals · no trade volume",
+                    provider: .langSchwarz,
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )
                 providerGroup(
                     "TraderFox",
                     detail: "Supplemental candidates when FMP is not configured",
+                    provider: .traderFox,
                     endpoints: [.traderFox]
                 )
                 fmpGroup
@@ -73,16 +83,20 @@ struct ProviderSettingsPanel: View {
     private func providerGroup(
         _ title: String,
         detail: String,
+        provider: MarketProvider,
         endpoints: [ProviderEndpoint],
         includesDiscoverySettings: Bool = false
     ) -> some View {
         SettingsGroup(title: title) {
             HStack(spacing: 8) {
-                Circle().fill(Color.green).frame(width: 8, height: 8)
-                Text("URLS CONFIGURED")
+                Circle().fill(providerIsHealthy(provider) ? Color.green : Color.red).frame(width: 8, height: 8)
+                Text(providerStatus(provider).uppercased())
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(providerIsHealthy(provider) ? Color.secondary : Color.red)
                 Spacer()
+                Toggle("Enabled", isOn: enabledBinding(provider))
+                    .labelsHidden()
+                    .accessibilityLabel("Enable \(provider.title)")
                 Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -120,8 +134,10 @@ struct ProviderSettingsPanel: View {
                     save: { try FinnhubCredentialStore.save($0) },
                     remove: {
                         try FinnhubCredentialStore.delete()
+                        credentialChanged(.finnhub)
                         radarSession.stop()
-                    }
+                    },
+                    onSave: { credentialChanged(.finnhub) }
                 )
                 CredentialEditor(
                     title: "Finnhub webhook secret",
@@ -140,6 +156,16 @@ struct ProviderSettingsPanel: View {
 
     private var fmpGroup: some View {
         SettingsGroup(title: "FMP") {
+            HStack(spacing: 8) {
+                Circle().fill(providerIsHealthy(.fmp) ? Color.green : Color.red).frame(width: 8, height: 8)
+                Text(providerStatus(.fmp).uppercased())
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(providerIsHealthy(.fmp) ? Color.secondary : Color.red)
+                Spacer()
+                Toggle("Enabled", isOn: enabledBinding(.fmp))
+                    .labelsHidden()
+                    .accessibilityLabel("Enable Financial Modeling Prep")
+            }
             Text("Optional candidate discovery, company profiles and fallback daily history. Uses FMP's stable API address; charts and the Finnhub feed work without this key.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
@@ -154,8 +180,15 @@ struct ProviderSettingsPanel: View {
                 ),
                 load: { try ProviderCredentialStore.load(FMPCredential.account) },
                 save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
-                remove: { try ProviderCredentialStore.delete(FMPCredential.account) }
+                remove: {
+                    try ProviderCredentialStore.delete(FMPCredential.account)
+                    credentialChanged(.fmp)
+                },
+                onSave: { credentialChanged(.fmp) }
             )
+            Text("A missing or rejected key stops requests to this provider. Check your account and plan before enabling it.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -188,9 +221,41 @@ struct ProviderSettingsPanel: View {
                 try ProviderEndpointStore.save(drafts[endpoint] ?? endpoint.defaultURL, for: endpoint)
             }
             savingMessage = "Addresses saved. Active adapters use them on the next request."
+            UserDefaults.standard.set(
+                UserDefaults.standard.integer(forKey: "provider.configurationRevision.v1") + 1,
+                forKey: "provider.configurationRevision.v1"
+            )
         } catch {
             savingMessage = error.localizedDescription
         }
+    }
+
+    private func enabledBinding(_ provider: MarketProvider) -> Binding<Bool> {
+        Binding(
+            get: { MarketProviderAccess.isEnabled(provider) },
+            set: { enabled in
+                MarketProviderAccess.setEnabled(enabled, for: provider)
+                if !enabled, provider == .finnhub { radarSession.stop() }
+            }
+        )
+    }
+
+    private func providerStatus(_ provider: MarketProvider) -> String {
+        _ = providerConfigurationRevision
+        _ = providerHealthRevision
+        return MarketProviderAccess.isEnabled(provider) ? MarketProviderAccess.health(provider) : "Disabled"
+    }
+
+    private func providerIsHealthy(_ provider: MarketProvider) -> Bool {
+        MarketProviderAccess.isEnabled(provider) && MarketProviderAccess.health(provider) == "Connected"
+    }
+
+    private func credentialChanged(_ provider: MarketProvider) {
+        MarketProviderAccess.setHealth("Not checked", for: provider)
+        UserDefaults.standard.set(
+            UserDefaults.standard.integer(forKey: "provider.configurationRevision.v1") + 1,
+            forKey: "provider.configurationRevision.v1"
+        )
     }
 }
 

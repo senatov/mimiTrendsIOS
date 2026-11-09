@@ -8,6 +8,10 @@ struct RadarChartPreview: View {
     let currencyRates: DisplayCurrencyRates?
     let displayCurrency: String
     let refreshID: Int
+    let providersReady: Bool
+    let yahooEnabled: Bool
+    let fmpEnabled: Bool
+    let providerRevision: Int
 
     @State private var allBars: [MinuteBar] = []
     @State private var dailyProvider = ""
@@ -55,8 +59,12 @@ struct RadarChartPreview: View {
                 .trendsPanel()
             }
         }
-        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadBars() } }
-        .task(id: "daily|\(symbol)|\(range.rawValue)") { if !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() } }
+        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(providerRevision)") {
+            if providersReady, !symbol.hasPrefix("LS:") { await loadBars() }
+        }
+        .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(fmpEnabled)|\(providerRevision)") {
+            if providersReady, !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() }
+        }
         .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
     }
@@ -196,7 +204,7 @@ struct RadarChartPreview: View {
             let trades = importedTrades
             let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
-                await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades)
+                if yahooEnabled { await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades) }
                 let store = try MarketBarStore(url: MarketBarStore.defaultURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,
@@ -228,7 +236,10 @@ struct RadarChartPreview: View {
         isLoadingDaily = true
         dailyError = nil
         do {
-            let loaded = try await RadarDailyHistoryService.shared.load(symbol: requestedSymbol)
+            guard yahooEnabled || fmpEnabled else { throw DailyHistoryError.unavailable }
+            let loaded = try await RadarDailyHistoryService.shared.load(
+                symbol: requestedSymbol, yahooEnabled: yahooEnabled, fmpEnabled: fmpEnabled
+            )
             guard !Task.isCancelled else { return }
             dailyBars = loaded.bars
             dailyProvider = loaded.provider

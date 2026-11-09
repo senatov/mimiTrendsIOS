@@ -2,37 +2,41 @@ import SwiftUI
 
 struct RadarView: View {
     @Environment(RadarSession.self) private var session
-    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.scenePhase) var scenePhase
     @AppStorage("radar.historyLimit.v1") private var maxResults = 30
     @AppStorage("radar.historyAgeHours.v1") private var maxAgeHours = 2
     @AppStorage("radar.scanWatchlist.v1") private var scanWatchlist = false
-    @AppStorage("display.currency.v1") private var displayCurrency = "EUR"
+    @AppStorage("display.currency.v1") var displayCurrency = "EUR"
+    @AppStorage("provider.configurationRevision.v1") var providerConfigurationRevision = 0
     @Binding var symbol: String
     let watchlistRevision: Int
     let onManageWatchlist: () -> Void
+    let onOpenProviderSettings: () -> Void
     @State private var setupMessage: String?
-    @State private var recentSignals: [ScanResult] = []
+    @State var recentSignals: [ScanResult] = []
     @State private var showingSavedHistory = false
     @State private var hasLoadedHistory = false
-    @State private var companyMetadata: [String: RadarCompanyMetadata] = [:]
-    @State private var companyMetadataService = RadarCompanyMetadataService()
+    @State var companyMetadata: [String: RadarCompanyMetadata] = [:]
+    @State var companyMetadataService = RadarCompanyMetadataService()
     @State private var selectedSignal: ScanResult?
     @State private var historyError: String?
-    @State private var chartRefreshID = 0
-    @State private var isPreparingFeed = false
+    @State var chartRefreshID = 0
+    @State var isPreparingFeed = false
     @State private var watchlistPreview: [WatchlistEntry] = []
-    @State private var discoveryController = DiscoveryPoolController()
-    @State private var lsCandidatePool = LSCandidatePool()
-    @State private var lsStatus: LSCandidateStatus?
-    @State private var marketScanner = MarketRadarScanner()
+    @State var discoveryController = DiscoveryPoolController()
+    @State var lsCandidatePool = LSCandidatePool()
+    @State var lsStatus: LSCandidateStatus?
+    @State var marketScanner = MarketRadarScanner()
     @State private var signalBarBackfill = RadarSignalBarBackfill()
-    @State private var marketCycle: MarketRadarCycle?
-    @State private var currencyRates: DisplayCurrencyRates?
-    @State private var currencyService = DisplayCurrencyService()
-    @State private var discoveryStatus: DiscoveryRefreshStatus?
-    @State private var discoveryRefreshID: UUID?
-    @State private var discoveryRequests = 0
-    @State private var discoveryErrors = 0
+    @State var marketCycle: MarketRadarCycle?
+    @State var currencyRates: DisplayCurrencyRates?
+    @State var currencyService = DisplayCurrencyService()
+    @State var discoveryStatus: DiscoveryRefreshStatus?
+    @State var discoveryRefreshID: UUID?
+    @State var discoveryRequests = 0
+    @State var discoveryErrors = 0
+    @State var providerIssue: MarketProviderPreflightIssue?
+    @State var providerStartupReady = false
     @AppStorage("radar.sources.open.v1") private var showingSources = false
 
     var body: some View {
@@ -56,7 +60,11 @@ struct RadarView: View {
                             signal: selectedSignal,
                             currencyRates: currencyRates,
                             displayCurrency: displayCurrency,
-                            refreshID: chartRefreshID
+                            refreshID: chartRefreshID,
+                            providersReady: providerStartupReady,
+                            yahooEnabled: MarketProviderAccess.isEnabled(.yahoo),
+                            fmpEnabled: MarketProviderAccess.isEnabled(.fmp),
+                            providerRevision: providerConfigurationRevision
                         )
                     },
                     controls: {
@@ -77,11 +85,14 @@ struct RadarView: View {
             .background(TrendsColors.canvas)
             .navigationTitle("Radar")
             .task(id: "\(maxResults)|\(maxAgeHours)") { await refreshSignals() }
-            .task(id: companyMetadataRequestKey) { await refreshCompanyMetadata() }
-            .task(id: scenePhase) { await refreshDiscoveryWhileActive() }
-            .task(id: scenePhase) { await refreshLSWhileActive() }
-            .task(id: scenePhase) { await scanMarketWhileActive() }
-            .task(id: scenePhase) { await refreshDisplayCurrency() }
+            .task(id: "\(companyMetadataRequestKey)|\(providerConfigurationRevision)") {
+                guard await ensureAutomaticProvidersReady() else { return }
+                await refreshCompanyMetadata()
+            }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDiscoveryWhileActive() }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDisplayCurrency() }
             .task { await detectInitialCurrency() }
             .task(id: "\(scenePhase)|\(watchlistRevision)") { await loadWatchlistPreview() }
             .onChange(of: scanWatchlist) { _, includeWatchlist in
@@ -102,13 +113,31 @@ struct RadarView: View {
                     selectedSignal = nil
                 }
             }
+            .onChange(of: providerConfigurationRevision) { _, _ in
+                providerStartupReady = false
+                providerIssue = nil
+            }
+            .sheet(item: $providerIssue) { issue in
+                ProviderIssueSheet(
+                    issue: issue,
+                    openProviderSettings: {
+                        providerIssue = nil
+                        onOpenProviderSettings()
+                    },
+                    disableProvider: {
+                        MarketProviderAccess.setEnabled(false, for: issue.provider)
+                        providerIssue = nil
+                    },
+                    retry: { retryProvider(issue.provider) }
+                )
+            }
         }
     }
 
-    private var radarCompanyNames: [String: String] {
+    var radarCompanyNames: [String: String] {
         (marketCycle?.companyNames ?? [:]).merging(Dictionary((lsStatus?.quotes ?? []).map { ("LS:" + $0.identifier, $0.name) }, uniquingKeysWith: { first, _ in first }), uniquingKeysWith: { first, _ in first })
     }
-    private var chartSymbol: String {
+    var chartSymbol: String {
         selectedSignal?.symbol ?? symbol
     }
 
@@ -116,100 +145,13 @@ struct RadarView: View {
         companyMetadata[chartSymbol.uppercased()]?.name ?? radarCompanyNames[chartSymbol] ?? chartSymbol
     }
 
-    private var companyMetadataRequestKey: String {
+    var companyMetadataRequestKey: String {
         let symbols = Set(recentSignals.map(\.symbol))
         return chartSymbol.uppercased() + "|" + symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
     }
 
-    private func refreshCompanyMetadata() async {
-        let symbols = [chartSymbol] + recentSignals.map(\.symbol)
-        companyMetadata = await companyMetadataService.cached(symbols: symbols)
-        companyMetadata = await companyMetadataService.load(
-            symbols: symbols, names: radarCompanyNames
-        )
-    }
-
-    private func refreshDiscoveryWhileActive() async {
-        guard scenePhase == .active else {
-            discoveryRefreshID = nil
-            await discoveryController.stop()
-            return
-        }
-        var firstRefresh = true
-        while !Task.isCancelled {
-            let nowMillis = Int64(Date().timeIntervalSince1970 * 1_000)
-            let isDue = firstRefresh || discoveryStatus.map { nowMillis >= $0.nextAttemptAtMillis } ?? true
-            let refreshID = isDue ? UUID() : nil
-            discoveryRefreshID = refreshID
-            let status = await discoveryController.refresh()
-            if discoveryRefreshID == refreshID { discoveryRefreshID = nil }
-            guard !Task.isCancelled else { return }
-            discoveryStatus = status
-            if isDue {
-                discoveryRequests += 1
-                if !status.lastAttemptSucceeded { discoveryErrors += 1 }
-                AppDiagnostics.shared.record(
-                    status.lastAttemptSucceeded ? .info : .warning,
-                    "Discovery", "refresh-finished",
-                    "candidates=\(status.snapshot?.candidates.count ?? 0) success=\(status.lastAttemptSucceeded) nextAttemptMillis=\(status.nextAttemptAtMillis)"
-                )
-            }
-            firstRefresh = false
-            do { try await Task.sleep(for: .seconds(60)) }
-            catch { return }
-        }
-    }
-
-    private func refreshLSWhileActive() async {
-        guard scenePhase == .active else {
-            lsStatus = await lsCandidatePool.stop()
-            return
-        }
-        while !Task.isCancelled {
-            let status = await lsCandidatePool.refreshIfNeeded()
-            guard !Task.isCancelled else { return }
-            lsStatus = status
-            if chartSymbol.hasPrefix("LS:") { chartRefreshID += 1 }
-            await refreshSignals()
-            do { try await Task.sleep(for: .seconds(30)) }
-            catch { return }
-        }
-    }
-
-    private func scanMarketWhileActive() async {
-        guard scenePhase == .active else { return }
-        while !Task.isCancelled {
-            do {
-                let cycle = try await marketScanner.scan(settings: RadarScanPreferencesStore.load())
-                guard !Task.isCancelled else { return }
-                marketCycle = cycle
-                await refreshSignals()
-                AppDiagnostics.shared.record(
-                    .info, "Radar", "market-scan-finished",
-                    "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
-                )
-            } catch is CancellationError {
-                return
-            } catch {
-                AppDiagnostics.shared.record(
-                    .error, "Radar", "market-scan-failed",
-                    "error=\(String(describing: type(of: error)))"
-                )
-            }
-            do { try await Task.sleep(for: .seconds(15)) }
-            catch { return }
-        }
-    }
-
-    private func refreshDisplayCurrency() async {
-        guard scenePhase == .active else { return }
-        currencyRates = await currencyService.cached()
-        do { currencyRates = try await currencyService.latest() }
-        catch { AppDiagnostics.shared.record(.warning, "ECB", "fx-rate-unavailable",
-                                             "error=\(String(describing: type(of: error)))") }
-    }
-
     private func detectInitialCurrency() async {
+        guard await ensureAutomaticProvidersReady() else { return }
         guard !UserDefaults.standard.bool(forKey: "display.currency.initialized.v1") else { return }
         guard let detected = try? await IPLocationCurrencySource().detect(),
               !Task.isCancelled,
@@ -250,6 +192,7 @@ struct RadarView: View {
                 symbol = signal.symbol
             },
             onVisibleSignal: { visibleSymbol in
+                guard providerStartupReady, MarketProviderAccess.isEnabled(.yahoo) else { return }
                 if await signalBarBackfill.fillIfMissing(symbol: visibleSymbol) {
                     chartRefreshID += 1
                 }
@@ -267,7 +210,7 @@ struct RadarView: View {
 
     private var isHistoryLoading: Bool { !hasLoadedHistory }
 
-    private func refreshSignals(selectNewest: Bool = false) async {
+    func refreshSignals(selectNewest: Bool = false) async {
         defer { hasLoadedHistory = true }
         do {
             let limit = min(max(maxResults, 5), 100)
@@ -309,9 +252,24 @@ struct RadarView: View {
 
     private func startFeed() {
         guard !isPreparingFeed else { return }
+        guard MarketProviderAccess.isEnabled(.finnhub) else {
+            setupMessage = "Enable Finnhub in Settings before starting the feed."
+            return
+        }
         isPreparingFeed = true
         AppDiagnostics.shared.record(.info, "Radar", "feed-preparing")
-        Task { await prepareFeed() }
+        Task {
+            guard await ensureAutomaticProvidersReady() else {
+                isPreparingFeed = false
+                return
+            }
+            if let issue = await MarketProviderPreflight().check(.finnhub) {
+                providerIssue = issue
+                isPreparingFeed = false
+                return
+            }
+            await prepareFeed()
+        }
     }
 
     private func loadWatchlistPreview() async {
@@ -329,7 +287,7 @@ struct RadarView: View {
     }
 
     @MainActor
-    private func prepareFeed() async {
+    func prepareFeed() async {
         defer { isPreparingFeed = false }
         setupMessage = nil
         do {
