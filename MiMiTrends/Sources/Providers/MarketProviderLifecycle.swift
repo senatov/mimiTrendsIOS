@@ -84,7 +84,7 @@ struct MarketProviderPreflightIssue: Identifiable, Sendable {
 struct MarketProviderPreflight: Sendable {
     private let endpointChecker = ProviderEndpointChecker()
 
-    func check(_ provider: MarketProvider) async -> MarketProviderPreflightIssue? {
+    func check(_ provider: MarketProvider, finnhubEndpoint: String? = nil) async -> MarketProviderPreflightIssue? {
         guard MarketProviderAccess.isEnabled(provider) else { return nil }
         do {
             switch provider {
@@ -92,8 +92,12 @@ struct MarketProviderPreflight: Sendable {
                 guard let key = try FinnhubCredentialStore.load() else {
                     throw MarketProviderPreflightError.missingCredential("Finnhub API key")
                 }
-                _ = try FinnhubTradeStream.streamURL(apiKey: key)
-                _ = try await FinnhubBidAskClient().load(symbol: "AAPL", apiKey: key)
+                let endpoint = try finnhubEndpoint.map {
+                    try ProviderEndpointStore.validate($0, for: .finnhubTrades)
+                }
+                try await FinnhubTradeStream().checkConnection(
+                    apiKey: key, symbol: "AAPL", endpointURL: endpoint
+                )
             case .yahoo:
                 try await requireAny([.yahooPrimary, .yahooAlternate])
             case .wallstreetOnline:
@@ -171,7 +175,7 @@ actor MarketProviderStartupGate {
             return await check(revision: revision)
         }
         let task = Task { [preflight = MarketProviderPreflight()] in
-            let providers: [MarketProvider] = [.yahoo, .wallstreetOnline, .langSchwarz, .traderFox, .finnhub, .fmp]
+            let providers: [MarketProvider] = [.yahoo, .wallstreetOnline, .langSchwarz, .traderFox, .fmp]
             return await withTaskGroup(of: MarketProviderPreflightIssue?.self) { group in
                 for provider in providers {
                     group.addTask { await preflight.check(provider) }

@@ -7,12 +7,12 @@ struct DiscoverySettingsSection: View {
     @State private var health: [RankingSourceHealth] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Ranking sources")
                 .font(SettingsTypography.label)
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 24) { sources }
-                VStack(alignment: .leading, spacing: 16) { sources }
+                HStack(alignment: .top, spacing: 12) { sources }
+                VStack(alignment: .leading, spacing: 10) { sources }
             }
             Divider()
             Picker("Scan priority", selection: $priority) {
@@ -43,7 +43,7 @@ struct DiscoverySettingsSection: View {
     }
 
     private func source(_ kind: WallstreetRankingKind, enabled: Binding<Bool>, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
             Toggle(kind.title, isOn: enabled)
                 .toggleStyle(.switch)
                 .font(SettingsTypography.label)

@@ -7,6 +7,7 @@ struct CredentialEditor: View {
     let load: () throws -> String?
     let save: (String) throws -> Void
     let remove: () throws -> Void
+    var compact = false
     var onSave: () -> Void = {}
     var onRemove: () -> Void = {}
 
@@ -16,7 +17,7 @@ struct CredentialEditor: View {
     @State private var showingHelp = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: compact ? 6 : 10) {
             HStack(spacing: 6) {
                 Text(title).font(SettingsTypography.label).foregroundStyle(.primary)
                 Button {
@@ -41,7 +42,7 @@ struct CredentialEditor: View {
             }
             Text(detail).font(.callout).foregroundStyle(.secondary)
             SecretEntryField(title: title, value: $draft)
-            HStack(spacing: 8) {
+            HStack(spacing: compact ? 6 : 8) {
                 TrendsActionButton(title: "Save", systemImage: "checkmark", tint: .green) {
                     saveDraft()
                 }
@@ -60,7 +61,7 @@ struct CredentialEditor: View {
                 Text(message).font(.callout).foregroundStyle(.secondary)
             }
         }
-        .padding(18)
+        .padding(compact ? 12 : 18)
         .foregroundStyle(.primary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(SettingsColors.group, in: RoundedRectangle(cornerRadius: 12))

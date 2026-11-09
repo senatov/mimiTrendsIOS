@@ -70,15 +70,16 @@ struct SettingsPage<Content: View>: View {
 
 struct SettingsGroup<Content: View>: View {
     let title: String
+    var compact = false
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: compact ? 10 : 14) {
             Text(title).font(SettingsTypography.sectionTitle).foregroundStyle(.indigo)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(18)
+        .padding(compact ? 12 : 18)
         .background(SettingsColors.group, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)

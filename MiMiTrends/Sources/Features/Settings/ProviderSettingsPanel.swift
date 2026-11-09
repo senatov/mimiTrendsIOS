@@ -16,7 +16,7 @@ struct ProviderSettingsPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Provider setup")
@@ -29,7 +29,7 @@ struct ProviderSettingsPanel: View {
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
                 providerGroup(
                     "Finnhub",
                     detail: "Live US trade feed",
@@ -84,7 +84,7 @@ struct ProviderSettingsPanel: View {
         endpoints: [ProviderEndpoint],
         includesDiscoverySettings: Bool = false
     ) -> some View {
-        SettingsGroup(title: title) {
+        SettingsGroup(title: title, compact: true) {
             HStack(spacing: 8) {
                 Circle().fill(providerIsHealthy(provider) ? Color.green : Color.red).frame(width: 8, height: 8)
                 Text(providerStatus(provider).uppercased())
@@ -110,7 +110,7 @@ struct ProviderSettingsPanel: View {
                             savingMessage = nil
                         }
                     ),
-                    status: checks[endpoint] ?? defaultStatus(for: endpoint),
+                    status: checks[endpoint] ?? defaultStatus,
                     check: { check(endpoint) }
                 )
             }
@@ -132,9 +132,14 @@ struct ProviderSettingsPanel: View {
                     remove: {
                         try FinnhubCredentialStore.delete()
                         credentialChanged(.finnhub)
+                        checks[.finnhubTrades] = nil
                         radarSession.stop()
                     },
-                    onSave: { credentialChanged(.finnhub) }
+                    compact: true,
+                    onSave: {
+                        credentialChanged(.finnhub)
+                        checks[.finnhubTrades] = nil
+                    }
                 )
                 CredentialEditor(
                     title: "Finnhub webhook secret",
@@ -145,14 +150,15 @@ struct ProviderSettingsPanel: View {
                     ),
                     load: { try FinnhubCredentialStore.loadWebhookSecret() },
                     save: { try FinnhubCredentialStore.saveWebhookSecret($0) },
-                    remove: { try FinnhubCredentialStore.deleteWebhookSecret() }
+                    remove: { try FinnhubCredentialStore.deleteWebhookSecret() },
+                    compact: true
                 )
             }
         }
     }
 
     private var fmpGroup: some View {
-        SettingsGroup(title: "FMP") {
+        SettingsGroup(title: "FMP", compact: true) {
             HStack(spacing: 8) {
                 Circle().fill(providerIsHealthy(.fmp) ? Color.green : Color.red).frame(width: 8, height: 8)
                 Text(providerStatus(.fmp).uppercased())
@@ -181,6 +187,7 @@ struct ProviderSettingsPanel: View {
                     try ProviderCredentialStore.delete(FMPCredential.account)
                     credentialChanged(.fmp)
                 },
+                compact: true,
                 onSave: { credentialChanged(.fmp) }
             )
             Text("A missing or rejected key stops requests to this provider. Check your account and plan before enabling it.")
@@ -189,12 +196,27 @@ struct ProviderSettingsPanel: View {
         }
     }
 
-    private func defaultStatus(for endpoint: ProviderEndpoint) -> String {
-        endpoint == .finnhubTrades ? "Verified by the live feed" : "Not checked"
-    }
+    private var defaultStatus: String { "Not checked" }
 
     private func check(_ endpoint: ProviderEndpoint) {
-        guard endpoint != .finnhubTrades else { return }
+        if endpoint == .finnhubTrades {
+            guard MarketProviderAccess.isEnabled(.finnhub) else {
+                checks[endpoint] = "Enable Finnhub before checking the live feed."
+                return
+            }
+            checks[endpoint] = "Checking WebSocket…"
+            let value = drafts[endpoint] ?? endpoint.defaultURL
+            Task {
+                if let issue = await MarketProviderPreflight().check(.finnhub, finnhubEndpoint: value) {
+                    guard drafts[endpoint] == value else { return }
+                    checks[endpoint] = issue.reason
+                } else {
+                    guard drafts[endpoint] == value else { return }
+                    checks[endpoint] = "WebSocket reachable; waiting for trades"
+                }
+            }
+            return
+        }
         let value = drafts[endpoint] ?? endpoint.defaultURL
         checks[endpoint] = "Checking…"
         Task {
@@ -275,9 +297,7 @@ private struct ProviderEndpointRow: View {
                     #endif
                     .autocorrectionDisabled()
                     .accessibilityLabel("\(endpoint.title) URL")
-                if endpoint != .finnhubTrades {
-                    TrendsActionButton(title: "Check", systemImage: "checkmark.circle", action: check)
-                }
+                TrendsActionButton(title: "Check", systemImage: "checkmark.circle", action: check)
             }
             Text(status)
                 .font(.caption)

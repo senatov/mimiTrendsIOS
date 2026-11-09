@@ -1,6 +1,39 @@
 import Foundation
 
 struct FinnhubTradeStream: Sendable {
+    func checkConnection(apiKey: String, symbol: String, endpointURL: URL? = nil) async throws {
+        let url = try Self.streamURL(apiKey: apiKey, endpointURL: endpointURL)
+        let command = try Self.subscriptionMessages(for: [symbol])[0]
+        let socket = URLSession.shared.webSocketTask(with: url)
+        let deadline = FinnhubConnectionCheckDeadline()
+        socket.resume()
+        defer { socket.cancel(with: .normalClosure, reason: nil) }
+
+        try await socket.send(.string(command))
+        let timeout = Task {
+            try? await Task.sleep(for: .seconds(5))
+            guard !Task.isCancelled else { return }
+            await deadline.expire()
+            socket.cancel(with: .goingAway, reason: nil)
+        }
+        defer { timeout.cancel() }
+
+        do {
+            let message = try await socket.receive()
+            timeout.cancel()
+            let data: Data
+            switch message {
+            case .data(let payload): data = payload
+            case .string(let text): data = Data(text.utf8)
+            @unknown default: throw FinnhubStreamError.invalidMessage
+            }
+            _ = try FinnhubTradeDecoder.decode(data)
+        } catch {
+            if await deadline.didExpire() { return }
+            throw error
+        }
+    }
+
     func run(
         apiKey: String,
         symbols: [String],
@@ -62,10 +95,10 @@ struct FinnhubTradeStream: Sendable {
         }
     }
 
-    static func streamURL(apiKey: String) throws -> URL {
+    static func streamURL(apiKey: String, endpointURL: URL? = nil) throws -> URL {
         let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { throw FinnhubStreamError.missingKey }
-        guard var components = URLComponents(url: ProviderEndpointStore.url(for: .finnhubTrades),
+        guard var components = URLComponents(url: endpointURL ?? ProviderEndpointStore.url(for: .finnhubTrades),
                                              resolvingAgainstBaseURL: false) else {
             throw FinnhubStreamError.missingKey
         }
@@ -115,4 +148,11 @@ struct FinnhubTradeStream: Sendable {
         let type: String
         let symbol: String
     }
+}
+
+private actor FinnhubConnectionCheckDeadline {
+    private var expired = false
+
+    func expire() { expired = true }
+    func didExpire() -> Bool { expired }
 }
