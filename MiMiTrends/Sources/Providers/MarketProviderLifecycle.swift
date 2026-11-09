@@ -107,8 +107,13 @@ struct MarketProviderPreflight: Sendable {
             case .wallstreetOnline:
                 try await requireWallstreetOnlineData()
             case .langSchwarz:
-                let quotes = try await LangSchwarzQuoteSource().loadQuotes()
-                guard !quotes.isEmpty else { throw MarketProviderPreflightError.unavailable }
+                do {
+                    let quotes = try await LangSchwarzQuoteSource().loadQuotes()
+                    guard !quotes.isEmpty else { throw MarketProviderPreflightError.unavailable }
+                } catch LangSchwarzQuoteError.noFreshQuotes {
+                    AppDiagnostics.shared.record(.info, "Lang & Schwarz", "preflight-no-fresh-quotes",
+                        "lsQuoteSession=\(LangSchwarzMarketSession.isQuoteVenueOpen(at: Date()) ? "open" : "closed") underlyingOpen=\(LangSchwarzMarketSession.underlyingOpenEndpoints(at: Date()).map(\.rawValue).joined(separator: ",")) providerReachable=true")
+                }
             case .traderFox:
                 try await requireAll(provider.endpoints)
             case .fmp:

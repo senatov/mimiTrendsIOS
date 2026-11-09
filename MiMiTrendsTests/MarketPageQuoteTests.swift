@@ -21,6 +21,15 @@ final class MarketPageQuoteTests: XCTestCase {
                        33.575 / 1.12, accuracy: 0.0001)
     }
 
+    func testLangSchwarzStaleQuotesAreClassifiedAsNoFreshQuotes() {
+        let stale = row(wkn: "A0WMPL", item: "41851", bid: "33,5500&nbsp;€",
+                        ask: "33,6000&nbsp;€", time: "11:20:00")
+        let html = "<table>" + Array(repeating: stale, count: 10).joined() + "</table>"
+        XCTAssertThrowsError(try LangSchwarzQuoteSource.decode(html, now: now)) { error in
+            XCTAssertEqual(error as? LangSchwarzQuoteError, .noFreshQuotes)
+        }
+    }
+
     func testWallstreetOnlineConvertsUSDWithFreshFXAndRejectsStaleFX() throws {
         let page = wsoPage(price: "112,00", currency: "USD", time: "11:59:30")
         let rate = try WallstreetOnlineQuoteSource.decodeEURUSD(

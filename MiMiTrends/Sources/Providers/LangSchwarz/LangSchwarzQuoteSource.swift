@@ -49,21 +49,34 @@ struct LangSchwarzQuoteSource: Sendable {
             }
         } else { fx = nil }
         var quotes: [String: MarketPageQuote] = [:]
+        var noFreshEndpoints: [ProviderEndpoint] = []
+        var invalidEndpoints: [ProviderEndpoint] = []
+        let decodeTime = Date()
         for (endpoint, html) in pages {
             do {
-                let decoded = try Self.decode(html, now: Date(), euroUSD: fx)
+                let decoded = try Self.decode(html, now: decodeTime, euroUSD: fx)
                 for quote in decoded {
                     if let old = quotes[quote.identifier], old.observedAtMillis > quote.observedAtMillis { continue }
                     quotes[quote.identifier] = quote
                 }
                 AppDiagnostics.shared.record(.info, "Lang & Schwarz", "page-quotes-decoded",
                     "endpoint=\(endpoint.rawValue) quotes=\(decoded.count)")
+            } catch LangSchwarzQuoteError.noFreshQuotes {
+                noFreshEndpoints.append(endpoint)
+                AppDiagnostics.shared.record(.info, "Lang & Schwarz", "page-no-fresh-quotes",
+                    "endpoint=\(endpoint.rawValue) lsQuoteSession=\(LangSchwarzMarketSession.isQuoteVenueOpen(at: decodeTime) ? "open" : "closed") underlyingMarket=\(LangSchwarzMarketSession.isUnderlyingMarketOpen(for: endpoint, at: decodeTime) ? "open" : "closed")")
             } catch {
+                invalidEndpoints.append(endpoint)
                 AppDiagnostics.shared.record(.warning, "Lang & Schwarz", "page-decode-failed",
                     "endpoint=\(endpoint.rawValue) error=\(String(describing: error))")
             }
         }
-        guard !quotes.isEmpty else { throw LangSchwarzQuoteError.noFreshQuotes }
+        guard !quotes.isEmpty else {
+            if !invalidEndpoints.isEmpty { throw LangSchwarzQuoteError.invalidPage }
+            AppDiagnostics.shared.record(.info, "Lang & Schwarz", "no-fresh-quotes",
+                "lsQuoteSession=\(LangSchwarzMarketSession.isQuoteVenueOpen(at: decodeTime) ? "open" : "closed") underlyingOpen=\(LangSchwarzMarketSession.underlyingOpenEndpoints(at: decodeTime).map(\.rawValue).joined(separator: ",")) noFresh=\(noFreshEndpoints.map(\.rawValue).joined(separator: ","))")
+            throw LangSchwarzQuoteError.noFreshQuotes
+        }
         return quotes.values.sorted { $0.name < $1.name }
     }
 
@@ -116,7 +129,7 @@ struct LangSchwarzQuoteSource: Sendable {
     }
 }
 
-enum LangSchwarzQuoteError: LocalizedError {
+enum LangSchwarzQuoteError: LocalizedError, Equatable {
     case invalidPage, noFreshQuotes
 
     var errorDescription: String? {

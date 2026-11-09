@@ -18,6 +18,7 @@
 		0CB10454D48027116BE62D30 /* WatchlistStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8AA63026829A74E3A98AC7 /* WatchlistStore.swift */; };
 		0E71337020F1BB1B62BD43F6 /* FinnhubTradeDecoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5BEDE07B7B34757E95DE94E /* FinnhubTradeDecoderTests.swift */; };
 		1169256C25EF48B8DBC7AF38 /* ScalableCSVImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E9DBC89710B0F21F227734A /* ScalableCSVImporter.swift */; };
+		143C5C038BDB09F8020D40A4 /* LangSchwarzMarketSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C47611DC905F1CB07DE6EF /* LangSchwarzMarketSession.swift */; };
 		1508659E21E4B69458075EBE /* FinnhubWatchlistSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7A8DAA84F3DA195B6936CD3 /* FinnhubWatchlistSelection.swift */; };
 		155DBFBEDEA2074BD560AB07 /* ShortMoveQuoteQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */; };
 		181A1307A50166CF2A885315 /* ProviderSettingsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */; };
@@ -121,6 +122,7 @@
 		A3DAD0D5998BC65F690ABA08 /* FMPCompanyProfileSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */; };
 		A65D29A1FE27B529A9EA93CF /* ReutersSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AA19330494343EA9883E78 /* ReutersSearch.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
+		A9A6DCCEC4127305904D9E6C /* LangSchwarzMarketSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */; };
 		A9E0F6144582D0B1291D7057 /* FinnhubRadarPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4678F11490EA437FAD224DD /* FinnhubRadarPipelineTests.swift */; };
 		ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */; };
 		ABF6F9D3F9824D07C350BA3E /* SustainedMoveDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC0207E808D3B3D6DB152DB /* SustainedMoveDetectorTests.swift */; };
@@ -228,6 +230,7 @@
 		23A0E3904F1519340EFA80C9 /* LSCandidatePool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSCandidatePool.swift; sourceTree = "<group>"; };
 		290013CD896F05B09FCF5BB0 /* BrokerTradeChartMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTradeChartMatcher.swift; sourceTree = "<group>"; };
 		29149A54292DF51AF4B0242E /* RecentCoverageClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCoverageClientTests.swift; sourceTree = "<group>"; };
+		29C47611DC905F1CB07DE6EF /* LangSchwarzMarketSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangSchwarzMarketSession.swift; sourceTree = "<group>"; };
 		2ED6027CA68FBDFDE492EDD1 /* MarketCandidateFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketCandidateFilter.swift; sourceTree = "<group>"; };
 		328B1273FBE94A7120573B78 /* ShortMoveQuoteQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortMoveQuoteQuality.swift; sourceTree = "<group>"; };
 		35C2E8B4DD20C94DB4457374 /* HeaderBadgeSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderBadgeSurface.swift; sourceTree = "<group>"; };
@@ -311,6 +314,7 @@
 		A48C8249EED74773A7514750 /* WatchlistStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistStoreTests.swift; sourceTree = "<group>"; };
 		A8F40FDEEFE4B7414AED2495 /* LSQuoteMoveDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSQuoteMoveDetector.swift; sourceTree = "<group>"; };
 		A92DB69298375F8673537FA0 /* TradeTick.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeTick.swift; sourceTree = "<group>"; };
+		A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangSchwarzMarketSessionTests.swift; sourceTree = "<group>"; };
 		A9BD55078CAB5B30D6B35305 /* RadarProviderLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarProviderLifecycle.swift; sourceTree = "<group>"; };
 		A9D3F6B4BDBCAB075A3F5C4B /* WallstreetDiscoverySource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallstreetDiscoverySource.swift; sourceTree = "<group>"; };
 		AEFE17A346A28DCD26945382 /* DisplayCurrencyService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayCurrencyService.swift; sourceTree = "<group>"; };
@@ -408,6 +412,7 @@
 		0F7095D32CA187350C006353 /* LangSchwarz */ = {
 			isa = PBXGroup;
 			children = (
+				29C47611DC905F1CB07DE6EF /* LangSchwarzMarketSession.swift */,
 				DD61AA5EB5B8F944EBCD8329 /* LangSchwarzQuoteSource.swift */,
 			);
 			path = LangSchwarz;
@@ -553,6 +558,7 @@
 				D5BEDE07B7B34757E95DE94E /* FinnhubTradeDecoderTests.swift */,
 				926E7B5100D9ECAD2EACFF6B /* FinnhubWatchlistSelectionTests.swift */,
 				10423816A59AB0FA4DE5F953 /* FMPHistoricalPriceSourceTests.swift */,
+				A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */,
 				06C09F5D686489AC861D744F /* LSQuoteMoveDetectorTests.swift */,
 				C03FCFB623D8910CA5B6945B /* MarketBarStoreTests.swift */,
 				44371ED1585DAE0AFED41514 /* MarketModelTests.swift */,
@@ -907,6 +913,7 @@
 				EEABD6D1F5BD10D0118B886B /* LSCandidatePool.swift in Sources */,
 				F55A87ED5DD6231E28E46817 /* LSQuoteHistoryChart.swift in Sources */,
 				ECC9407F1DD5D898F5ED9A04 /* LSQuoteMoveDetector.swift in Sources */,
+				143C5C038BDB09F8020D40A4 /* LangSchwarzMarketSession.swift in Sources */,
 				C63CC2365CBED179E978C94F /* LangSchwarzQuoteSource.swift in Sources */,
 				764CDDB1345634F29FE0470D /* LocalAccountInstanceGuard.swift in Sources */,
 				6A580E7214EACB7224EF26EB /* MarketBarStore.swift in Sources */,
@@ -1024,6 +1031,7 @@
 				0E71337020F1BB1B62BD43F6 /* FinnhubTradeDecoderTests.swift in Sources */,
 				84A0091D780B3C0C0EBB13CF /* FinnhubWatchlistSelectionTests.swift in Sources */,
 				672385B49D7AA5AB27A81B69 /* LSQuoteMoveDetectorTests.swift in Sources */,
+				A9A6DCCEC4127305904D9E6C /* LangSchwarzMarketSessionTests.swift in Sources */,
 				F1846824C6A7B629009B5B58 /* MarketBarStoreTests.swift in Sources */,
 				213EF8EF61243367B8E01CC5 /* MarketModelTests.swift in Sources */,
 				BED09ECD6A1CDA6A842DF997 /* MarketPageQuoteTests.swift in Sources */,

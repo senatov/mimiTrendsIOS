@@ -66,6 +66,15 @@ actor LSCandidatePool {
             nextAttemptAtMillis = lastSuccessAtMillis! + 30_000
             AppDiagnostics.shared.record(.info, "LangSchwarz", "refresh-success",
                                          "quotes=\(loaded.count)")
+        } catch LangSchwarzQuoteError.noFreshQuotes {
+            if Task.isCancelled { return status() }
+            lastAttemptSucceeded = false
+            let nowDate = Date()
+            let quoteSessionOpen = LangSchwarzMarketSession.isQuoteVenueOpen(at: nowDate)
+            let retryMillis: Int64 = quoteSessionOpen ? 60_000 : 300_000
+            nextAttemptAtMillis = now + retryMillis
+            AppDiagnostics.shared.record(.info, "LangSchwarz", "refresh-no-fresh-quotes",
+                "lsQuoteSession=\(quoteSessionOpen ? "open" : "closed") underlyingOpen=\(LangSchwarzMarketSession.underlyingOpenEndpoints(at: nowDate).map(\.rawValue).joined(separator: ",")) retrySeconds=\(retryMillis / 1_000) errorsUnchanged=true")
         } catch {
             if Task.isCancelled || error is CancellationError { return status() }
             lastAttemptSucceeded = false
