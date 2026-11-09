@@ -10,6 +10,9 @@ struct RadarSourcePanel: View {
     let discoveryRequests: Int
     let discoveryErrors: Int
     let marketCycle: MarketRadarCycle?
+    @AppStorage("radar.scannerCandidatesHeight.v1") private var savedCandidatesHeight = 200.0
+    @State private var draggedCandidatesHeight: Double?
+    @State private var candidatesDragStart: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -25,11 +28,33 @@ struct RadarSourcePanel: View {
             .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
             .trendsPanel()
             if let snapshot = discoveryStatus?.snapshot {
-                RadarScannerDiagnostics(snapshot: snapshot, progress: marketCycle?.progress)
+                RadarSplitHandle(
+                    axis: .rows,
+                    value: min(1, max(0, candidatesHeight / 600)),
+                    onDrag: { delta in
+                        if candidatesDragStart == nil { candidatesDragStart = savedCandidatesHeight }
+                        draggedCandidatesHeight = min(600, max(110, (candidatesDragStart ?? savedCandidatesHeight) + Double(delta)))
+                    },
+                    onFinish: {
+                        if let draggedCandidatesHeight { savedCandidatesHeight = draggedCandidatesHeight }
+                        draggedCandidatesHeight = nil
+                        candidatesDragStart = nil
+                    },
+                    onAdjust: { direction in
+                        savedCandidatesHeight = min(600, max(110, savedCandidatesHeight + Double(direction * 30)))
+                    }
+                )
+                .accessibilityLabel("Resize Sources and Scanner Candidates")
+                RadarScannerDiagnostics(
+                    snapshot: snapshot, progress: marketCycle?.progress,
+                    listHeight: CGFloat(candidatesHeight)
+                )
             }
         }
         .fixedSize(horizontal: false, vertical: true)
     }
+
+    private var candidatesHeight: Double { draggedCandidatesHeight ?? savedCandidatesHeight }
 
     private var telemetrySources: [RadarTelemetrySource] {
         [

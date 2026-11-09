@@ -6,6 +6,7 @@ struct RadarScannerDiagnostics: View {
     @Environment(\.colorScheme) private var colorScheme
     let snapshot: DiscoverySnapshot
     let progress: MarketScanProgress?
+    let listHeight: CGFloat
     @State private var search = ""
     @AppStorage(RadarDiscoveryPreferences.priorityKey) private var priorityMode = DiscoveryPriorityMode.balanced.rawValue
     @AppStorage(RadarDiscoveryPreferences.wikifolioKey) private var wikifolio = true
@@ -76,7 +77,7 @@ struct RadarScannerDiagnostics: View {
                     }
                 }
             }
-            .frame(height: 200)
+            .frame(height: listHeight)
             Text("Ranking priority · not a trading signal")
                 .font(.caption2).foregroundStyle(color(.sourceMutedText))
         }
