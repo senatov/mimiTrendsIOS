@@ -34,7 +34,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .finnhub: [.finnhubTrades]
         case .yahoo: [.yahooPrimary, .yahooAlternate]
         case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline]
-        case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
+        case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
         case .fmp: []
         }

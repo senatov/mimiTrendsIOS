@@ -51,7 +51,7 @@ struct ProviderSettingsPanel: View {
                 )
                 providerGroup(
                     "Lang & Schwarz",
-                    detail: "Fresh bid/ask movement signals · no trade volume",
+                    detail: "Fresh bid/ask movement signals · Germany, Europe and America",
                     provider: .langSchwarz,
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )

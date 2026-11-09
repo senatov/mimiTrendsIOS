@@ -2,7 +2,7 @@ import Foundation
 
 enum ProviderEndpoint: String, CaseIterable, Identifiable {
     case finnhubTrades
-    case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope
+    case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope, langSchwarzAmerica
     case yahooPrimary, yahooAlternate
     case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, traderFox
 
@@ -14,6 +14,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzGermany: "Germany"
         case .langSchwarzStoxx: "STOXX 50"
         case .langSchwarzEurope: "Europe"
+        case .langSchwarzAmerica: "America"
         case .yahooPrimary: "Primary"
         case .yahooAlternate: "Alternate"
         case .wallstreetOnline: "Instrument pages"
@@ -29,6 +30,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzGermany: "https://www.ls-tc.de/de/aktien/deutschland"
         case .langSchwarzStoxx: "https://www.ls-tc.de/de/aktien/europa/stoxx50"
         case .langSchwarzEurope: "https://www.ls-tc.de/de/aktien/europa"
+        case .langSchwarzAmerica: "https://www.ls-tc.de/de/aktien/amerika"
         case .yahooPrimary: "https://query1.finance.yahoo.com"
         case .yahooAlternate: "https://query2.finance.yahoo.com"
         case .wallstreetOnline: "https://www.wallstreet-online.de"
@@ -41,7 +43,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
     var probePath: String {
         switch self {
         case .finnhubTrades: ""
-        case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: ""
+        case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica: ""
         case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
         case .wallstreetWikifolio, .wallstreetPerformance: ""
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
@@ -110,7 +112,8 @@ struct ProviderEndpointChecker: Sendable {
         let expected: String
         switch endpoint {
         case .finnhubTrades: expected = ""
-        case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope: expected = "bidWithCurrencySymbol"
+        case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica:
+            expected = "bidWithCurrencySymbol"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"
         case .wallstreetOnline: expected = "ASML"
         case .wallstreetWikifolio: expected = "Käufe/Verkäufe"

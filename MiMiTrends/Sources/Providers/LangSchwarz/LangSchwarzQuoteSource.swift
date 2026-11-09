@@ -3,7 +3,7 @@ import Foundation
 struct LangSchwarzQuoteSource: Sendable {
     private let session: URLSession
     private let endpoints: [ProviderEndpoint] = [
-        .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope
+        .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica
     ]
 
     init(session: URLSession = .shared) { self.session = session }
