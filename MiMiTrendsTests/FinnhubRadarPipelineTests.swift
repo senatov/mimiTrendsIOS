@@ -35,11 +35,13 @@ final class FinnhubRadarPipelineTests: XCTestCase {
         ]
         var updates: [FinnhubRadarPipeline.Update] = []
         for (second, price) in observations {
-            let trade = TradeTick(
-                symbol: "RISE", price: price,
-                timestampMillis: second * 1_000 + 1, volume: 1_000
-            )
-            updates.append(try await pipeline.accept(trade, nowEpochSeconds: second))
+            let frame = try JSONSerialization.data(withJSONObject: [
+                "type": "trade",
+                "data": [["s": "RISE", "p": price, "t": second * 1_000 + 1, "v": 1_000]]
+            ])
+            for trade in try FinnhubTradeDecoder.decode(frame) {
+                updates.append(try await pipeline.accept(trade, nowEpochSeconds: second))
+            }
         }
         XCTAssertEqual(updates.filter(\.storedBar).count, 3)
         XCTAssertNil(updates[0].signal)
@@ -53,6 +55,13 @@ final class FinnhubRadarPipelineTests: XCTestCase {
         let signals = try MarketSignalStore(url: directory.appendingPathComponent("mimitrends-signals.db"))
         let history = try await signals.loadRecent()
         XCTAssertEqual(history, [try XCTUnwrap(updates[3].signal)])
+
+        let displayed = RadarSignalSelection.displayHistory(
+            history, since: 12_000_000 - 2 * 60 * 60 * 1_000, limit: 10,
+            preferences: RadarScanPreferences(), allowSavedFallback: false
+        )
+        XCTAssertFalse(displayed.savedFallback)
+        XCTAssertEqual(displayed.signals, history)
     }
 
     func testFreshWideQuoteSuppressesSignalBeforePersistence() async throws {
