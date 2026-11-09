@@ -4,10 +4,10 @@ import SwiftUI
 
 final class RadarPaneLayoutTests: XCTestCase {
     func testSourceDrawerLeavesSignalSpaceOnIPad() {
-        XCTAssertEqual(RadarPaneLayout.sourceDrawerWidth(totalWidth: 834), 340)
+        XCTAssertEqual(RadarPaneLayout.sourceDrawerWidth(totalWidth: 834), 510)
         XCTAssertEqual(RadarPaneLayout.signalWidth(totalWidth: 834, sourcesOpen: false), 834)
-        XCTAssertEqual(RadarPaneLayout.signalWidth(totalWidth: 834, sourcesOpen: true), 488)
-        XCTAssertGreaterThan(RadarPaneLayout.signalWidth(totalWidth: 1_194, sourcesOpen: true), 700)
+        XCTAssertEqual(RadarPaneLayout.signalWidth(totalWidth: 834, sourcesOpen: true), 318)
+        XCTAssertGreaterThan(RadarPaneLayout.signalWidth(totalWidth: 1_194, sourcesOpen: true), 650)
     }
 
     func testNarrowWindowUsesSourceSheetInsteadOfInlineDrawer() {

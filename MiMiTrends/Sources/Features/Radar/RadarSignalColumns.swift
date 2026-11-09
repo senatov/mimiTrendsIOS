@@ -5,7 +5,7 @@ import AppKit
 import UIKit
 #endif
 
-enum RadarSortColumn: CaseIterable {
+enum RadarSortColumn: String, CaseIterable {
     case company, event, movement, window, price, age
 
     var title: String {

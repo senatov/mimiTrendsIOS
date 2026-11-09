@@ -33,7 +33,7 @@ struct RadarView: View {
     @State private var discoveryRefreshID: UUID?
     @State private var discoveryRequests = 0
     @State private var discoveryErrors = 0
-    @State private var showingSources = false
+    @AppStorage("radar.sources.open.v1") private var showingSources = false
 
     var body: some View {
         NavigationStack {

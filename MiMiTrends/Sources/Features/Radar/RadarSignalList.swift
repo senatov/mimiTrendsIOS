@@ -23,11 +23,14 @@ struct RadarSignalList: View {
     let onSelect: (ScanResult) -> Void
     let onVisibleSignal: (String) async -> Void
     let onRefresh: () -> Void
-    @State private var sortColumn: RadarSortColumn = .age
-    @State private var ascending = true
+    @AppStorage("radar.sort.column.v1") private var storedSortColumn = RadarSortColumn.age.rawValue
+    @AppStorage("radar.sort.ascending.v1") private var ascending = true
     @State private var availableWidth: CGFloat = 0
     @State private var columnWidthOverrides: [RadarSortColumn: CGFloat] = [:]
     @State private var coverageRequest: RadarCoverageRequest?
+    private var sortColumn: RadarSortColumn {
+        get { RadarSortColumn(rawValue: storedSortColumn) ?? .age }
+    }
     private var scrollbarGutter: CGFloat {
         #if os(macOS)
         CGFloat(NSScroller.scrollerWidth(for: .regular, scrollerStyle: .legacy))
@@ -231,7 +234,7 @@ struct RadarSignalList: View {
     private func toggleSort(_ column: RadarSortColumn) {
         if sortColumn == column { ascending.toggle() }
         else {
-            sortColumn = column
+            storedSortColumn = column.rawValue
             ascending = column == .company || column == .event
         }
     }
