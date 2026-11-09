@@ -17,9 +17,9 @@ on run argv
                 set icon size to 96
                 set text size to 13
             end tell
-            set position of item "mimiTrends-iOS.app" to {250, 185}
-            set position of item "How to Install.app" to {500, 185}
-            set position of item "Applications" to {750, 185}
+            set position of item "mimiTrends-iOS.app" of installerWindow to {750, 185}
+            set position of item "How to Install.app" of installerWindow to {500, 185}
+            set position of item "Applications" of installerWindow to {250, 185}
         end tell
     end tell
 end run
