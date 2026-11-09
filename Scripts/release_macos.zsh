@@ -151,6 +151,7 @@ git push --atomic origin HEAD:main "refs/tags/${tag}"
 gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --notes-file "${notes_file}"
 echo "Published notarized ${dmg} as GitHub Release ${next}."
 release_url="$(gh release view "${tag}" --json url --jq '.url')"
-"${release_ui}" \
+nohup "${release_ui}" \
     "${next}" "${release_url}" "${dmg}" "${notes_file}" "${app_path}" \
-    "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png"
+    "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png" \
+    >/dev/null 2>&1 &!
