@@ -25,9 +25,6 @@ struct ProviderSettingsPanel: View {
                     Text("Each provider's addresses, credentials and options are grouped together.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Text("Technical checks do not grant data rights. Review each provider's terms before enabling it.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }

@@ -14,9 +14,6 @@ struct ProviderIssueSheet: View {
                 .foregroundStyle(.red)
             Text(issue.reason)
                 .font(.body)
-            Text("Review the provider's access and usage terms. This check confirms technical availability only.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
             HStack {
                 if let url = issue.provider.accountURL {
                     TrendsActionButton(title: "Open provider", systemImage: "arrow.up.right") {

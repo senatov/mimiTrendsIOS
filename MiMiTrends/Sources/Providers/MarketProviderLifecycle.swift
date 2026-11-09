@@ -97,9 +97,10 @@ struct MarketProviderPreflight: Sendable {
             case .yahoo:
                 try await requireAny([.yahooPrimary, .yahooAlternate])
             case .wallstreetOnline:
-                try await requireAll(provider.endpoints)
+                try await requireWallstreetOnlineData()
             case .langSchwarz:
-                try await requireAll(provider.endpoints)
+                let quotes = try await LangSchwarzQuoteSource().loadQuotes()
+                guard !quotes.isEmpty else { throw MarketProviderPreflightError.unavailable }
             case .traderFox:
                 try await requireAll(provider.endpoints)
             case .fmp:
@@ -129,6 +130,18 @@ struct MarketProviderPreflight: Sendable {
             }
             for try await _ in group {}
         }
+    }
+
+    private func requireWallstreetOnlineData() async throws {
+        let preferences = RadarDiscoveryPreferences.load()
+        let kinds = WallstreetRankingKind.allCases.filter {
+            $0 == .wikifolio ? preferences.wikifolio : preferences.performance
+        }
+        let page = WallstreetRankingPageSource()
+        for kind in kinds {
+            if let entries = try? await page.load(kind), !entries.isEmpty { return }
+        }
+        throw MarketProviderPreflightError.unavailable
     }
 
     private func requireAny(_ endpoints: [ProviderEndpoint]) async throws {
