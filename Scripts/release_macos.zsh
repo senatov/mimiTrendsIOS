@@ -30,6 +30,12 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
 fi
 gh auth status >/dev/null 2>&1
 
+release_ui_dir="${DERIVED_DATA}/ReleaseTools"
+mkdir -p "${release_ui_dir}"
+release_ui="${release_ui_dir}/ReleaseCompleteWindow"
+swiftc -parse-as-library -O -framework AppKit -framework SwiftUI \
+    "${SCRIPT_DIR}/ReleaseCompleteWindow.swift" -o "${release_ui}"
+
 current="$(/usr/bin/python3 "${SCRIPT_DIR}/release_version.py" current)"
 local_tags="$(git tag --list)"
 release_tags="$(gh release list --limit 1000 --json tagName --jq '.[].tagName')"
@@ -144,3 +150,7 @@ code --wait "${notes_file}"
 git push --atomic origin HEAD:main "refs/tags/${tag}"
 gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --notes-file "${notes_file}"
 echo "Published notarized ${dmg} as GitHub Release ${next}."
+release_url="$(gh release view "${tag}" --json url --jq '.url')"
+"${release_ui}" \
+    "${next}" "${release_url}" "${dmg}" "${notes_file}" "${app_path}" \
+    "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png"
