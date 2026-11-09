@@ -136,7 +136,7 @@ struct MarketProviderPreflight: Sendable {
         try await withThrowingTaskGroup(of: Void.self) { group in
             for endpoint in endpoints {
                 group.addTask {
-                    try await endpointChecker.check(
+                    _ = try await endpointChecker.check(
                         ProviderEndpointStore.url(for: endpoint).absoluteString, for: endpoint
                     )
                 }
@@ -161,7 +161,7 @@ struct MarketProviderPreflight: Sendable {
         var lastError: Error?
         for endpoint in endpoints {
             do {
-                try await endpointChecker.check(ProviderEndpointStore.url(for: endpoint).absoluteString, for: endpoint)
+                _ = try await endpointChecker.check(ProviderEndpointStore.url(for: endpoint).absoluteString, for: endpoint)
                 return
             } catch { lastError = error }
         }
