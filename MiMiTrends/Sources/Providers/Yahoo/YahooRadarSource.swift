@@ -28,6 +28,48 @@ struct YahooRadarSource: Sendable {
         return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol)
     }
 
+    func diagnose(symbol: String) async -> YahooSymbolEvidence {
+        guard MarketCandidateFilter.supportsYahooBars(symbol: symbol),
+              let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            return YahooSymbolEvidence(symbol: symbol, found: false, name: nil, currency: nil,
+                                      exchange: nil, detail: "Symbol format is not supported by Yahoo.")
+        }
+        let path = "/v8/finance/chart/\(encoded)?range=1d&interval=1m&includePrePost=false"
+        do {
+            let root = try await loadWithFallback(path: path)
+            guard let chart = root["chart"] as? [String: Any] else {
+                return YahooSymbolEvidence(symbol: symbol, found: false, name: nil, currency: nil,
+                                          exchange: nil, detail: "Yahoo response has no chart object.")
+            }
+            if let error = chart["error"], !(error is NSNull) {
+                return YahooSymbolEvidence(symbol: symbol, found: false, name: nil, currency: nil,
+                                          exchange: nil, detail: "Yahoo chart error: \(String(describing: error))")
+            }
+            guard let result = (chart["result"] as? [[String: Any]])?.first,
+                  let meta = result["meta"] as? [String: Any] else {
+                return YahooSymbolEvidence(symbol: symbol, found: false, name: nil, currency: nil,
+                                          exchange: nil, detail: "Yahoo returned no instrument metadata.")
+            }
+            let providerSymbol = meta["symbol"] as? String
+            let name = meta["longName"] as? String ?? meta["shortName"] as? String
+            let currency = meta["currency"] as? String
+            let exchange = meta["fullExchangeName"] as? String ?? meta["exchangeName"] as? String
+            let timestamps = result["timestamp"] as? [Any] ?? []
+            let rows = (result["indicators"] as? [String: Any])?["quote"] as? [[String: Any]]
+            let closes = rows?.first?["close"] as? [Any] ?? []
+            let usableBars = zip(timestamps, closes).reduce(into: 0) { count, pair in
+                if !(pair.1 is NSNull), (pair.1 as? NSNumber)?.doubleValue != nil { count += 1 }
+            }
+            let detail = "Yahoo identifies \(providerSymbol ?? "no exact symbol"); \(name ?? "company name unavailable"); currency \(currency ?? "unknown"); \(exchange ?? "exchange unknown"); usable minute bars \(usableBars)."
+            return YahooSymbolEvidence(symbol: providerSymbol ?? symbol,
+                                       found: providerSymbol?.caseInsensitiveCompare(symbol) == .orderedSame, name: name,
+                                       currency: currency, exchange: exchange, detail: detail)
+        } catch {
+            return YahooSymbolEvidence(symbol: symbol, found: false, name: nil, currency: nil,
+                                      exchange: nil, detail: MarketRadarErrorDescription.message(error, provider: "Yahoo diagnostic"))
+        }
+    }
+
     func dailyBars(symbol: String) async throws -> [MinuteBar] {
         guard MarketCandidateFilter.supportsYahooBars(symbol: symbol),
               let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {

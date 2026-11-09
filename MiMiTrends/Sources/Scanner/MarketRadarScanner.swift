@@ -80,6 +80,7 @@ actor MarketRadarScanner {
         if Date() >= nextDiscoveryAt {
             try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders)
         }
+        unreadableSymbols = await YahooSymbolResolutionStore.shared.skippedSymbols()
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
         let secondaryUS = secondaryCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
         let secondaryGerman = secondaryCandidates.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
@@ -171,16 +172,25 @@ actor MarketRadarScanner {
                                                  failure: nil,
                                                  rejectedSymbol: symbol, skipped: true)
                         } catch {
+                            if Task.isCancelled {
+                                return SymbolOutcome(symbol: symbol, received: 0, failure: nil, skipped: true)
+                            }
                             let unreadableSymbol: String?
+                            var failureMessage = MarketRadarErrorDescription.message(error, provider: "Yahoo (\(symbol))")
                             if let radarError = error as? RadarSourceError,
                                case .invalidResponse = radarError {
                                 unreadableSymbol = symbol
+                                let resolution = await YahooSymbolDiagnosisService().diagnose(symbol: symbol)
+                                await YahooSymbolResolutionStore.shared.save(resolution)
+                                failureMessage += " Auto-check: \(resolution.summary)"
+                                AppDiagnostics.shared.record(.warning, "Yahoo", "symbol-auto-diagnosed",
+                                    "symbol=\(symbol) evidence=\(resolution.providerEvidence.joined(separator: " | ")) recheckAtMillis=\(resolution.retryAfterMillis)")
                             } else {
                                 unreadableSymbol = nil
                             }
                             return SymbolOutcome(
                                 symbol: symbol, received: 0,
-                                failure: MarketRadarErrorDescription.message(error, provider: "Yahoo (\(symbol))"),
+                                failure: failureMessage,
                                 rateLimited: false,
                                 unreadableSymbol: unreadableSymbol
                             )
@@ -296,7 +306,6 @@ actor MarketRadarScanner {
                 yahooRefreshed = true
                 yahooTotals.lastErrorMessage = nil
                 unsupportedSymbols.removeAll()
-                unreadableSymbols.removeAll()
                 scanOffset = 0
             }
           } catch RadarSourceError.rateLimited {
