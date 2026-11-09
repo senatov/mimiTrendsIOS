@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProviderSettingsPanel: View {
+    @Environment(RadarSession.self) private var radarSession
     let width: CGFloat
     @State private var drafts: [ProviderEndpoint: String] = [:]
     @State private var checks: [ProviderEndpoint: String] = [:]
@@ -92,6 +93,25 @@ struct ProviderSettingsPanel: View {
                     ),
                     status: checks[endpoint] ?? defaultStatus(for: endpoint),
                     check: { check(endpoint) }
+                )
+            }
+            if endpoints.contains(.finnhubTrades) {
+                CredentialEditor(
+                    title: "Finnhub API key",
+                    detail: "Required for the live trade feed and optional US bid/ask validation. Stored securely on this device.",
+                    load: { try FinnhubCredentialStore.load() },
+                    save: { try FinnhubCredentialStore.save($0) },
+                    remove: {
+                        try FinnhubCredentialStore.delete()
+                        radarSession.stop()
+                    }
+                )
+                CredentialEditor(
+                    title: "Finnhub webhook secret",
+                    detail: "Stored separately. The current app does not receive Finnhub webhooks; this value does not affect the live trade feed.",
+                    load: { try FinnhubCredentialStore.loadWebhookSecret() },
+                    save: { try FinnhubCredentialStore.saveWebhookSecret($0) },
+                    remove: { try FinnhubCredentialStore.deleteWebhookSecret() }
                 )
             }
         }

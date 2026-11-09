@@ -1,8 +1,6 @@
 import SwiftUI
 
 struct SourceCredentialsView: View {
-    @Environment(RadarSession.self) private var radarSession
-
     var body: some View {
         SettingsPage(
             title: "Market data providers",
@@ -24,40 +22,7 @@ struct SourceCredentialsView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
-                SettingsGroup(title: "Finnhub access") {
-                    finnhubKeyEditor
-                    finnhubWebhookSecretEditor
-                    Text("Required for the live trade feed and optional US bid/ask validation.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Text("The webhook secret is stored separately. The current app does not receive Finnhub webhooks; this value does not affect the live trade feed.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
             }
         }
-    }
-
-    private var finnhubKeyEditor: some View {
-        CredentialEditor(
-            title: "Finnhub API key",
-            detail: "Stored securely on this device.",
-            load: { try FinnhubCredentialStore.load() },
-            save: { try FinnhubCredentialStore.save($0) },
-            remove: {
-                try FinnhubCredentialStore.delete()
-                radarSession.stop()
-            }
-        )
-    }
-
-    private var finnhubWebhookSecretEditor: some View {
-        CredentialEditor(
-            title: "Finnhub webhook secret",
-            detail: "Stored separately on this device.",
-            load: { try FinnhubCredentialStore.loadWebhookSecret() },
-            save: { try FinnhubCredentialStore.saveWebhookSecret($0) },
-            remove: { try FinnhubCredentialStore.deleteWebhookSecret() }
-        )
     }
 }
