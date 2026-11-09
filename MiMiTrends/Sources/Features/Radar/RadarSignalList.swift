@@ -18,6 +18,9 @@ struct RadarSignalList: View {
     let selected: ScanResult?
     let compact: Bool
     let errorMessage: String?
+    let emptyStateMessage: String
+    let canStartFinnhubFeed: Bool
+    let onStartFinnhubFeed: () -> Void
     let sourcesOpen: Bool
     let onToggleSources: () -> Void
     let onSelect: (ScanResult) -> Void
@@ -120,6 +123,19 @@ struct RadarSignalList: View {
                         .foregroundStyle(TrendsColors.ink)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
+                    Text(emptyStateMessage)
+                        .font(.callout)
+                        .foregroundStyle(tableColor(.signalMutedText))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 520)
+                    if canStartFinnhubFeed {
+                        TrendsActionButton(
+                            title: "Start Finnhub live feed",
+                            systemImage: "play.fill",
+                            tint: .green,
+                            action: onStartFinnhubFeed
+                        )
+                    }
                     Spacer(minLength: 16)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

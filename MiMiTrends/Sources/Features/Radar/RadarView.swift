@@ -172,6 +172,18 @@ struct RadarView: View {
         return nil
     }
 
+    private var emptyRadarMessage: String {
+        if session.isScanning {
+            return session.isSubscribed
+                ? "Finnhub is connected and waiting for a qualifying trade move. Lang & Schwarz is checking quote changes independently."
+                : "Finnhub is connecting. Yahoo and FMP update candidate and history data; they do not create live signals."
+        }
+        if !MarketProviderAccess.isEnabled(.finnhub) {
+            return "Yahoo and FMP update candidates and price history. Enable Finnhub in Settings to start live trade signals; Lang & Schwarz checks quote changes independently."
+        }
+        return "Yahoo and FMP update candidates and price history. Lang & Schwarz checks quote changes; Finnhub trade signals require the live feed to be started."
+    }
+
     private func signalList(compact: Bool) -> some View {
         RadarSignalList(
             signals: recentSignals,
@@ -184,6 +196,9 @@ struct RadarView: View {
             selected: selectedSignal,
             compact: compact,
             errorMessage: historyError,
+            emptyStateMessage: emptyRadarMessage,
+            canStartFinnhubFeed: !session.isScanning && !isPreparingFeed,
+            onStartFinnhubFeed: startFeed,
             sourcesOpen: showingSources,
             onToggleSources: { showingSources.toggle() },
             onSelect: { signal in
