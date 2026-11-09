@@ -7,7 +7,7 @@ struct DiscoverySettingsSection: View {
     @State private var health: [RankingSourceHealth] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             Text("Ranking sources")
                 .font(SettingsTypography.label)
             ViewThatFits(in: .horizontal) {
@@ -20,10 +20,10 @@ struct DiscoverySettingsSection: View {
             }
             .font(SettingsTypography.label)
             .pickerStyle(.menu)
-            Text("Both lists refresh at startup and every 30 minutes. Ranking position and presence in both lists determine scan order; they do not increase signal confidence.")
-                .font(.callout).foregroundStyle(.primary.opacity(0.72))
-            Text("Wikifolio trades measure activity on wikifolio, not exchange volume. Fresh L&S bid/ask movements and live Finnhub trade signals keep their own validation. Yahoo candles are for historical context.")
-                .font(.callout).foregroundStyle(.primary.opacity(0.72))
+            Text("Both lists refresh at startup and every 30 minutes. Ranking affects scan order, not signal confidence.")
+                .font(.caption).foregroundStyle(.primary.opacity(0.78))
+            Text("Wikifolio shows platform activity; turnover ranks value traded on the exchange. L&S and Finnhub validate live moves independently.")
+                .font(.caption).foregroundStyle(.primary.opacity(0.78))
         }
         .task(id: "\(wikifolio)|\(performance)|\(priority)") {
             health = await WallstreetDiscoverySource.shared.health()
@@ -39,7 +39,7 @@ struct DiscoverySettingsSection: View {
         source(.performance, enabled: Binding(get: { performance }, set: {
             performance = $0
             if !$0 && !wikifolio { wikifolio = true }
-        }), detail: "Today's price-performance ranking")
+        }), detail: "Top exchange turnover · daily list")
     }
 
     private func source(_ kind: WallstreetRankingKind, enabled: Binding<Bool>, detail: String) -> some View {

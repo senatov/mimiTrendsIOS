@@ -7,7 +7,7 @@ enum DiscoveryPriorityMode: String, CaseIterable, Identifiable, Codable, Sendabl
         switch self {
         case .balanced: "Balanced"
         case .activity: "Wikifolio activity first"
-        case .performance: "Price movers first"
+        case .performance: "Trading turnover first"
         }
     }
     var activityWeight: Double {

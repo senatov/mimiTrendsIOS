@@ -63,7 +63,7 @@ struct RadarScannerDiagnostics: View {
                             if let evidence = candidate.rankingEvidence {
                                 HStack(spacing: 8) {
                                     if let rank = evidence.wikifolioRank { Text("Wikifolio #\(rank)") }
-                                    if let rank = evidence.performanceRank { Text("Performance #\(rank)") }
+                                    if let rank = evidence.performanceRank { Text("Turnover #\(rank)") }
                                 }
                                 .font(.caption2).foregroundStyle(color(.sourceMutedText))
                             }

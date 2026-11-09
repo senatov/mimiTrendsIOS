@@ -2,7 +2,7 @@ import Foundation
 
 enum WallstreetRankingKind: String, CaseIterable, Sendable {
     case wikifolio, performance
-    var title: String { self == .wikifolio ? "Wikifolio activity" : "Price performance" }
+    var title: String { self == .wikifolio ? "Wikifolio activity" : "Trading turnover" }
     var endpoint: ProviderEndpoint { self == .wikifolio ? .wallstreetWikifolio : .wallstreetPerformance }
 }
 
@@ -37,7 +37,7 @@ struct WallstreetRankingPageSource: Sendable {
                                               with: "", options: .regularExpression)
         let tables = MarketPageHTML.matches(#"<table\b[^>]*>(.*?)</table>"#, in: clean)
         guard let table = tables.first(where: {
-            $0.contains("Wertpapier") && $0.contains(kind == .wikifolio ? "Käufe/Verkäufe" : "Perf. %")
+            $0.contains("Wertpapier") && $0.contains(kind == .wikifolio ? "Käufe/Verkäufe" : "Umsatz")
         }), let header = MarketPageHTML.first(#"<thead\b[^>]*>(.*?)</thead>"#, in: table) else {
             throw DiscoveryDataError.invalidCandidate
         }
@@ -60,15 +60,9 @@ struct WallstreetRankingPageSource: Sendable {
                 guard let value = Double(text), value.isFinite else { return nil }
                 return value
             }
-            let metrics: DiscoveryMarketMetrics?
-            if kind == .performance, let price = number("Kurs"), price > 0,
-               let day = number("Perf. %"), let week = number("7 Tage %"),
-               let month = number("1 Monat %"), let year = number("1 Jahr %") {
-                metrics = DiscoveryMarketMetrics(price: price, change1dPercent: day,
-                    change7dPercent: week, change30dPercent: month, change1yPercent: year)
-            } else { metrics = nil }
             return WallstreetRankingEntry(path: link, name: MarketPageHTML.plainText(name),
-                rank: rank, trades: kind == .wikifolio ? number("Trades").flatMap { (0...1_000_000_000).contains($0) ? Int($0) : nil } : nil, metrics: metrics)
+                rank: rank, trades: kind == .wikifolio ? number("Trades").flatMap { (0...1_000_000_000).contains($0) ? Int($0) : nil } : nil,
+                metrics: nil)
         }
         guard !entries.isEmpty else { throw DiscoveryDataError.invalidCandidate }
         return entries.sorted { $0.rank < $1.rank }

@@ -2,6 +2,25 @@ import XCTest
 @testable import MiMiTrends
 
 final class WallstreetRankingTests: XCTestCase {
+    func testDefaultRankingAndQuoteURLsPassEndpointValidation() throws {
+        XCTAssertEqual(ProviderEndpoint.wallstreetPerformance.defaultURL,
+                       "https://www.wallstreet-online.de/statistik/top-aktien-meistgehandelt")
+        for endpoint in [ProviderEndpoint.wallstreetWikifolio, .wallstreetPerformance,
+                         .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope] {
+            XCTAssertNoThrow(try ProviderEndpointStore.validate(endpoint.defaultURL, for: endpoint))
+        }
+    }
+
+    func testDuplicateLegacyWikifolioURLMigratesToTurnoverRanking() {
+        let suite = "WallstreetRankingTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("https://www.wallstreet-online.de/statistik/top-aktien-wikifolio",
+                     forKey: "provider.endpoint.wallstreetPerformance.v1")
+        XCTAssertEqual(ProviderEndpointStore.url(for: .wallstreetPerformance, defaults: defaults).absoluteString,
+                       "https://www.wallstreet-online.de/statistik/top-aktien-meistgehandelt")
+    }
+
     func testWikifolioReadsTodayOnlyAndIgnoresNestedTooltipTables() throws {
         let header = "<thead><tr><th>Rang</th><th>Wertpapier</th><th>Käufe/Verkäufe</th><th>Trades</th></tr></thead>"
         let today = """
@@ -16,16 +35,24 @@ final class WallstreetRankingTests: XCTestCase {
         XCTAssertNil(entries.first?.metrics)
     }
 
-    func testPerformanceReadsSignedPriceMetricsByColumnHeader() throws {
+    func testTurnoverReadsMostTradedTableByColumnHeader() throws {
         let html = """
-        <table><thead><tr><th>Platz</th><th>Wertpapier</th><th>Kurs</th><th>Perf. %</th><th>1 Monat %</th><th>7 Tage %</th><th>1 Jahr %</th></tr></thead>
-        <tr><td>1.</td><td><a href="/aktien/sap-aktie">SAP</a></td><td>218,60</td><td>-1,25%</td><td>+2,5%</td><td>+3,5%</td><td>-10,0%</td></tr></table>
+        <table><thead><tr><th>Platz</th><th>Wertpapier</th><th>Kurs</th><th>Perf. %</th><th>1 Monat %</th><th>Umsatz</th></tr></thead>
+        <tr><td>1.</td><td><a href="/aktien/sap-aktie">SAP</a></td><td>218,60</td><td>-1,25%</td><td>+2,5%</td><td>337.966.754</td></tr></table>
         """
         let rows = try WallstreetRankingPageSource.decode(html, kind: .performance)
-        XCTAssertEqual(rows.first?.metrics?.price, 218.6)
-        XCTAssertEqual(rows.first?.metrics?.change1dPercent, -1.25)
-        XCTAssertEqual(rows.first?.metrics?.change30dPercent, 2.5)
+        XCTAssertEqual(rows.first?.path, "/aktien/sap-aktie")
+        XCTAssertEqual(rows.first?.name, "SAP")
+        XCTAssertNil(rows.first?.metrics)
         XCTAssertThrowsError(try WallstreetRankingPageSource.decode("<html>Unavailable</html>", kind: .performance))
+    }
+
+    func testMostSearchedListDoesNotMatchTurnoverParser() {
+        let html = """
+        <table><thead><tr><th>Platz</th><th>Wertpapier</th><th>Suchanfragen</th></tr></thead>
+        <tr><td>1.</td><td><a href="/aktien/sap-aktie">SAP</a></td><td>100</td></tr></table>
+        """
+        XCTAssertThrowsError(try WallstreetRankingPageSource.decode(html, kind: .performance))
     }
 
     func testCombinedPriorityDeduplicatesAndKeepsBothSourcesEvidence() throws {

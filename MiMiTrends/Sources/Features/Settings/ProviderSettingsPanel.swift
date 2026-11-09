@@ -9,14 +9,8 @@ struct ProviderSettingsPanel: View {
     @AppStorage("provider.configurationRevision.v1") private var providerConfigurationRevision = 0
     @AppStorage("provider.healthRevision.v1") private var providerHealthRevision = 0
 
-    private var columns: [GridItem] {
-        width >= 980
-            ? [GridItem(.flexible(), alignment: .top), GridItem(.flexible(), alignment: .top)]
-            : [GridItem(.flexible(), alignment: .top)]
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Provider setup")
@@ -29,39 +23,32 @@ struct ProviderSettingsPanel: View {
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-                providerGroup(
-                    "Finnhub",
-                    detail: "Live US trade feed",
-                    provider: .finnhub,
-                    endpoints: [.finnhubTrades]
-                )
-                providerGroup(
-                    "Yahoo Finance",
-                    detail: "Candidates · minute + daily history · no API key",
-                    provider: .yahoo,
-                    endpoints: [.yahooPrimary, .yahooAlternate]
-                )
-                providerGroup(
-                    "wallstreetONLINE rankings",
-                    detail: "Wikifolio + Performance · shared base pool",
-                    provider: .wallstreetOnline,
-                    endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline],
-                    includesDiscoverySettings: true
-                )
-                providerGroup(
-                    "Lang & Schwarz",
-                    detail: "Fresh bid/ask movement signals · Germany, Europe and America",
-                    provider: .langSchwarz,
-                    endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
-                )
-                providerGroup(
-                    "TraderFox",
-                    detail: "Supplemental candidates when FMP is not configured",
-                    provider: .traderFox,
-                    endpoints: [.traderFox]
-                )
-                fmpGroup
+            if width >= 980 {
+                HStack(alignment: .top, spacing: 8) {
+                    VStack(spacing: 6) {
+                        providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
+                        providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
+                                      endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline], includesDiscoverySettings: true)
+                        providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                    }
+                    VStack(spacing: 6) {
+                        providerGroup("Yahoo Finance", detail: "Candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
+                        providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
+                                      endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
+                        fmpGroup
+                    }
+                }
+            } else {
+                VStack(spacing: 6) {
+                    providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
+                    providerGroup("Yahoo Finance", detail: "Candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
+                    providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
+                                  endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline], includesDiscoverySettings: true)
+                    providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
+                                  endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
+                    providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                    fmpGroup
+                }
             }
             if let savingMessage {
                 Label(savingMessage, systemImage: "checkmark.circle")
@@ -236,9 +223,9 @@ struct ProviderSettingsPanel: View {
         checks[endpoint] = "Checking…"
         Task {
             do {
-                try await ProviderEndpointChecker().check(value, for: endpoint)
+                let result = try await ProviderEndpointChecker().check(value, for: endpoint)
                 guard drafts[endpoint] == value else { return }
-                checks[endpoint] = "Address reachable"
+                checks[endpoint] = result
             } catch {
                 guard drafts[endpoint] == value else { return }
                 checks[endpoint] = error.localizedDescription
@@ -302,7 +289,7 @@ private struct ProviderEndpointRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(endpoint.title).font(SettingsTypography.label).foregroundStyle(.primary)
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 TextField(endpoint.title, text: $value)
                     .textFieldStyle(.roundedBorder)
                     .font(SettingsTypography.url)

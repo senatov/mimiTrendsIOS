@@ -74,12 +74,12 @@ struct SettingsGroup<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 7 : 14) {
+        VStack(alignment: .leading, spacing: compact ? 5 : 14) {
             Text(title).font(SettingsTypography.sectionTitle).foregroundStyle(.indigo)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(compact ? 10 : 18)
+        .padding(compact ? 8 : 18)
         .background(SettingsColors.group, in: RoundedRectangle(cornerRadius: 12))
         .overlay {
             RoundedRectangle(cornerRadius: 12)
