@@ -7,7 +7,9 @@ struct DiscoverySettingsSection: View {
     @State private var health: [RankingSourceHealth] = []
 
     var body: some View {
-        SettingsGroup(title: "Radar discovery & priority") {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Ranking sources")
+                .font(SettingsTypography.label)
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .top, spacing: 24) { sources }
                 VStack(alignment: .leading, spacing: 16) { sources }

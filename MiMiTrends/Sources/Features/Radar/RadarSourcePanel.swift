@@ -68,7 +68,8 @@ struct RadarSourcePanel: View {
             RadarTelemetrySource(
                 name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
                 received: session.tradeCount, valid: session.completedBarsStored,
-                requests: nil, errors: session.errorCount
+                requests: nil, errors: session.errorCount,
+                errorDetails: session.errorMessage
             ),
             RadarTelemetrySource(
                 name: "Lang & Schwarz",

@@ -17,39 +17,44 @@ struct ProviderSettingsPanel: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Active provider addresses")
+                    Text("Provider setup")
                         .font(SettingsTypography.sectionTitle)
                         .foregroundStyle(.indigo)
-                    Text("These sources are used by Radar or the live trade feed.")
+                    Text("Each provider's addresses, credentials and options are grouped together.")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 12)
-                TrendsActionButton(title: "Save addresses", systemImage: "checkmark") { save() }
+                TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }
             }
             LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
-                endpointGroup(
+                providerGroup(
                     "Finnhub",
                     detail: "Live US trade feed",
                     endpoints: [.finnhubTrades]
                 )
-                endpointGroup(
+                providerGroup(
                     "Yahoo Finance",
                     detail: "Candidates · minute + daily history · no API key",
                     endpoints: [.yahooPrimary, .yahooAlternate]
                 )
-                endpointGroup(
+                providerGroup(
                     "wallstreetONLINE rankings",
                     detail: "Wikifolio + Performance · shared base pool",
-                    endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline]
+                    endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline],
+                    includesDiscoverySettings: true
                 )
-                endpointGroup(
+                providerGroup(
                     "Lang & Schwarz",
                     detail: "Fresh bid/ask movement signals · no trade volume",
                     endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope]
                 )
-                endpointGroup("TraderFox", detail: "Supplemental candidates without an FMP key",
-                              endpoints: [.traderFox])
+                providerGroup(
+                    "TraderFox",
+                    detail: "Supplemental candidates when FMP is not configured",
+                    endpoints: [.traderFox]
+                )
+                fmpGroup
             }
             if let savingMessage {
                 Label(savingMessage, systemImage: "checkmark.circle")
@@ -65,13 +70,16 @@ struct ProviderSettingsPanel: View {
         }
     }
 
-    private func endpointGroup(
-        _ title: String, detail: String, endpoints: [ProviderEndpoint]
+    private func providerGroup(
+        _ title: String,
+        detail: String,
+        endpoints: [ProviderEndpoint],
+        includesDiscoverySettings: Bool = false
     ) -> some View {
         SettingsGroup(title: title) {
             HStack(spacing: 8) {
                 Circle().fill(Color.green).frame(width: 8, height: 8)
-                Text("CONFIGURED")
+                Text("URLS CONFIGURED")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -94,6 +102,9 @@ struct ProviderSettingsPanel: View {
                     status: checks[endpoint] ?? defaultStatus(for: endpoint),
                     check: { check(endpoint) }
                 )
+            }
+            if includesDiscoverySettings {
+                DiscoverySettingsSection()
             }
             if endpoints.contains(.finnhubTrades) {
                 CredentialEditor(
@@ -124,6 +135,27 @@ struct ProviderSettingsPanel: View {
                     remove: { try FinnhubCredentialStore.deleteWebhookSecret() }
                 )
             }
+        }
+    }
+
+    private var fmpGroup: some View {
+        SettingsGroup(title: "FMP") {
+            Text("Optional candidate discovery, company profiles and fallback daily history. Uses FMP's stable API address; charts and the Finnhub feed work without this key.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            CredentialEditor(
+                title: "Financial Modeling Prep API key",
+                detail: "Optional. FMP plan limits and endpoint access apply.",
+                help: CredentialHelp(
+                    title: "Get an FMP API key",
+                    message: "Create an FMP account, verify your email, then copy the API key from your FMP dashboard. This key is optional and does not enable the Finnhub live feed. Free-plan access and limits depend on FMP's current plan terms.",
+                    linkTitle: "Open FMP dashboard",
+                    url: URL(string: "https://site.financialmodelingprep.com/developer/docs/dashboard")
+                ),
+                load: { try ProviderCredentialStore.load(FMPCredential.account) },
+                save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
+                remove: { try ProviderCredentialStore.delete(FMPCredential.account) }
+            )
         }
     }
 

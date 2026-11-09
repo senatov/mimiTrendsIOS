@@ -22,6 +22,9 @@ struct RadarCompanyMetadata: Codable, Sendable {
     }
 
     static func countryFallback(for symbol: String) -> String? {
+        // Lang & Schwarz quote identifiers refer to instruments traded on its German venue.
+        // They are not exchange tickers, so suffix-based country detection cannot resolve them.
+        if symbol.uppercased().hasPrefix("LS:") { return "DE" }
         let suffix = symbol.uppercased().split(separator: ".").last
         return switch suffix {
         case "DE", "F", "BE", "DU", "HM", "MU", "SG", "HA", "X": "DE"

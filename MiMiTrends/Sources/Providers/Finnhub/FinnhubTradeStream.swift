@@ -55,7 +55,7 @@ struct FinnhubTradeStream: Sendable {
                 throw error
             } catch {
                 if Task.isCancelled { throw CancellationError() }
-                throw FinnhubStreamError.connectionFailed
+                throw FinnhubStreamError.connectionFailed(Self.connectionFailureReason(error))
             }
         } onCancel: {
             socket.cancel(with: .normalClosure, reason: nil)
@@ -87,6 +87,28 @@ struct FinnhubTradeStream: Sendable {
             }
             return text
         }
+    }
+
+    private static func connectionFailureReason(_ error: Error) -> String {
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut:
+                return "The connection timed out. Check the network and try again."
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "The device has no stable internet connection. Check the network and try again."
+            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return "The device could not reach Finnhub. Check the network or DNS settings."
+            case .secureConnectionFailed, .serverCertificateUntrusted, .serverCertificateHasBadDate,
+                 .serverCertificateNotYetValid:
+                return "A secure connection to Finnhub could not be verified. Check the device date and network security settings."
+            case .badServerResponse, .cannotParseResponse:
+                return "Finnhub did not accept the WebSocket handshake. Check the Finnhub endpoint and account access."
+            default:
+                return "Network connection error (\(urlError.code.rawValue)). Check the endpoint, network, and Finnhub account access."
+            }
+        }
+        let socketError = error as NSError
+        return "Socket error \(socketError.code). Check the endpoint, network, and Finnhub account access."
     }
 
     private struct Subscription: Encodable {

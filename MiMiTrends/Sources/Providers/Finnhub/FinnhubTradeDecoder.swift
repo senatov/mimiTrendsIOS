@@ -44,7 +44,7 @@ enum FinnhubStreamError: LocalizedError {
     case missingKey
     case invalidMessage
     case providerRejected
-    case connectionFailed
+    case connectionFailed(String)
     case invalidSubscription
 
     var errorDescription: String? {
@@ -52,7 +52,7 @@ enum FinnhubStreamError: LocalizedError {
         case .missingKey: "Enter a Finnhub API key in Settings."
         case .invalidMessage: "Finnhub sent an unreadable trade message."
         case .providerRejected: "Finnhub rejected the stream request. Check the API key and plan."
-        case .connectionFailed: "Could not connect to Finnhub. Check the network and try again."
+        case .connectionFailed(let reason): "Could not connect to Finnhub. \(reason)"
         case .invalidSubscription: "Choose one to five valid symbols for the Finnhub feed."
         }
     }
