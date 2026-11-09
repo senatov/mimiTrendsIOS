@@ -16,6 +16,7 @@ actor MarketRadarScanner {
     private var nextDiscoveryAt: Date = .distantPast
     private var yahooCooldownUntil: Date?
     private var unsupportedSymbols = Set<String>()
+    private var unreadableSymbols = Set<String>()
     private var scanOffset = 0
     private var initialScanSymbols = Set<String>()
     private var initialScanTotal = 0
@@ -77,7 +78,7 @@ actor MarketRadarScanner {
         }
         let usesFMP = fmpKey != nil
         if Date() >= nextDiscoveryAt {
-            await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders)
+            try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders)
         }
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
         let secondaryUS = secondaryCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
@@ -89,9 +90,10 @@ actor MarketRadarScanner {
             .appendingUnique(supplemental)
             .filter { !unsupportedSymbols.contains($0) }
         let activePool = pool.filter {
-            !MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date())
+            (!MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date()))
+                && !unreadableSymbols.contains($0)
         }
-        initialScanTotal = pool.count
+        initialScanTotal = activePool.count
         let names = Dictionary(
             (baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
@@ -135,6 +137,7 @@ actor MarketRadarScanner {
         var yahooFailuresThisCycle = 0
         var rejectedSymbolsThisCycle = 0
         var firstRejectedSymbol: String?
+        var unreadableSymbolsThisCycle: [String] = []
         var rateLimited = false
         for batch in stride(from: 0, to: symbols.count, by: 4) {
             try Task.checkCancellation()
@@ -168,10 +171,18 @@ actor MarketRadarScanner {
                                                  failure: nil,
                                                  rejectedSymbol: symbol, skipped: true)
                         } catch {
+                            let unreadableSymbol: String?
+                            if let radarError = error as? RadarSourceError,
+                               case .invalidResponse = radarError {
+                                unreadableSymbol = symbol
+                            } else {
+                                unreadableSymbol = nil
+                            }
                             return SymbolOutcome(
                                 symbol: symbol, received: 0,
                                 failure: MarketRadarErrorDescription.message(error, provider: "Yahoo (\(symbol))"),
-                                rateLimited: false
+                                rateLimited: false,
+                                unreadableSymbol: unreadableSymbol
                             )
                         }
                     }
@@ -193,6 +204,10 @@ actor MarketRadarScanner {
                         unsupportedSymbols.insert(symbol)
                         rejectedSymbolsThisCycle += 1
                         if firstRejectedSymbol == nil { firstRejectedSymbol = symbol }
+                    }
+                    if let symbol = outcome.unreadableSymbol {
+                        unreadableSymbols.insert(symbol)
+                        unreadableSymbolsThisCycle.append(symbol)
                     }
                     if !initialScanSymbols.contains(outcome.symbol) {
                         if outcome.failure != nil { initialErrors += 1 }
@@ -228,6 +243,10 @@ actor MarketRadarScanner {
                 "count=\(rejectedSymbolsThisCycle) first=\(firstRejectedSymbol)"
             )
         }
+        if !unreadableSymbolsThisCycle.isEmpty {
+            AppDiagnostics.shared.record(.warning, "Yahoo", "unreadable-symbols-paused",
+                "count=\(unreadableSymbolsThisCycle.count) first=\(unreadableSymbolsThisCycle[0]) resumeAfterCandidateRefresh=true")
+        }
         return MarketRadarCycle(
             yahoo: yahooTotals, traderFox: traderFoxTotals, fmp: fmpTotals, usesFMP: usesFMP,
             yahooCooldownUntil: yahooCooldownUntil,
@@ -248,8 +267,9 @@ actor MarketRadarScanner {
         )
     }
 
-    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>) async {
+    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>) async throws {
         nextDiscoveryAt = Date().addingTimeInterval(30 * 60)
+        var hadFailure = false
         if enabledProviders.contains(.wallstreetOnline) && enabledProviders.contains(.yahoo) {
             do {
             let loaded = try await baselineSource.loadCandidates()
@@ -257,8 +277,10 @@ actor MarketRadarScanner {
             AppDiagnostics.shared.record(.info, "Discovery", "radar-baseline-loaded",
                                          "resolved=\(baselineCandidates.count)")
             } catch {
+            if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
+            hadFailure = true
             AppDiagnostics.shared.record(.warning, "Discovery", "radar-baseline-failed",
-                                         "error=\(String(describing: error))")
+                                         "error=\(String(describing: error)) retrySeconds=60")
             }
         } else {
             baselineCandidates = []
@@ -274,9 +296,11 @@ actor MarketRadarScanner {
                 yahooRefreshed = true
                 yahooTotals.lastErrorMessage = nil
                 unsupportedSymbols.removeAll()
+                unreadableSymbols.removeAll()
                 scanOffset = 0
             }
           } catch RadarSourceError.rateLimited {
+            hadFailure = true
             yahooTotals.operations += 1
             yahooTotals.errors += 1
             yahooTotals.lastErrorMessage = "Yahoo temporarily limited requests (HTTP 429). Radar pauses Yahoo scanning for 30 minutes, then retries automatically."
@@ -284,12 +308,14 @@ actor MarketRadarScanner {
             AppDiagnostics.shared.record(.warning, "Yahoo", "candidate-rate-limited",
                                          "cooldownMinutes=30")
           } catch {
+            if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
+            hadFailure = true
             yahooTotals.operations += 1
             yahooTotals.errors += 1
             yahooTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "Yahoo")
             AppDiagnostics.shared.record(
                 .warning, "Yahoo", "candidate-refresh-failed",
-                "error=\(String(describing: type(of: error)))"
+                "error=\(MarketRadarErrorDescription.message(error, provider: "Yahoo candidate discovery"))"
             )
           }
         } else { yahooCandidates = [] }
@@ -299,6 +325,7 @@ actor MarketRadarScanner {
                 fmpTotals.operations += 3
                 fmpTotals.received += symbols.count
                 fmpTotals.valid += symbols.count
+                fmpTotals.lastErrorMessage = nil
                 fmpCandidates = symbols
                 let yahooSet = Set(yahooCandidates.map(\.symbol))
                 let overlap = symbols.filter { yahooSet.contains($0.symbol) }.count
@@ -306,15 +333,21 @@ actor MarketRadarScanner {
                     .info, "FMP", "candidate-comparison",
                     "fmp=\(symbols.count) yahoo=\(yahooCandidates.count) yahooFresh=\(yahooRefreshed) overlap=\(overlap) sourceTimestamp=unavailable"
                 )
+            } catch is CancellationError {
+                nextDiscoveryAt = .distantPast
+                throw CancellationError()
             } catch let failure as FMPCandidateFailure {
+                hadFailure = true
                 fmpTotals.operations += failure.requests
                 fmpTotals.errors += 1
-                fmpTotals.lastErrorMessage = MarketRadarErrorDescription.message(failure, provider: "FMP")
+                fmpTotals.lastErrorMessage = failure.localizedDescription
                 AppDiagnostics.shared.record(
                     .warning, "FMP", "candidate-refresh-failed",
-                    "requests=\(failure.requests) error=\(failure.reason)"
+                    "requests=\(failure.requests) endpoint=\(failure.endpoint) error=\(failure.reason)"
                 )
             } catch {
+                if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
+                hadFailure = true
                 fmpTotals.errors += 1
                 fmpTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "FMP")
                 AppDiagnostics.shared.record(
@@ -330,6 +363,8 @@ actor MarketRadarScanner {
                 traderFoxTotals.valid += symbols.count
                 if !symbols.isEmpty { traderFoxCandidates = symbols }
             } catch {
+                if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
+                hadFailure = true
                 traderFoxTotals.operations += 1
                 traderFoxTotals.errors += 1
                 traderFoxTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "TraderFox US candidates")
@@ -348,6 +383,8 @@ actor MarketRadarScanner {
             traderFoxTotals.valid += symbols.count
             if !symbols.isEmpty { germanCandidates = symbols }
           } catch {
+            if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
+            hadFailure = true
             traderFoxTotals.operations += 3
             traderFoxTotals.errors += 1
             traderFoxTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "TraderFox German candidates")
@@ -363,6 +400,7 @@ actor MarketRadarScanner {
         }
         traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
             ? nil : traderFoxRefreshErrors.joined(separator: "\n")
+        if hadFailure { nextDiscoveryAt = Date().addingTimeInterval(60) }
     }
 
     static func interleave(_ first: [String], _ second: [String], limit: Int) -> [String] {
@@ -394,5 +432,6 @@ private struct SymbolOutcome: Sendable {
     let failure: String?
     var rateLimited = false
     var rejectedSymbol: String? = nil
+    var unreadableSymbol: String? = nil
     var skipped = false
 }

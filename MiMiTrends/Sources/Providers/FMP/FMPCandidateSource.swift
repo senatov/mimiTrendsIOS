@@ -30,9 +30,11 @@ struct FMPCandidateSource: Sendable {
     func activeCandidates(apiKey: String, limit: Int = 40) async throws -> [RadarCompanyCandidate] {
         var lists: [[RadarCompanyCandidate]] = []
         var requests = 0
+        var activePath = "unknown"
         do {
             for path in paths {
                 try Task.checkCancellation()
+                activePath = path
                 var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false)!
                 components.queryItems = [URLQueryItem(name: "apikey", value: apiKey)]
                 var request = URLRequest(url: components.url!)
@@ -51,7 +53,8 @@ struct FMPCandidateSource: Sendable {
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            throw FMPCandidateFailure(requests: requests, reason: String(describing: error))
+            throw FMPCandidateFailure(requests: requests, endpoint: activePath,
+                                      reason: Self.describe(error))
         }
         return Self.interleave(lists, limit: limit)
     }
@@ -92,6 +95,29 @@ struct FMPCandidateSource: Sendable {
         }
         return result
     }
+
+    private static func describe(_ error: Error) -> String {
+        if let failure = error as? FMPCandidateError {
+            switch failure {
+            case .invalidResponse: return "FMP returned an unexpected response or JSON format."
+            case .httpStatus(let status):
+                switch status {
+                case 401, 403: return "FMP rejected the API key or this endpoint is not available on the account (HTTP \(status))."
+                case 402: return "FMP plan or request limit blocked this endpoint (HTTP 402)."
+                case 429: return "FMP rate limit reached (HTTP 429)."
+                default: return "FMP returned HTTP \(status)."
+                }
+            }
+        }
+        if let error = error as? URLError {
+            switch error.code {
+            case .timedOut: return "The FMP request timed out."
+            case .notConnectedToInternet, .networkConnectionLost: return "The device could not reach FMP."
+            default: return "FMP network request failed: \(error.localizedDescription)"
+            }
+        }
+        return "FMP candidate response could not be read: \(String(describing: error))"
+    }
 }
 
 enum FMPCandidateError: Error {
@@ -101,5 +127,8 @@ enum FMPCandidateError: Error {
 
 struct FMPCandidateFailure: Error, Sendable {
     let requests: Int
+    let endpoint: String
     let reason: String
+
+    var localizedDescription: String { "\(reason) Endpoint: \(endpoint)." }
 }
