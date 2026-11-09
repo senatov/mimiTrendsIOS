@@ -4,6 +4,7 @@ enum RadarScanPreferencesStore {
     static let key = "radar.scanPreferences.v1"
     private static let dropThresholdMigrationKey = "radar.scanPreferences.rapidDropDefaultsMigrated.v1"
     private static let movementProfileMigrationKey = "radar.scanPreferences.movementProfileMigrated.v1"
+    private static let quickMovesMigrationKey = "radar.scanPreferences.quickMovesMigrated.v1"
 
     private static let previousShortDropPercent = 1.0
     private static let previousSustainedDropPercent = 1.5
@@ -51,6 +52,20 @@ enum RadarScanPreferencesStore {
             changed = true
         }
 
+        if !defaults.bool(forKey: quickMovesMigrationKey) {
+            if value.crashPercent == 2.0 && value.crashWindowMinutes == 5 {
+                value.crashPercent = RadarScanThresholdDefaults.shortDropPercent
+            }
+            if value.sustainedCrashPercent == 3.5 && value.sustainedCrashWindowMinutes == 15 {
+                value.sustainedCrashPercent = RadarScanThresholdDefaults.sustainedDropPercent
+            }
+            if value.risePercent == 1.2 && value.riseWindowMinutes == 5 {
+                value.risePercent = RadarScanThresholdDefaults.sharpReboundPercent
+            }
+            defaults.set(true, forKey: quickMovesMigrationKey)
+            changed = true
+        }
+
         if changed { try? save(value, to: defaults) }
         return value
     }
@@ -58,5 +73,6 @@ enum RadarScanPreferencesStore {
     static func save(_ value: RadarScanPreferences, to defaults: UserDefaults = .standard) throws {
         defaults.set(try JSONEncoder().encode(value.validated), forKey: key)
         defaults.set(true, forKey: dropThresholdMigrationKey)
+        defaults.set(true, forKey: quickMovesMigrationKey)
     }
 }

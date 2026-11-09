@@ -13,7 +13,8 @@ enum RapidRiseDetector {
         settings: RapidRiseSettings = RapidRiseSettings()
     ) -> ScanResult? {
         let recent = bars.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
-        guard let latest = recent.last,
+        guard let latest = recent.last, recent.count >= 2,
+              latest.close > recent[recent.count - 2].close,
               latest.minuteEpochSeconds >= nowEpochSeconds - 600 else { return nil }
 
         guard latest.volumeStatus == .reported, latest.volume > 0 else { return nil }

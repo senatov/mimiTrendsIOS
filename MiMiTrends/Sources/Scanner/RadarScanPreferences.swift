@@ -1,11 +1,11 @@
 import Foundation
 
 enum RadarScanThresholdDefaults {
-    static let shortDropPercent = 2.0
-    static let sustainedDropPercent = 3.5
+    static let shortDropPercent = 0.8
+    static let sustainedDropPercent = 2.0
     static let legacyShortDropPercent = 0.35
     static let legacySustainedDropPercent = 0.55
-    static let sharpReboundPercent = 1.2
+    static let sharpReboundPercent = 0.8
     static let smoothRisePercent = 1.2
     static let smoothRiseWindowMinutes = 120
     static let smoothRiseMaximumPullbackPercent = 0.75

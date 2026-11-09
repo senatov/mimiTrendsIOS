@@ -4,14 +4,22 @@ import XCTest
 final class RapidCrashDetectorTests: XCTestCase {
     func testConfiguredShortDropThresholdIncludesBoundary() throws {
         let now: Int64 = 12_000
-        let bars = prices("THRESHOLD", endingAt: now, [100, 100.15, 99.0, 98.0])
+        let bars = prices("THRESHOLD", endingAt: now, [100, 100, 99.5, 99.2])
         let signal = try XCTUnwrap(RapidCrashDetector.detect(
             symbol: "THRESHOLD", bars: bars, nowEpochSeconds: now
         ))
         XCTAssertEqual(signal.signalSource, "Rapid crash")
-        XCTAssertEqual(signal.windowChangePercent, -2.0, accuracy: 1e-9)
+        XCTAssertEqual(signal.windowChangePercent, -0.8, accuracy: 1e-9)
         XCTAssertEqual(signal.signalPrice, 100)
-        XCTAssertEqual(signal.price, 98.0)
+        XCTAssertEqual(signal.price, 99.2)
+    }
+
+    func testOneMinuteDropFromRecentPeakIsDetected() throws {
+        let now: Int64 = 20_000
+        let bars = prices("FAST", endingAt: now, [99.5, 99.7, 100.0, 99.1])
+        let signal = try XCTUnwrap(RapidCrashDetector.detect(symbol: "FAST", bars: bars, nowEpochSeconds: now))
+        XCTAssertEqual(signal.signalWindowLabel, "1m")
+        XCTAssertEqual(signal.windowChangePercent, -0.9, accuracy: 1e-9)
     }
 
     func testModeratePullbackDoesNotQualifyAsRapidCrash() {

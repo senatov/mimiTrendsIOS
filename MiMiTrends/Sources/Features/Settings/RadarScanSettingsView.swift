@@ -52,7 +52,7 @@ struct RadarScanSettingsView: View {
     private var crashDescription: String {
         let short = draft.crashPercent.formatted(.number.precision(.fractionLength(0...2)))
         let sustained = draft.sustainedCrashPercent.formatted(.number.precision(.fractionLength(0...2)))
-        return "This is a short-term price-move alert, not an overall stock rating. Current thresholds: at least \(short)% in \(draft.crashWindowMinutes) minutes or \(sustained)% in \(draft.sustainedCrashWindowMinutes) minutes. Both rules require a new low and reported volume; the longer-window rule also requires acceleration."
+        return "Short-term price-move alert: at least \(short)% in \(draft.crashWindowMinutes) minutes or \(sustained)% in \(draft.sustainedCrashWindowMinutes) minutes. Both rules require reported volume; the longer-window rule also requires a new low and acceleration."
     }
 
     private var riseGroup: some View {

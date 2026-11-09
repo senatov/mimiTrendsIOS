@@ -23,8 +23,8 @@ struct RadarSignalList: View {
     let onSelect: (ScanResult) -> Void
     let onVisibleSignal: (String) async -> Void
     let onRefresh: () -> Void
-    @State private var sortColumn: RadarSortColumn = .movement
-    @State private var ascending = false
+    @State private var sortColumn: RadarSortColumn = .age
+    @State private var ascending = true
     @State private var availableWidth: CGFloat = 0
     @State private var columnWidthOverrides: [RadarSortColumn: CGFloat] = [:]
     @State private var coverageRequest: RadarCoverageRequest?

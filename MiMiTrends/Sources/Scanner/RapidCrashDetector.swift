@@ -15,7 +15,8 @@ enum RapidCrashDetector {
         settings: RapidCrashSettings = RapidCrashSettings()
     ) -> ScanResult? {
         let recent = bars.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
-        guard let latest = recent.last,
+        guard let latest = recent.last, recent.count >= 2,
+              latest.close < recent[recent.count - 2].close,
               latest.minuteEpochSeconds >= nowEpochSeconds - 600 else { return nil }
 
         // Use the newest available bar as the event end; otherwise a recovered
@@ -23,7 +24,7 @@ enum RapidCrashDetector {
         let latestCandidates = [
             crashEndingAt(latest, bars: recent, settings: settings,
                           windowMinutes: settings.crashWindowMinutes,
-                          minimumDropPercent: settings.crashPercent, anchorAtPeak: false),
+                          minimumDropPercent: settings.crashPercent, anchorAtPeak: true),
             crashEndingAt(latest, bars: recent, settings: settings,
                           windowMinutes: settings.sustainedCrashWindowMinutes,
                           minimumDropPercent: settings.sustainedCrashPercent, anchorAtPeak: true)
@@ -51,7 +52,7 @@ enum RapidCrashDetector {
         }
         let start = anchorAtPeak ? window.max(by: { $0.close < $1.close }) : window.first
         guard let start,
-              (end.minuteEpochSeconds - start.minuteEpochSeconds) / 60 >= 3,
+              (end.minuteEpochSeconds - start.minuteEpochSeconds) / 60 >= 1,
               start.close > 0, end.close > 0 else { return nil }
         let change = (end.close / start.close - 1) * 100
         guard change <= -minimumDropPercent + 1e-9 else { return nil }
@@ -64,7 +65,7 @@ enum RapidCrashDetector {
             $0.minuteEpochSeconds >= start.minuteEpochSeconds - settings.sustainedCrashWindowMinutes * 60 &&
                 $0.minuteEpochSeconds < start.minuteEpochSeconds && $0.close > 0
         }.map(\.close).min()
-        if let precedingLow, end.close >= precedingLow { return nil }
+        if windowMinutes > settings.crashWindowMinutes, let precedingLow, end.close >= precedingLow { return nil }
         let eventBars = window.filter { $0.minuteEpochSeconds >= start.minuteEpochSeconds }
         guard hasReliableActivity(bars, eventBars: eventBars, end: end, settings: settings) else { return nil }
         return Candidate(start: start, end: end, change: change, count: eventBars.count)
@@ -88,7 +89,7 @@ enum RapidCrashDetector {
     private static func hasReliableActivity(
         _ bars: [MinuteBar], eventBars: [MinuteBar], end: MinuteBar, settings: RapidCrashSettings
     ) -> Bool {
-        guard end.close >= settings.minimumPrice, eventBars.count >= 3,
+        guard end.close >= settings.minimumPrice, eventBars.count >= 2,
               !zip(eventBars, eventBars.dropFirst()).contains(where: { pair in
                   pair.1.minuteEpochSeconds - pair.0.minuteEpochSeconds > 180
               }),
