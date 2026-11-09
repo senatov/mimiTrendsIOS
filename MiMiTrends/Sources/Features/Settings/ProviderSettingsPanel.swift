@@ -291,7 +291,7 @@ private struct ProviderEndpointRow: View {
             Text(endpoint.title).font(SettingsTypography.label).foregroundStyle(.primary)
             HStack(spacing: 6) {
                 TextField(endpoint.title, text: $value)
-                    .textFieldStyle(.roundedBorder)
+                    .settingsInputEmphasis()
                     .font(SettingsTypography.url)
                     .foregroundStyle(SettingsColors.url)
                     #if os(iOS)

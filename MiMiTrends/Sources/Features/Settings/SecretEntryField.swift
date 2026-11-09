@@ -14,7 +14,7 @@ struct SecretEntryField: View {
                     SecureField(title, text: $value)
                 }
             }
-            .textFieldStyle(.roundedBorder)
+            .settingsInputEmphasis()
             .lineLimit(1)
             .autocorrectionDisabled()
             .accessibilityLabel(title)

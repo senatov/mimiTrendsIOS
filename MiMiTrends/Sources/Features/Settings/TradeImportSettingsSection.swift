@@ -4,7 +4,7 @@ struct TradeImportSettingsSection: View {
     let width: CGFloat
 
     var body: some View {
-        SettingsGroup(title: "Scalable trade history") {
+        SettingsGroup(title: "Trade history") {
             if width >= 700 {
                 HStack(alignment: .center, spacing: 16) {
                     importDescription
@@ -22,8 +22,8 @@ struct TradeImportSettingsSection: View {
 
     private var importDescription: some View {
         HStack(alignment: .center, spacing: 16) {
-            Image(systemName: "arrow.down.doc")
-                .font(.title2.weight(.light))
+            Image(systemName: "arrow.down.doc.fill")
+                .font(.title2.weight(.semibold))
                 .foregroundStyle(.blue)
                 .frame(width: 42, height: 42)
                 .background(.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))

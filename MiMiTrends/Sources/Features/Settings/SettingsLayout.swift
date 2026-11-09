@@ -39,6 +39,35 @@ enum SettingsColors {
         Color(uiColor: .secondarySystemGroupedBackground)
         #endif
     }
+
+    static var inputFill: Color {
+        #if os(macOS)
+        Color(nsColor: .textBackgroundColor)
+        #else
+        Color(uiColor: .tertiarySystemBackground)
+        #endif
+    }
+
+    static var inputBorder: Color { Color.accentColor.opacity(0.4) }
+}
+
+struct SettingsInputEmphasis: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.roundedBorder)
+            .tint(.accentColor)
+            .background(SettingsColors.inputFill, in: RoundedRectangle(cornerRadius: 7))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .strokeBorder(SettingsColors.inputBorder, lineWidth: 1)
+            }
+    }
+}
+
+extension View {
+    func settingsInputEmphasis() -> some View {
+        modifier(SettingsInputEmphasis())
+    }
 }
 
 struct SettingsPage<Content: View>: View {
