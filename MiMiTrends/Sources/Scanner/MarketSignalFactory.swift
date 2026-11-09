@@ -10,7 +10,8 @@ enum MarketSignalFactory {
         displayPrice: Double,
         nowEpochSeconds: Int64,
         anomalyScore: Double = 100,
-        windowLabel: String? = nil
+        windowLabel: String? = nil,
+        dataStatus: String? = nil
     ) -> ScanResult {
         let session = bars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - 10_800 }
         return ScanResult(
@@ -30,7 +31,7 @@ enum MarketSignalFactory {
             signalAgeMinutes: Int(max(0, nowEpochSeconds - end.minuteEpochSeconds) / 60),
             signalSource: source,
             updatedAtMillis: end.minuteEpochSeconds * 1_000,
-            dataStatus: MarketCandidateFilter.isGermanSymbol(symbol) ? "DELAYED" : "LIVE",
+            dataStatus: dataStatus ?? (MarketCandidateFilter.isGermanSymbol(symbol) ? "DELAYED" : "LIVE"),
             signalWindowLabel: windowLabel ?? "\(max(1, (end.minuteEpochSeconds - start.minuteEpochSeconds) / 60))m",
             signalPrice: start.close,
             signalEpochMillis: end.minuteEpochSeconds * 1_000,

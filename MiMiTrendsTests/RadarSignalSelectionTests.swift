@@ -42,9 +42,18 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(displayed.signals.map(\.symbol), ["AAPL", "MSFT"])
     }
 
+    func testHidesLegacyYahooRapidDropsWithoutFinnhubProvenance() {
+        let legacyYahoo = event("DELL", source: "Rapid crash", at: 500, change: -1.02,
+                                window: "4m", dataStatus: "LIVE")
+
+        let displayed = RadarSignalSelection.displayHistory([legacyYahoo], since: 0, limit: 10)
+
+        XCTAssertTrue(displayed.signals.isEmpty)
+    }
+
     private func event(
         _ symbol: String, source: String, at epoch: Int64,
-        change: Double = 1, window: String = "1m"
+        change: Double = 1, window: String = "1m", dataStatus: String? = nil
     ) -> ScanResult {
         ScanResult(
             symbol: symbol, price: 100, anomalyScore: 0,
@@ -52,7 +61,9 @@ final class RadarSignalSelectionTests: XCTestCase {
             relativeVolume: nil, candleBodyRatio: 0,
             windowChangePercent: change, windowVolume: 0, sessionVolume: 0,
             sessionTurnover: 0, signalAgeMinutes: 0, signalSource: source,
-            updatedAtMillis: epoch, signalWindowLabel: window, signalEpochMillis: epoch
+            updatedAtMillis: epoch,
+            dataStatus: dataStatus ?? (source == "Rapid crash" ? "FINNHUB_LIVE" : "CACHE"),
+            signalWindowLabel: window, signalEpochMillis: epoch
         )
     }
 }

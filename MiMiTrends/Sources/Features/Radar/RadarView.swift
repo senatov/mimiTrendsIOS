@@ -186,7 +186,7 @@ struct RadarView: View {
                 await refreshSignals()
                 AppDiagnostics.shared.record(
                     .info, "Radar", "market-scan-finished",
-                    "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) signals=\(cycle.storedSignals) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
+                    "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return

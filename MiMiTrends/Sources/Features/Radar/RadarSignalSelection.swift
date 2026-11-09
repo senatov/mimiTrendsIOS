@@ -8,7 +8,12 @@ enum RadarSignalSelection {
     )
         -> (signals: [ScanResult], savedFallback: Bool) {
         let qualified = history.filter { signal in
-            guard signal.signalSource.lowercased() == "rapid crash" else { return true }
+            let source = signal.signalSource.lowercased()
+            let requiresLiveTrades = ["rapid crash", "sharp rebound", "smooth rise"].contains(source)
+            if requiresLiveTrades && signal.dataStatus != "FINNHUB_LIVE" {
+                return false
+            }
+            guard source == "rapid crash" else { return true }
             let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
             let threshold = minutes <= preferences.crashWindowMinutes
                 ? preferences.crashPercent : preferences.sustainedCrashPercent

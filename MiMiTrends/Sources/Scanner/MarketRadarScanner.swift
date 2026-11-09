@@ -17,7 +17,6 @@ struct MarketRadarCycle: Sendable {
     let initialScanProcessed: Int
     let initialScanTotal: Int
     let scannedSymbols: Int
-    let storedSignals: Int
     let companyNames: [String: String]
     let progress: MarketScanProgress
 }
@@ -112,7 +111,7 @@ actor MarketRadarScanner {
                                     yahooCooldownUntil: yahooCooldownUntil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, storedSignals: 0, companyNames: names,
+                                    scannedSymbols: 0, companyNames: names,
                                     progress: progress())
         }
         yahooCooldownUntil = nil
@@ -127,13 +126,11 @@ actor MarketRadarScanner {
                                     yahooCooldownUntil: nil,
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, storedSignals: 0, companyNames: names,
+                                    scannedSymbols: 0, companyNames: names,
                                     progress: progress())
         }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
-        let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
         let nowSeconds = Int64(Date().timeIntervalSince1970)
-        var storedSignals = 0
         var firstYahooFailure: String?
         var yahooFailuresThisCycle = 0
         var rejectedSymbolsThisCycle = 0
@@ -157,42 +154,22 @@ actor MarketRadarScanner {
                                   last.minuteEpochSeconds >= evaluationTime - 600 else {
                                 RadarMarketDataPolicy.logStale(symbol: symbol, bars: bars, now: nowSeconds)
                                 return SymbolOutcome(symbol: symbol, received: bars.count,
-                                                     signalStored: false, failure: nil, skipped: true)
+                                                     failure: nil, skipped: true)
                             }
                             for bar in bars { _ = try await barStore.upsert(bar) }
                             RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)
-                            let recent = try await barStore.loadMinuteBars(
-                                symbol: symbol, fromEpochSeconds: nowSeconds - 21_600
-                            )
-                            let signal = RapidCrashDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
-                                settings: settings.rapidCrash
-                            ) ?? RapidRiseDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
-                                settings: settings.rapidRise
-                            ) ?? SmoothRiseDetector.detect(
-                                symbol: symbol, bars: recent, nowEpochSeconds: evaluationTime,
-                                settings: settings.smoothRise
-                            )
-                            let saved: Bool
-                            if let signal {
-                                saved = try await signalStore.record(signal)
-                            } else {
-                                saved = false
-                            }
-                            return SymbolOutcome(symbol: symbol, received: bars.count,
-                                                 signalStored: saved, failure: nil)
+                            return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil)
                         } catch RadarSourceError.rateLimited {
-                            return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
+                            return SymbolOutcome(symbol: symbol, received: 0,
                                                  failure: "Yahoo temporarily limited requests (HTTP 429). Radar pauses scanning for 30 minutes, then retries automatically.",
                                                  rateLimited: true)
                         } catch RadarSourceError.invalidSymbol {
-                            return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
+                            return SymbolOutcome(symbol: symbol, received: 0,
                                                  failure: nil,
                                                  rejectedSymbol: symbol, skipped: true)
                         } catch {
                             return SymbolOutcome(
-                                symbol: symbol, received: 0, signalStored: false,
+                                symbol: symbol, received: 0,
                                 failure: Self.errorMessage(error, provider: "Yahoo (\(symbol))"),
                                 rateLimited: false
                             )
@@ -217,7 +194,6 @@ actor MarketRadarScanner {
                         rejectedSymbolsThisCycle += 1
                         if firstRejectedSymbol == nil { firstRejectedSymbol = symbol }
                     }
-                    if outcome.signalStored { storedSignals += 1 }
                     if !initialScanSymbols.contains(outcome.symbol) {
                         if outcome.failure != nil { initialErrors += 1 }
                         else if outcome.skipped {
@@ -257,7 +233,7 @@ actor MarketRadarScanner {
             yahooCooldownUntil: yahooCooldownUntil,
             initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
             initialScanTotal: initialScanTotal,
-            scannedSymbols: symbols.count, storedSignals: storedSignals, companyNames: names,
+            scannedSymbols: symbols.count, companyNames: names,
             progress: progress()
         )
     }
@@ -436,7 +412,6 @@ actor MarketRadarScanner {
 private struct SymbolOutcome: Sendable {
     let symbol: String
     let received: Int
-    let signalStored: Bool
     let failure: String?
     var rateLimited = false
     var rejectedSymbol: String? = nil

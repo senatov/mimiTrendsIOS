@@ -35,15 +35,16 @@ struct FinnhubRadarPipeline: Sendable {
         )
         let candidate = RapidCrashDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
-            settings: settings.rapidCrash
+            settings: settings.rapidCrash, dataStatus: "FINNHUB_LIVE"
         ) ?? RapidRiseDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
-            settings: settings.rapidRise
+            settings: settings.rapidRise, dataStatus: "FINNHUB_LIVE"
         ) ?? SmoothRiseDetector.detect(
             symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
-            settings: settings.smoothRise
+            settings: settings.smoothRise, dataStatus: "FINNHUB_LIVE"
         ) ?? TradableCorridorDetector.detect(
-            symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds
+            symbol: trade.symbol, bars: recent, nowEpochSeconds: nowEpochSeconds,
+            dataStatus: "FINNHUB_LIVE"
         )
         var signal = candidate
         if let quote, let candidate,

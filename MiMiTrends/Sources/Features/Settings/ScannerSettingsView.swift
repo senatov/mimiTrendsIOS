@@ -37,11 +37,11 @@ struct ScannerSettingsView: View {
 
     private var scopePanel: some View {
         SettingsGroup(title: "Current scan scope") {
-            SettingsValueRow(title: "Confirmed signals", value: "Yahoo minute bars; optional Finnhub trades")
-            SettingsValueRow(title: "Preliminary quotes", value: "Lang & Schwarz; linked wallstreetONLINE prices on demand")
+            SettingsValueRow(title: "Confirmed signals", value: "Live Finnhub trades; fresh Lang & Schwarz quotes")
+            SettingsValueRow(title: "Historical data", value: "Yahoo candles for charts and price history")
             SettingsValueRow(title: "Symbols", value: scanWatchlist ? "Selected + saved, up to 5" : "Selected only")
             SettingsValueRow(title: "Activity", value: "Foreground only")
-            Text("Quote movements have no verified trade volume. Existing source-currency minute bars remain separate from EUR quote observations.")
+            Text("Finnhub signals use live trades and volume. Lang & Schwarz signals use fresh bid/ask quotes without trade volume. Yahoo data does not generate live signals.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
         }

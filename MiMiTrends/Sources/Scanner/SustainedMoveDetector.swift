@@ -15,7 +15,8 @@ enum SmoothRiseDetector {
         symbol: String,
         bars: [MinuteBar],
         nowEpochSeconds: Int64,
-        settings: SmoothRiseSettings = SmoothRiseSettings()
+        settings: SmoothRiseSettings = SmoothRiseSettings(),
+        dataStatus: String? = nil
     ) -> ScanResult? {
         let recent = bars.filter {
             $0.minuteEpochSeconds >= nowEpochSeconds - settings.windowMinutes * 60 &&
@@ -52,7 +53,7 @@ enum SmoothRiseDetector {
             eventBarCount: eventBars.count, changePercent: change,
             source: "Smooth rise",
             displayPrice: end.close, nowEpochSeconds: nowEpochSeconds,
-            anomalyScore: 90
+            anomalyScore: 90, dataStatus: dataStatus
         )
     }
 

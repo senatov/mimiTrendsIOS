@@ -22,7 +22,7 @@ struct DiscoverySettingsSection: View {
             .pickerStyle(.menu)
             Text("Both lists refresh at startup and every 30 minutes. Ranking position and presence in both lists determine scan order; they do not increase signal confidence.")
                 .font(.callout).foregroundStyle(.secondary)
-            Text("Wikifolio trades measure activity on wikifolio, not exchange volume. Fresh L&S bid/ask movements and Yahoo candle signals keep their own validation.")
+            Text("Wikifolio trades measure activity on wikifolio, not exchange volume. Fresh L&S bid/ask movements and live Finnhub trade signals keep their own validation. Yahoo candles are for historical context.")
                 .font(.callout).foregroundStyle(.secondary)
         }
         .task(id: "\(wikifolio)|\(performance)|\(priority)") {

@@ -1,7 +1,9 @@
 import Foundation
 
 enum TradableCorridorDetector {
-    static func detect(symbol: String, bars: [MinuteBar], nowEpochSeconds: Int64) -> ScanResult? {
+    static func detect(
+        symbol: String, bars: [MinuteBar], nowEpochSeconds: Int64, dataStatus: String? = nil
+    ) -> ScanResult? {
         let sorted = bars.filter { $0.close > 0 }.sorted {
             $0.minuteEpochSeconds < $1.minuteEpochSeconds
         }
@@ -67,7 +69,7 @@ enum TradableCorridorDetector {
             eventBarCount: session.count, changePercent: remaining,
             source: "Tradable corridor", displayPrice: upper,
             nowEpochSeconds: nowEpochSeconds,
-            anomalyScore: Double(score), windowLabel: "120m corridor"
+            anomalyScore: Double(score), windowLabel: "120m corridor", dataStatus: dataStatus
         )
     }
 

@@ -59,7 +59,7 @@ struct RadarSourcePanel: View {
     private var telemetrySources: [RadarTelemetrySource] {
         [
             RadarTelemetrySource(
-                name: "Yahoo", status: yahooStatus,
+                name: "Yahoo history", status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
