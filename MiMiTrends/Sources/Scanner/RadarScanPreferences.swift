@@ -2,10 +2,13 @@ import Foundation
 
 enum RadarScanThresholdDefaults {
     static let shortDropPercent = 0.8
+    static let shortDropWindowMinutes = 5
     static let sustainedDropPercent = 2.0
+    static let sustainedDropWindowMinutes = 15
     static let legacyShortDropPercent = 0.35
     static let legacySustainedDropPercent = 0.55
     static let sharpReboundPercent = 0.8
+    static let sharpReboundWindowMinutes = 5
     static let smoothRisePercent = 1.2
     static let smoothRiseWindowMinutes = 120
     static let smoothRiseMaximumPullbackPercent = 0.75
@@ -13,11 +16,11 @@ enum RadarScanThresholdDefaults {
 
 struct RadarScanPreferences: Codable, Equatable, Sendable {
     var crashPercent = RadarScanThresholdDefaults.shortDropPercent
-    var crashWindowMinutes = 5
+    var crashWindowMinutes = RadarScanThresholdDefaults.shortDropWindowMinutes
     var sustainedCrashPercent = RadarScanThresholdDefaults.sustainedDropPercent
-    var sustainedCrashWindowMinutes = 15
+    var sustainedCrashWindowMinutes = RadarScanThresholdDefaults.sustainedDropWindowMinutes
     var risePercent = RadarScanThresholdDefaults.sharpReboundPercent
-    var riseWindowMinutes = 5
+    var riseWindowMinutes = RadarScanThresholdDefaults.sharpReboundWindowMinutes
     var minimumPrice = 5.0
     var minimumTurnover = 250_000.0
     var sustainedMovePercent = RadarScanThresholdDefaults.smoothRisePercent
