@@ -3,6 +3,7 @@ import SwiftUI
 struct CredentialEditor: View {
     let title: String
     let detail: String
+    let help: CredentialHelp
     let load: () throws -> String?
     let save: (String) throws -> Void
     let remove: () throws -> Void
@@ -11,10 +12,32 @@ struct CredentialEditor: View {
     @State private var draft = ""
     @State private var hasStoredValue = false
     @State private var message: String?
+    @State private var showingHelp = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(title).font(SettingsTypography.label).foregroundStyle(.primary)
+            HStack(spacing: 6) {
+                Text(title).font(SettingsTypography.label).foregroundStyle(.primary)
+                Button {
+                    showingHelp = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Where to get \(title)")
+                .popover(isPresented: $showingHelp, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(help.title).font(.headline)
+                        Text(help.message).font(.callout).fixedSize(horizontal: false, vertical: true)
+                        if let url = help.url {
+                            Link(help.linkTitle, destination: url)
+                        }
+                    }
+                    .padding(16)
+                    .frame(width: 320, alignment: .leading)
+                }
+            }
             Text(detail).font(.callout).foregroundStyle(.secondary)
             SecretEntryField(title: title, value: $draft)
             HStack(spacing: 8) {
@@ -89,4 +112,11 @@ struct CredentialEditor: View {
         "Saved in Keychain"
         #endif
     }
+}
+
+struct CredentialHelp {
+    let title: String
+    let message: String
+    var linkTitle: String = "Open provider page"
+    var url: URL?
 }

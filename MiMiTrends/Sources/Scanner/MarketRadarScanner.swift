@@ -5,6 +5,7 @@ struct RadarSourceTotals: Sendable {
     var valid = 0
     var operations = 0
     var errors = 0
+    var lastErrorMessage: String?
 }
 
 struct MarketRadarCycle: Sendable {
@@ -183,7 +184,7 @@ actor MarketRadarScanner {
                                                  signalStored: saved, failure: nil)
                         } catch RadarSourceError.rateLimited {
                             return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
-                                                 failure: "symbol=\(symbol) error=rateLimited",
+                                                 failure: "Yahoo temporarily limited requests (HTTP 429). Radar pauses scanning for 30 minutes, then retries automatically.",
                                                  rateLimited: true)
                         } catch RadarSourceError.invalidSymbol {
                             return SymbolOutcome(symbol: symbol, received: 0, signalStored: false,
@@ -192,7 +193,7 @@ actor MarketRadarScanner {
                         } catch {
                             return SymbolOutcome(
                                 symbol: symbol, received: 0, signalStored: false,
-                                failure: "symbol=\(symbol) error=\(String(describing: error))",
+                                failure: Self.errorMessage(error, provider: "Yahoo (\(symbol))"),
                                 rateLimited: false
                             )
                         }
@@ -206,6 +207,7 @@ actor MarketRadarScanner {
                     yahooTotals.operations += 1
                     if let failure = outcome.failure {
                         yahooTotals.errors += 1
+                        yahooTotals.lastErrorMessage = failure
                         yahooFailuresThisCycle += 1
                         if firstYahooFailure == nil { firstYahooFailure = failure }
                     }
@@ -282,24 +284,28 @@ actor MarketRadarScanner {
                                          "error=\(String(describing: error))")
         }
         var yahooRefreshed = false
+        var traderFoxRefreshErrors: [String] = []
         do {
             let symbols = try await yahoo.mostActiveCandidates()
             yahooTotals.operations += 1
             if !symbols.isEmpty {
                 yahooCandidates = symbols
                 yahooRefreshed = true
+                yahooTotals.lastErrorMessage = nil
                 unsupportedSymbols.removeAll()
                 scanOffset = 0
             }
         } catch RadarSourceError.rateLimited {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
+            yahooTotals.lastErrorMessage = "Yahoo temporarily limited requests (HTTP 429). Radar pauses Yahoo scanning for 30 minutes, then retries automatically."
             yahooCooldownUntil = Date().addingTimeInterval(30 * 60)
             AppDiagnostics.shared.record(.warning, "Yahoo", "candidate-rate-limited",
                                          "cooldownMinutes=30")
         } catch {
             yahooTotals.operations += 1
             yahooTotals.errors += 1
+            yahooTotals.lastErrorMessage = Self.errorMessage(error, provider: "Yahoo")
             AppDiagnostics.shared.record(
                 .warning, "Yahoo", "candidate-refresh-failed",
                 "error=\(String(describing: type(of: error)))"
@@ -321,12 +327,14 @@ actor MarketRadarScanner {
             } catch let failure as FMPCandidateFailure {
                 fmpTotals.operations += failure.requests
                 fmpTotals.errors += 1
+                fmpTotals.lastErrorMessage = Self.errorMessage(failure, provider: "FMP")
                 AppDiagnostics.shared.record(
                     .warning, "FMP", "candidate-refresh-failed",
                     "requests=\(failure.requests) error=\(failure.reason)"
                 )
             } catch {
                 fmpTotals.errors += 1
+                fmpTotals.lastErrorMessage = Self.errorMessage(error, provider: "FMP")
                 AppDiagnostics.shared.record(
                     .warning, "FMP", "candidate-refresh-failed",
                     "error=\(String(describing: type(of: error)))"
@@ -342,6 +350,8 @@ actor MarketRadarScanner {
             } catch {
                 traderFoxTotals.operations += 1
                 traderFoxTotals.errors += 1
+                traderFoxTotals.lastErrorMessage = Self.errorMessage(error, provider: "TraderFox US candidates")
+                traderFoxRefreshErrors.append(traderFoxTotals.lastErrorMessage ?? "TraderFox request failed.")
                 AppDiagnostics.shared.record(
                     .warning, "TraderFox", "candidate-refresh-failed",
                     "error=\(String(describing: type(of: error)))"
@@ -357,11 +367,47 @@ actor MarketRadarScanner {
         } catch {
             traderFoxTotals.operations += 3
             traderFoxTotals.errors += 1
+            traderFoxTotals.lastErrorMessage = Self.errorMessage(error, provider: "TraderFox German candidates")
+            traderFoxRefreshErrors.append(traderFoxTotals.lastErrorMessage ?? "TraderFox request failed.")
             AppDiagnostics.shared.record(
                 .warning, "TraderFox", "german-candidate-refresh-failed",
                 "error=\(String(describing: type(of: error)))"
             )
         }
+        traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
+            ? nil : traderFoxRefreshErrors.joined(separator: "\n")
+    }
+
+    private static func errorMessage(_ error: Error, provider: String) -> String {
+        if let sourceError = error as? RadarSourceError {
+            switch sourceError {
+            case .rateLimited:
+                return "\(provider) temporarily limited requests (HTTP 429). Radar will retry after its cooldown."
+            case .httpStatus(let status) where status == 401 || status == 403:
+                return "\(provider) denied access (HTTP \(status)). Check that the source address is correct and that the provider permits requests from this app."
+            case .httpStatus(let status) where status >= 500:
+                return "\(provider) returned a server error (HTTP \(status)). This is usually temporary; Radar retries automatically."
+            case .httpStatus(let status):
+                return "\(provider) returned HTTP \(status). Check provider availability and the configured address."
+            case .invalidResponse:
+                return "\(provider) returned data in a format Radar could not read. The page or response format may have changed."
+            case .invalidSymbol:
+                return "\(provider) does not support this symbol. Radar skips unsupported symbols automatically."
+            }
+        }
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .timedOut:
+                return "The request to \(provider) timed out. Check the internet connection or try again later."
+            case .notConnectedToInternet, .networkConnectionLost:
+                return "The device could not reach \(provider). Check the internet connection; Radar retries automatically."
+            case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                return "The device could not connect to \(provider). Check the configured address or try again later."
+            default:
+                return "The request to \(provider) failed: \(urlError.localizedDescription)"
+            }
+        }
+        return "The request to \(provider) failed (\(String(describing: type(of: error)))). Check the network and retry; Radar retries automatically."
     }
 
     static func interleave(_ first: [String], _ second: [String], limit: Int) -> [String] {

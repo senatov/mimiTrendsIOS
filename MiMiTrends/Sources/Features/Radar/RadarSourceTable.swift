@@ -9,6 +9,7 @@ struct RadarTelemetrySource: Identifiable {
     let valid: Int?
     let requests: Int?
     let errors: Int?
+    var errorDetails: String? = nil
 
     var id: String { name }
 }
@@ -33,11 +34,16 @@ struct RadarSourceTable: View {
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        Text(source.status)
-                            .font(statusFont)
-                            .foregroundStyle(source.statusColor)
-                            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
-                            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.8)
+                        HStack(spacing: 4) {
+                            Text(source.status)
+                                .font(statusFont)
+                                .foregroundStyle(source.statusColor)
+                                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 2 : 1)
+                                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.8)
+                            if let detail = source.errorDetails, (source.errors ?? 0) > 0 {
+                                RadarSourceErrorButton(source: source.name, detail: detail)
+                            }
+                        }
                     }
                     Group {
                         if dynamicTypeSize.isAccessibilitySize {
@@ -61,8 +67,7 @@ struct RadarSourceTable: View {
                 .padding(.vertical, 5)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(tableColor(.sourceRowFill))
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("\(source.name), \(source.status), received \(spoken(source.received)), valid \(spoken(source.valid)), requests \(spoken(source.requests)), errors \(spoken(source.errors))")
+                .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("source-\(source.name)")
                 if source.id != sources.last?.id {
                     Rectangle()
@@ -94,11 +99,33 @@ struct RadarSourceTable: View {
         dynamicTypeSize.isAccessibilitySize ? .caption : tableTypography.font(size: max(10, tableTypography.size - 2))
     }
 
-    private func spoken(_ value: Int?) -> String {
-        value.map(String.init) ?? "unavailable"
-    }
-
     private func tableColor(_ role: RadarTableColorRole) -> Color {
         tableColors.color(role, dark: colorScheme == .dark)
+    }
+}
+
+private struct RadarSourceErrorButton: View {
+    let source: String
+    let detail: String
+    @State private var showingDetails = false
+
+    var body: some View {
+        Button { showingDetails = true } label: {
+            Image(systemName: "info.circle")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(2)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(source) error details")
+        .popover(isPresented: $showingDetails, arrowEdge: .top) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(source) · latest error").font(.headline)
+                Text(detail).font(.callout).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(16)
+            .frame(width: 320, alignment: .leading)
+        }
     }
 }

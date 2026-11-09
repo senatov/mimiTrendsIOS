@@ -99,6 +99,12 @@ struct ProviderSettingsPanel: View {
                 CredentialEditor(
                     title: "Finnhub API key",
                     detail: "Required for the live trade feed and optional US bid/ask validation. Stored securely on this device.",
+                    help: CredentialHelp(
+                        title: "Get your Finnhub API key",
+                        message: "Sign in to your Finnhub account and copy the API key from your account dashboard. Paste that key here. Account-plan permissions determine which symbols and endpoints are available.",
+                        linkTitle: "Open Finnhub account",
+                        url: URL(string: "https://finnhub.io/dashboard")
+                    ),
                     load: { try FinnhubCredentialStore.load() },
                     save: { try FinnhubCredentialStore.save($0) },
                     remove: {
@@ -108,7 +114,11 @@ struct ProviderSettingsPanel: View {
                 )
                 CredentialEditor(
                     title: "Finnhub webhook secret",
-                    detail: "Stored separately. The current app does not receive Finnhub webhooks; this value does not affect the live trade feed.",
+                    detail: "Not used by this app's live feed.",
+                    help: CredentialHelp(
+                        title: "Webhook secret is for your webhook server",
+                        message: "This app does not receive Finnhub webhooks, so you can leave this blank. For a separate webhook integration, the server owner creates the shared secret and configures it on both the receiver and sender; it is not the Finnhub API key."
+                    ),
                     load: { try FinnhubCredentialStore.loadWebhookSecret() },
                     save: { try FinnhubCredentialStore.saveWebhookSecret($0) },
                     remove: { try FinnhubCredentialStore.deleteWebhookSecret() }

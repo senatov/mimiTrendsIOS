@@ -62,7 +62,8 @@ struct RadarSourcePanel: View {
                 name: "Yahoo", status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
-                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors
+                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
+                errorDetails: marketCycle?.yahoo.lastErrorMessage
             ),
             RadarTelemetrySource(
                 name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
@@ -88,7 +89,8 @@ struct RadarSourcePanel: View {
                 status: marketStatus(candidateTotals),
                 statusColor: marketColor(candidateTotals), dotColor: marketColor(candidateTotals),
                 received: candidateTotals?.received, valid: candidateTotals?.valid,
-                requests: candidateTotals?.operations, errors: candidateTotals?.errors
+                requests: candidateTotals?.operations, errors: candidateTotals?.errors,
+                errorDetails: candidateTotals?.lastErrorMessage
             )
         ] + (discoveryStatus?.rankingSources ?? []).map { source in
             let color = tableColor(source.failed ? .sourceAttention : source.enabled ? .sourceActive : .sourceInactive)
