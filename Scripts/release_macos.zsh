@@ -75,8 +75,16 @@ fi
 
 version_applied=0
 release_committed=0
+mount_point=""
+writable_dmg=""
 restore_on_failure() {
     local result=$?
+    if [[ -n "${mount_point}" && -d "${mount_point}" ]]; then
+        hdiutil detach "${mount_point}" -quiet >/dev/null 2>&1 || true
+    fi
+    if [[ -n "${writable_dmg}" && -e "${writable_dmg}" ]]; then
+        rm -f "${writable_dmg}"
+    fi
     if (( result != 0 && version_applied && !release_committed )); then
         git restore -- project.yml mimiTrends-iOS.xcodeproj/project.pbxproj
         echo "Release failed before commit; project versions were restored." >&2
@@ -113,10 +121,57 @@ fi
 staging="${release_dir}/staging"
 mkdir -p "${staging}"
 ditto "${app_path}" "${staging}/${APP_NAME}.app"
-ln -s /Applications "${staging}/Applications"
+ln -sfn /Applications "${staging}/Applications"
+installer_app="${staging}/How to Install.app"
+mkdir -p "${installer_app}/Contents/MacOS" "${installer_app}/Contents/Resources"
+swiftc -parse-as-library -O -framework AppKit -framework SwiftUI \
+    "${SCRIPT_DIR}/InstallerGuide.swift" -o "${installer_app}/Contents/MacOS/InstallerGuide"
+cp "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png" \
+    "${installer_app}/Contents/Resources/AppIcon.png"
+cp "${SCRIPT_DIR}/assets/InstallerBackground.png" \
+    "${installer_app}/Contents/Resources/InstallerBackground.png"
+cat > "${installer_app}/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleDevelopmentRegion</key><string>en</string>
+<key>CFBundleExecutable</key><string>InstallerGuide</string>
+<key>CFBundleIconFile</key><string>AppIcon.png</string>
+<key>CFBundleIdentifier</key><string>org.senatov.mimitrends.installer</string>
+<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+<key>CFBundleName</key><string>How to Install</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleShortVersionString</key><string>${next}</string>
+<key>CFBundleVersion</key><string>${next}</string>
+<key>LSMinimumSystemVersion</key><string>27.0</string>
+<key>NSPrincipalClass</key><string>NSApplication</string>
+</dict></plist>
+PLIST
+codesign --force --sign "${signing_identity}" --options runtime --timestamp "${installer_app}"
+codesign --verify --deep --strict "${installer_app}"
+installer_team="$(codesign -dv --verbose=4 "${installer_app}" 2>&1 | /usr/bin/sed -n 's/^TeamIdentifier=//p')"
+if [[ "${installer_team}" != "${team_id}" ]]; then
+    echo "Installer helper has team ${installer_team}; expected ${team_id}." >&2
+    exit 1
+fi
+
 dmg="${release_dir}/${APP_NAME}-${next}.dmg"
-hdiutil create -quiet -volname "${APP_NAME} ${next}" -srcfolder "${staging}" \
-    -fs HFS+ -format UDZO -ov "${dmg}"
+volume_name="${APP_NAME}-${next}"
+writable_dmg="${release_dir}/${APP_NAME}-${next}-writable.dmg"
+hdiutil create -quiet -volname "${volume_name}" -srcfolder "${staging}" \
+    -fs HFS+ -format UDRW -ov "${writable_dmg}"
+hdiutil attach -quiet -nobrowse -noverify -readwrite "${writable_dmg}"
+mount_point="/Volumes/${volume_name}"
+if [[ ! -d "${mount_point}" ]]; then
+    echo "Could not mount the writable installer image at ${mount_point}." >&2
+    exit 1
+fi
+osascript "${SCRIPT_DIR}/configure_installer_window.applescript" "${volume_name}"
+hdiutil detach "${mount_point}" -quiet
+mount_point=""
+hdiutil convert "${writable_dmg}" -quiet -format UDZO -ov -o "${dmg}"
+rm -f "${writable_dmg}"
+writable_dmg=""
 notary_result="${release_dir}/notary-result.json"
 if ! xcrun notarytool submit "${dmg}" --keychain-profile "${notary_profile}" \
     --wait --output-format json > "${notary_result}"; then
