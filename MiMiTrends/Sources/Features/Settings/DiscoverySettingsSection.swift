@@ -7,12 +7,12 @@ struct DiscoverySettingsSection: View {
     @State private var health: [RankingSourceHealth] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("Ranking sources")
                 .font(SettingsTypography.label)
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .top, spacing: 12) { sources }
-                VStack(alignment: .leading, spacing: 10) { sources }
+                HStack(alignment: .top, spacing: 8) { sources }
+                VStack(alignment: .leading, spacing: 8) { sources }
             }
             Divider()
             Picker("Scan priority", selection: $priority) {
@@ -21,9 +21,9 @@ struct DiscoverySettingsSection: View {
             .font(SettingsTypography.label)
             .pickerStyle(.menu)
             Text("Both lists refresh at startup and every 30 minutes. Ranking position and presence in both lists determine scan order; they do not increase signal confidence.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.primary.opacity(0.72))
             Text("Wikifolio trades measure activity on wikifolio, not exchange volume. Fresh L&S bid/ask movements and live Finnhub trade signals keep their own validation. Yahoo candles are for historical context.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.primary.opacity(0.72))
         }
         .task(id: "\(wikifolio)|\(performance)|\(priority)") {
             health = await WallstreetDiscoverySource.shared.health()
@@ -43,12 +43,12 @@ struct DiscoverySettingsSection: View {
     }
 
     private func source(_ kind: WallstreetRankingKind, enabled: Binding<Bool>, detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 4) {
             Toggle(kind.title, isOn: enabled)
                 .toggleStyle(.switch)
                 .font(SettingsTypography.label)
                 .accessibilityIdentifier("discovery-\(kind.rawValue)")
-            Text(detail).font(.callout).foregroundStyle(.secondary)
+            Text(detail).font(.callout).foregroundStyle(.primary.opacity(0.72))
             Link(destination: ProviderEndpointStore.url(for: kind.endpoint)) {
                 Text(ProviderEndpointStore.url(for: kind.endpoint).absoluteString)
                     .font(SettingsTypography.url).foregroundStyle(SettingsColors.url)
@@ -56,7 +56,7 @@ struct DiscoverySettingsSection: View {
             }
             if let status = health.first(where: { $0.kind == kind }) {
                 Text(!enabled.wrappedValue ? "Disabled" : status.failed ? "Refresh failed · retaining cached candidates" : status.lastSuccess == nil ? "Waiting for the first ranking refresh" : "\(status.count) ranked stocks · today's list")
-                    .font(.caption).foregroundStyle(status.failed ? .orange : .secondary)
+                    .font(.caption).foregroundStyle(status.failed ? .orange : .primary.opacity(0.72))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

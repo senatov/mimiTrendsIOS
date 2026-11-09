@@ -40,7 +40,8 @@ struct CredentialEditor: View {
                     .frame(width: 320, alignment: .leading)
                 }
             }
-            Text(detail).font(.callout).foregroundStyle(.secondary)
+            Text(detail).font(.callout)
+                .foregroundStyle(compact ? Color.primary.opacity(0.72) : Color.secondary)
             SecretEntryField(title: title, value: $draft)
             HStack(spacing: compact ? 6 : 8) {
                 TrendsActionButton(title: "Save", systemImage: "checkmark", tint: .green) {
@@ -55,10 +56,11 @@ struct CredentialEditor: View {
                 }
                 Text(hasStoredValue ? storageStatus : "Not configured")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(compact ? Color.primary.opacity(0.72) : Color.secondary)
             }
             if let message {
-                Text(message).font(.callout).foregroundStyle(.secondary)
+                Text(message).font(.callout)
+                    .foregroundStyle(compact ? Color.primary.opacity(0.72) : Color.secondary)
             }
         }
         .padding(compact ? 12 : 18)

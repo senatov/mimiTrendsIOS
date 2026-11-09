@@ -1,6 +1,12 @@
 import Foundation
 
 enum FinnhubTradeDecoder {
+    static func messageType(_ data: Data) -> String {
+        guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let type = object["type"] as? String else { return "unknown" }
+        return type
+    }
+
     static func decode(_ data: Data) throws -> [TradeTick] {
         let envelope: Envelope
         do {

@@ -6,14 +6,19 @@ struct FinnhubTradeStream: Sendable {
         let command = try Self.subscriptionMessages(for: [symbol])[0]
         let socket = URLSession.shared.webSocketTask(with: url)
         let deadline = FinnhubConnectionCheckDeadline()
+        let host = url.host ?? "unknown"
+        AppDiagnostics.shared.record(.info, "Finnhub", "connection-check-start", "host=\(host) symbol=\(symbol)")
         socket.resume()
         defer { socket.cancel(with: .normalClosure, reason: nil) }
 
         try await socket.send(.string(command))
+        AppDiagnostics.shared.record(.info, "Finnhub", "connection-check-subscription-sent", "symbol=\(symbol)")
         let timeout = Task {
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled else { return }
             await deadline.expire()
+            AppDiagnostics.shared.record(.warning, "Finnhub", "connection-check-no-frame",
+                                         "symbol=\(symbol) result=socket-open-but-no-data-frame-within-5s")
             socket.cancel(with: .goingAway, reason: nil)
         }
         defer { timeout.cancel() }
@@ -27,9 +32,18 @@ struct FinnhubTradeStream: Sendable {
             case .string(let text): data = Data(text.utf8)
             @unknown default: throw FinnhubStreamError.invalidMessage
             }
-            _ = try FinnhubTradeDecoder.decode(data)
+            let type = FinnhubTradeDecoder.messageType(data)
+            let trades = try FinnhubTradeDecoder.decode(data)
+            AppDiagnostics.shared.record(.info, "Finnhub", "connection-check-frame",
+                                         "symbol=\(symbol) type=\(type) decodedTrades=\(trades.count)")
         } catch {
-            if await deadline.didExpire() { return }
+            if await deadline.didExpire() {
+                AppDiagnostics.shared.record(.info, "Finnhub", "connection-check-result",
+                                             "symbol=\(symbol) transport=reachable data=not-confirmed")
+                return
+            }
+            AppDiagnostics.shared.record(.error, "Finnhub", "connection-check-failed",
+                                         Self.safeErrorDetails(error))
             throw error
         }
     }
@@ -45,15 +59,30 @@ struct FinnhubTradeStream: Sendable {
         let subscribedSymbols = Set(symbols)
 
         let socket = URLSession.shared.webSocketTask(with: url)
+        let host = url.host ?? "unknown"
+        let telemetry = FinnhubStreamTelemetry()
+        AppDiagnostics.shared.record(.info, "Finnhub", "stream-start", "host=\(host) symbols=\(symbols.joined(separator: ","))")
         try await withTaskCancellationHandler {
             socket.resume()
             defer { socket.cancel(with: .normalClosure, reason: nil) }
+            let waitingMonitor = Task {
+                while !Task.isCancelled {
+                    do { try await Task.sleep(for: .seconds(30)) } catch { return }
+                    guard !Task.isCancelled else { return }
+                    let stats = await telemetry.snapshot()
+                    AppDiagnostics.shared.record(.warning, "Finnhub", "stream-still-waiting",
+                        "symbols=\(symbols.joined(separator: ",")) frames=\(stats.frames) trades=\(stats.trades) elapsedSeconds=\(stats.elapsedSeconds)")
+                }
+            }
+            defer { waitingMonitor.cancel() }
             do {
                 for command in commands {
                     try Task.checkCancellation()
                     try await socket.send(.string(command))
                 }
                 try Task.checkCancellation()
+                AppDiagnostics.shared.record(.info, "Finnhub", "stream-subscriptions-sent",
+                                             "count=\(commands.count) symbols=\(symbols.joined(separator: ","))")
                 await onSubscribed()
                 while !Task.isCancelled {
                     let message = try await socket.receive()
@@ -63,10 +92,26 @@ struct FinnhubTradeStream: Sendable {
                     case .string(let text): data = Data(text.utf8)
                     @unknown default: throw FinnhubStreamError.invalidMessage
                     }
-                    for trade in try FinnhubTradeDecoder.decode(data) {
+                    let frameNumber = await telemetry.recordFrame()
+                    let messageType = FinnhubTradeDecoder.messageType(data)
+                    let decodedTrades: [TradeTick]
+                    do {
+                        decodedTrades = try FinnhubTradeDecoder.decode(data)
+                    } catch {
+                        AppDiagnostics.shared.record(.error, "Finnhub", "stream-frame-rejected",
+                            "frame=\(frameNumber) type=\(messageType) bytes=\(data.count) error=\(Self.safeErrorDetails(error))")
+                        throw error
+                    }
+                    let accepted = decodedTrades.filter { subscribedSymbols.contains($0.symbol.uppercased()) }
+                    if frameNumber == 1 || messageType == "error" || !accepted.isEmpty {
+                        AppDiagnostics.shared.record(messageType == "error" ? .error : .info, "Finnhub", "stream-frame",
+                            "frame=\(frameNumber) type=\(messageType) bytes=\(data.count) decodedTrades=\(decodedTrades.count) subscribedTrades=\(accepted.count)")
+                    }
+                    for trade in decodedTrades {
                         try Task.checkCancellation()
                         let normalizedSymbol = trade.symbol.uppercased()
                         guard subscribedSymbols.contains(normalizedSymbol) else { continue }
+                        await telemetry.recordTrade()
                         try await onTrade(TradeTick(
                             symbol: normalizedSymbol,
                             price: trade.price,
@@ -79,15 +124,22 @@ struct FinnhubTradeStream: Sendable {
                 throw CancellationError()
             } catch let error as FinnhubStreamError {
                 if Task.isCancelled { throw CancellationError() }
+                AppDiagnostics.shared.record(.error, "Finnhub", "stream-provider-error",
+                                             "errorType=\(String(describing: type(of: error)))")
                 throw error
             } catch let error as MarketBarStoreError {
                 if Task.isCancelled { throw CancellationError() }
+                AppDiagnostics.shared.record(.error, "Finnhub", "stream-bar-store-error",
+                                             "errorType=\(String(describing: type(of: error)))")
                 throw error
             } catch let error as MarketSignalStoreError {
                 if Task.isCancelled { throw CancellationError() }
+                AppDiagnostics.shared.record(.error, "Finnhub", "stream-signal-store-error",
+                                             "errorType=\(String(describing: type(of: error)))")
                 throw error
             } catch {
                 if Task.isCancelled { throw CancellationError() }
+                AppDiagnostics.shared.record(.error, "Finnhub", "stream-failed", Self.safeErrorDetails(error))
                 throw FinnhubStreamError.connectionFailed(Self.connectionFailureReason(error))
             }
         } onCancel: {
@@ -144,9 +196,31 @@ struct FinnhubTradeStream: Sendable {
         return "Socket error \(socketError.code). Check the endpoint, network, and Finnhub account access."
     }
 
+    private static func safeErrorDetails(_ error: Error) -> String {
+        let nsError = error as NSError
+        return "errorType=\(String(describing: type(of: error))) domain=\(nsError.domain) code=\(nsError.code)"
+    }
+
     private struct Subscription: Encodable {
         let type: String
         let symbol: String
+    }
+}
+
+private actor FinnhubStreamTelemetry {
+    private let startedAt = Date()
+    private var frames = 0
+    private var trades = 0
+
+    func recordFrame() -> Int {
+        frames += 1
+        return frames
+    }
+
+    func recordTrade() { trades += 1 }
+
+    func snapshot() -> (frames: Int, trades: Int, elapsedSeconds: Int) {
+        (frames, trades, Int(Date().timeIntervalSince(startedAt)))
     }
 }
 

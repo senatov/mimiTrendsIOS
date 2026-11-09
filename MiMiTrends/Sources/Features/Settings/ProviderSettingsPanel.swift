@@ -16,7 +16,7 @@ struct ProviderSettingsPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Provider setup")
@@ -24,12 +24,12 @@ struct ProviderSettingsPanel: View {
                         .foregroundStyle(.indigo)
                     Text("Each provider's addresses, credentials and options are grouped together.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.primary.opacity(0.72))
                 }
                 Spacer(minLength: 12)
                 TrendsActionButton(title: "Save URLs", systemImage: "checkmark") { save() }
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 12) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
                 providerGroup(
                     "Finnhub",
                     detail: "Live US trade feed",
@@ -85,18 +85,18 @@ struct ProviderSettingsPanel: View {
         includesDiscoverySettings: Bool = false
     ) -> some View {
         SettingsGroup(title: title, compact: true) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Circle().fill(providerIsHealthy(provider) ? Color.green : Color.red).frame(width: 8, height: 8)
                 Text(providerStatus(provider).uppercased())
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(providerIsHealthy(provider) ? Color.secondary : Color.red)
+                    .foregroundStyle(providerIsHealthy(provider) ? Color.primary.opacity(0.78) : Color.red)
                 Spacer()
                 Toggle("Enabled", isOn: enabledBinding(provider))
                     .labelsHidden()
                     .accessibilityLabel("Enable \(provider.title)")
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary.opacity(0.72))
                     .multilineTextAlignment(.trailing)
             }
             ForEach(endpoints) { endpoint in
@@ -159,11 +159,11 @@ struct ProviderSettingsPanel: View {
 
     private var fmpGroup: some View {
         SettingsGroup(title: "FMP", compact: true) {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Circle().fill(providerIsHealthy(.fmp) ? Color.green : Color.red).frame(width: 8, height: 8)
                 Text(providerStatus(.fmp).uppercased())
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(providerIsHealthy(.fmp) ? Color.secondary : Color.red)
+                    .foregroundStyle(providerIsHealthy(.fmp) ? Color.primary.opacity(0.78) : Color.red)
                 Spacer()
                 Toggle("Enabled", isOn: enabledBinding(.fmp))
                     .labelsHidden()
@@ -171,7 +171,7 @@ struct ProviderSettingsPanel: View {
             }
             Text("Optional candidate discovery, company profiles and fallback daily history. Uses FMP's stable API address; charts and the Finnhub feed work without this key.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.72))
             CredentialEditor(
                 title: "Financial Modeling Prep API key",
                 detail: "Optional. FMP plan limits and endpoint access apply.",
@@ -192,7 +192,7 @@ struct ProviderSettingsPanel: View {
             )
             Text("A missing or rejected key stops requests to this provider. Check your account and plan before enabling it.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.72))
         }
     }
 
@@ -204,16 +204,31 @@ struct ProviderSettingsPanel: View {
                 checks[endpoint] = "Enable Finnhub before checking the live feed."
                 return
             }
-            checks[endpoint] = "Checking WebSocket…"
+            checks[endpoint] = "Checking REST and WebSocket…"
             let value = drafts[endpoint] ?? endpoint.defaultURL
             Task {
-                if let issue = await MarketProviderPreflight().check(.finnhub, finnhubEndpoint: value) {
-                    guard drafts[endpoint] == value else { return }
-                    checks[endpoint] = issue.reason
-                } else {
-                    guard drafts[endpoint] == value else { return }
-                    checks[endpoint] = "WebSocket reachable; waiting for trades"
+                let restResult: String
+                do {
+                    guard let key = try FinnhubCredentialStore.load() else {
+                        throw FinnhubStreamError.missingKey
+                    }
+                    try await FinnhubQuoteSmokeTest().check(symbol: "AAPL", apiKey: key)
+                    restResult = "REST quote OK"
+                    AppDiagnostics.shared.record(.info, "Finnhub", "quote-smoke-test-success", "symbol=AAPL")
+                } catch {
+                    restResult = "REST quote failed: \(error.localizedDescription)"
+                    let nsError = error as NSError
+                    AppDiagnostics.shared.record(.warning, "Finnhub", "quote-smoke-test-failed",
+                        "errorType=\(String(describing: type(of: error))) domain=\(nsError.domain) code=\(nsError.code)")
                 }
+                let websocketResult: String
+                if let issue = await MarketProviderPreflight().check(.finnhub, finnhubEndpoint: value) {
+                    websocketResult = "WebSocket failed: \(issue.reason)"
+                } else {
+                    websocketResult = "WebSocket reachable; trades not confirmed"
+                }
+                guard drafts[endpoint] == value else { return }
+                checks[endpoint] = "\(restResult) · \(websocketResult)"
             }
             return
         }
@@ -301,7 +316,7 @@ private struct ProviderEndpointRow: View {
             }
             Text(status)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.72))
         }
     }
 }

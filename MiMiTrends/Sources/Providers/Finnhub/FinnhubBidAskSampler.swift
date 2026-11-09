@@ -20,11 +20,17 @@ actor FinnhubBidAskSampler {
                 let quote = try await load(symbol, apiKey)
                 try Task.checkCancellation()
                 cachedBySymbol[symbol] = quote
+                AppDiagnostics.shared.record(.info, "Finnhub", "bidask-sampled",
+                                             "symbol=\(symbol) ageSeconds=\(max(0, nowMillis - quote.observedAtMillis) / 1_000)")
             } catch FinnhubBidAskError.accessUnavailable {
                 accessUnavailable = true
                 cachedBySymbol.removeAll()
+                AppDiagnostics.shared.record(.warning, "Finnhub", "bidask-unavailable", "symbol=\(symbol) reason=access-denied")
             } catch {
                 cachedBySymbol.removeValue(forKey: symbol)
+                let nsError = error as NSError
+                AppDiagnostics.shared.record(.warning, "Finnhub", "bidask-failed",
+                    "symbol=\(symbol) errorType=\(String(describing: type(of: error))) domain=\(nsError.domain) code=\(nsError.code)")
             }
         }
         guard let cached = cachedBySymbol[symbol],

@@ -259,12 +259,9 @@ struct RadarView: View {
         isPreparingFeed = true
         AppDiagnostics.shared.record(.info, "Radar", "feed-preparing")
         Task {
-            guard await ensureAutomaticProvidersReady() else {
-                isPreparingFeed = false
-                return
-            }
             if let issue = await MarketProviderPreflight().check(.finnhub) {
                 providerIssue = issue
+                AppDiagnostics.shared.record(.error, "Finnhub", "feed-not-started", "reason=connection-check-failed")
                 isPreparingFeed = false
                 return
             }
@@ -346,6 +343,8 @@ struct RadarView: View {
                 } catch is CancellationError {
                     // The scene lifecycle or Stop button ended the feed.
                 } catch {
+                    AppDiagnostics.shared.record(.error, "Finnhub", "feed-pipeline-failed",
+                        "errorType=\(String(describing: type(of: error)))")
                     await session.recordFailure(error.localizedDescription, runID: runID)
                 }
             }

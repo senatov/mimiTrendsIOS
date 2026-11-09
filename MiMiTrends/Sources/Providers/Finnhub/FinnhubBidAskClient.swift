@@ -76,6 +76,59 @@ struct FinnhubBidAskClient: Sendable {
     }
 }
 
+struct FinnhubQuoteSmokeTest: Sendable {
+    private let session: URLSession
+
+    init(session: URLSession = .shared) { self.session = session }
+
+    func check(symbol: String, apiKey: String) async throws {
+        guard var components = URLComponents(string: "https://finnhub.io/api/v1/quote") else {
+            throw FinnhubQuoteSmokeTestError.invalidResponse
+        }
+        components.queryItems = [
+            URLQueryItem(name: "symbol", value: symbol),
+            URLQueryItem(name: "token", value: apiKey)
+        ]
+        guard let url = components.url else { throw FinnhubQuoteSmokeTestError.invalidResponse }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+        let (data, response) = try await session.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw FinnhubQuoteSmokeTestError.invalidResponse
+        }
+        guard http.statusCode == 200 else {
+            throw FinnhubQuoteSmokeTestError.requestRejected(http.statusCode)
+        }
+        let quote = try JSONDecoder().decode(QuoteResponse.self, from: data)
+        guard (quote.current ?? 0) > 0 || (quote.previousClose ?? 0) > 0 else {
+            throw FinnhubQuoteSmokeTestError.noQuote
+        }
+    }
+
+    private struct QuoteResponse: Decodable {
+        let current: Double?
+        let previousClose: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case current = "c"
+            case previousClose = "pc"
+        }
+    }
+}
+
+private enum FinnhubQuoteSmokeTestError: LocalizedError {
+    case invalidResponse, noQuote, requestRejected(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse: "Finnhub returned an unreadable quote response."
+        case .noQuote: "Finnhub returned no quote for AAPL."
+        case .requestRejected(let status): "Finnhub rejected the quote request (HTTP \(status)). Check the API key and account access."
+        }
+    }
+}
+
 enum FinnhubBidAskError: Error {
     case unsupportedSymbol
     case accessUnavailable
