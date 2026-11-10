@@ -54,7 +54,7 @@ struct LSQuoteHistoryChart: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             chartControls
             header
             if let errorMessage {
@@ -91,37 +91,39 @@ struct LSQuoteHistoryChart: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Label("PRICE HISTORY", systemImage: "chart.xyaxis.line")
                     .font(.system(.caption2, design: .monospaced).weight(.bold))
-                    .tracking(1.1)
                     .foregroundStyle(.secondary)
                 Text("\(symbol) · Lang & Schwarz · EUR")
                     .font(.system(.caption, design: .monospaced))
                     .foregroundStyle(.indigo)
-                if let signal {
-                    Text("\(signal.signalSource) · \(signal.signalWindowLabel) · Volume unavailable")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer(minLength: 8)
-            if let quote = displayedQuote {
-                VStack(alignment: .trailing, spacing: 5) {
+                Spacer(minLength: 4)
+                if let quote = displayedQuote {
                     Text((selectedPrice ?? quote.midpoint), format: .currency(code: "EUR").precision(.fractionLength(2)))
-                        .font(.system(.title2, design: .rounded).weight(.semibold).monospacedDigit())
+                        .font(.headline.monospacedDigit())
                         .contentTransition(.numericText())
                     Text("BID \(quote.bid.formatted(.currency(code: "EUR").precision(.fractionLength(2))))  ASK \(quote.ask.formatted(.currency(code: "EUR").precision(.fractionLength(2))))")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 10) {
+                if let signal {
+                    Text("\(signal.signalSource) · \(signal.signalWindowLabel) · Volume unavailable")
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 4)
+                if let quote = displayedQuote {
                     Text(quoteDate(quote))
-                        .font(.caption.monospacedDigit())
+                        .monospacedDigit()
                         .foregroundStyle(.purple)
                 }
-                .multilineTextAlignment(.trailing)
             }
+            .font(.caption)
         }
+        .lineLimit(1)
     }
 
     private var chartControls: some View {
