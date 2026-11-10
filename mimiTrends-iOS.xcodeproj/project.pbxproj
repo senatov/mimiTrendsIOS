@@ -138,6 +138,7 @@
 		BBF88726F1EC08B77602F2E6 /* FinnhubCredentialStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9ED758354DE55D4CAFFCEE /* FinnhubCredentialStore.swift */; };
 		BC856CF072894AEE7AFAD544 /* DisplayCurrencyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B4E8BB96F3C24749F2B955 /* DisplayCurrencyServiceTests.swift */; };
 		BED09ECD6A1CDA6A842DF997 /* MarketPageQuoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10998EE6A4521A12B6D6FA /* MarketPageQuoteTests.swift */; };
+		BFCAD7418B5EAF9A668F6315 /* LSQuoteCursorOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0593535ADC56D51110FC38C7 /* LSQuoteCursorOverlay.swift */; };
 		C02CCA55CA6466C3CEEC0CE3 /* DiscoveryRankingPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A77B0ED8931A451EB4AA09 /* DiscoveryRankingPage.swift */; };
 		C21BD48FA3A9BD875D3D0368 /* HeaderResourceBadges.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9D629ECCB3C023D89194F6 /* HeaderResourceBadges.swift */; };
 		C4F7A2E3A430877B71487DF3 /* WallstreetRankingPageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = F74DFA1272B8D2BF7A4A4901 /* WallstreetRankingPageSource.swift */; };
@@ -198,6 +199,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0593535ADC56D51110FC38C7 /* LSQuoteCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LSQuoteCursorOverlay.swift; sourceTree = "<group>"; };
 		05D8C3C64AA6EC99640F853B /* DiscoveryRankingBatchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRankingBatchTests.swift; sourceTree = "<group>"; };
 		0641D88BFDA84CA15FDF0772 /* RadarSignalRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalRow.swift; sourceTree = "<group>"; };
 		06BCFEAFCBC097BFB379CCF0 /* ProviderCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderCredentialStore.swift; sourceTree = "<group>"; };
@@ -688,6 +690,7 @@
 		E612AEB71A0EF70B42A81033 /* Radar */ = {
 			isa = PBXGroup;
 			children = (
+				0593535ADC56D51110FC38C7 /* LSQuoteCursorOverlay.swift */,
 				1F8D0A1AB4172F7B65194AF8 /* LSQuoteHistoryChart.swift */,
 				E8DFAE553CB077C256B394FF /* ProviderIssueSheet.swift */,
 				5235DFF6ECD25F329C365833 /* RadarActivityBanner.swift */,
@@ -908,6 +911,7 @@
 				CEC005ADCE1D13DA8216CFFD /* HeaderBuildBadge.swift in Sources */,
 				C21BD48FA3A9BD875D3D0368 /* HeaderResourceBadges.swift in Sources */,
 				EEABD6D1F5BD10D0118B886B /* LSCandidatePool.swift in Sources */,
+				BFCAD7418B5EAF9A668F6315 /* LSQuoteCursorOverlay.swift in Sources */,
 				F55A87ED5DD6231E28E46817 /* LSQuoteHistoryChart.swift in Sources */,
 				ECC9407F1DD5D898F5ED9A04 /* LSQuoteMoveDetector.swift in Sources */,
 				C63CC2365CBED179E978C94F /* LangSchwarzQuoteSource.swift in Sources */,

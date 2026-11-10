@@ -26,13 +26,41 @@ struct RadarChartPreview: View {
     @State private var isLoading = false
     @State private var cursorInspection: RadarChartInspection?
     @State private var showingTrades = true
+    @State private var showingSignalFocus = true
 
     private var chartData: RadarChartData {
         RadarChartData(
             allBars: convertedBars ?? [],
             range: range,
-            nowEpochSeconds: Int64(Date().timeIntervalSince1970)
+            nowEpochSeconds: Int64(Date().timeIntervalSince1970),
+            focusEpochSeconds: showingSignalFocus && focusAvailable ? signalEpochSeconds : nil
         )
+    }
+
+    private var signalEpochSeconds: Int64? { signal.map { $0.signalEpochMillis / 1_000 } }
+
+    private var focusAvailable: Bool {
+        guard !range.usesDailyBars, let signalEpochSeconds else { return false }
+        let bars = convertedBars ?? []
+        let rangeBars: [MinuteBar]
+        if range == .trades { rangeBars = bars }
+        else if let seconds = range.seconds {
+            rangeBars = bars.filter { $0.minuteEpochSeconds >= Int64(Date().timeIntervalSince1970) - seconds }
+        } else { rangeBars = Array(bars.suffix(60)) }
+        guard let nearest = RadarChartData.nearestBar(
+            to: Date(timeIntervalSince1970: TimeInterval(signalEpochSeconds)), in: rangeBars
+        ) else { return false }
+        return abs(nearest.minuteEpochSeconds - signalEpochSeconds) <= 90
+    }
+
+    private var chartSignal: ScanResult? { range == .trades ? nil : signal }
+
+    private var chartSignalEntryPrice: Double? {
+        guard let chartSignal else { return nil }
+        let source = chartSignal.priceCurrency ?? RadarChartCurrency.source(for: symbol)
+        return source == displayCurrency
+            ? chartSignal.signalPrice
+            : currencyRates?.convert(chartSignal.signalPrice, from: source, to: displayCurrency)
     }
 
     private var convertedBars: [MinuteBar]? {
@@ -51,7 +79,11 @@ struct RadarChartPreview: View {
     var body: some View {
         Group {
             if symbol.hasPrefix("LS:") {
-                LSQuoteHistoryChart(symbol: symbol, companyName: companyName, refreshID: refreshID)
+                LSQuoteHistoryChart(
+                    symbol: symbol, companyName: companyName, refreshID: refreshID,
+                    range: rangeSelection, signal: signal,
+                    showingSignalFocus: $showingSignalFocus
+                )
             } else {
                 GeometryReader { geometry in
                     ScrollView { chartContent(availableHeight: geometry.size.height) }
@@ -67,16 +99,21 @@ struct RadarChartPreview: View {
         }
         .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
+        .onChange(of: symbol) { _, _ in
+            showingSignalFocus = true
+            cursorInspection = nil
+        }
     }
 
     private func chartContent(availableHeight: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             RadarChartHeader(
                 symbol: symbol, companyName: companyName, metadata: companyMetadata,
-                signal: range == .trades ? nil : signal, lastBar: chartData.bars.last, rates: currencyRates,
+                signal: chartSignal, lastBar: chartData.bars.last, rates: currencyRates,
                 currency: displayCurrency, hasTrades: !chartTrades.isEmpty,
                 outsideTradeCount: outsideTradeCount,
-                showingTrades: $showingTrades, range: rangeSelection,
+                focusAvailable: focusAvailable,
+                showingTrades: $showingTrades, showingSignalFocus: $showingSignalFocus, range: rangeSelection,
                 onImport: { Task { await loadImportedTrades() } }
             )
             if chartTrades.count < importedTrades.count {
@@ -108,6 +145,8 @@ struct RadarChartPreview: View {
                 RadarChartPlot(
                     data: chartData, symbol: symbol,
                     displayCurrency: displayCurrency,
+                    signal: chartSignal,
+                    signalEntryPrice: chartSignalEntryPrice,
                     trades: showingTrades ? chartTrades : [],
                     priceHeight: max(140, availableHeight - 240),
                     volumeHeight: 60,

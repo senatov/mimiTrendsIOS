@@ -5,6 +5,8 @@ struct RadarChartPlot: View {
     let data: RadarChartData
     let symbol: String
     let displayCurrency: String
+    let signal: ScanResult?
+    let signalEntryPrice: Double?
     let trades: [BrokerTradePosition]
     var priceHeight: CGFloat = 300
     var volumeHeight: CGFloat = 90
@@ -33,6 +35,23 @@ struct RadarChartPlot: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Chart {
+                if let signal, let signalEntryPrice, signalIsVisible(signal) {
+                    let startEpoch = max(
+                        data.bars.first?.minuteEpochSeconds ?? 0,
+                        signal.signalEpochMillis / 1_000 - signalWindowMinutes(signal) * 60
+                    )
+                    let endEpoch = signal.signalEpochMillis / 1_000
+                    RectangleMark(
+                        xStart: .value("Signal start", timeline.position(startEpoch)),
+                        xEnd: .value("Signal end", timeline.position(endEpoch)),
+                        yStart: .value("Signal low", priceDomain.lowerBound),
+                        yEnd: .value("Signal high", priceDomain.upperBound)
+                    )
+                    .foregroundStyle(.orange.opacity(0.08))
+                    RuleMark(y: .value("Signal entry", signalEntryPrice))
+                        .foregroundStyle(.orange.opacity(0.7))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 3]))
+                }
                 ForEach(data.bars, id: \.minuteEpochSeconds) { bar in
                     let time = timeline.position(bar.minuteEpochSeconds)
                     let halfWidth: TimeInterval = 20
@@ -71,6 +90,26 @@ struct RadarChartPlot: View {
                     .foregroundStyle(.orange)
                     .lineStyle(StrokeStyle(lineWidth: 1.5))
                 }
+                ForEach(data.trend30) { point in
+                    LineMark(
+                        x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
+                        y: .value("Trend 30", point.value),
+                        series: .value("Overlay", "Trend 30")
+                    )
+                    .foregroundStyle(.secondary)
+                    .lineStyle(StrokeStyle(lineWidth: 1.8, lineCap: .round, dash: [6, 4]))
+                }
+                if let last = data.bars.last {
+                    RuleMark(y: .value("Current price", last.close))
+                        .foregroundStyle(.teal.opacity(0.8))
+                        .lineStyle(StrokeStyle(lineWidth: 1.2, dash: [2, 3]))
+                        .annotation(position: .trailing, alignment: .center, spacing: 4) {
+                            Text("Current / exit · \(last.close.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))")
+                                .font(.caption2.monospacedDigit().weight(.semibold))
+                                .padding(.horizontal, 5).padding(.vertical, 3)
+                                .background(.teal.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
+                        }
+                }
                 ForEach(visibleTrades) { trade in
                     tradeMarks(for: trade)
                 }
@@ -88,6 +127,18 @@ struct RadarChartPlot: View {
             .chartYScale(domain: priceDomain)
             .chartXScale(domain: timeline.domain)
             .chartXAxis { timelineAxis }
+            .chartYAxis {
+                AxisMarks(position: .trailing) { value in
+                    AxisGridLine().foregroundStyle(.secondary.opacity(0.16))
+                    AxisTick()
+                    AxisValueLabel {
+                        if let price = value.as(Double.self) {
+                            Text(price.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
+                                .font(.caption2.monospacedDigit())
+                        }
+                    }
+                }
+            }
             .chartOverlay { proxy in
                 ZStack {
                     RadarChartCursorOverlay(
@@ -100,6 +151,8 @@ struct RadarChartPlot: View {
                 }
             }
             .frame(height: priceHeight)
+            .animation(.easeInOut(duration: 0.24), value: data.bars.map(\.minuteEpochSeconds))
+            .animation(.easeInOut(duration: 0.16), value: selectedMinute)
             .padding(.top, RadarTradeCardOverlay.railHeight(count: visibleTrades.count, width: plotWidth))
             .background {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -121,6 +174,8 @@ struct RadarChartPlot: View {
                     .foregroundStyle(.blue)
                 Label("EMA 21", systemImage: "line.diagonal")
                     .foregroundStyle(.orange)
+                Label("Trend 30", systemImage: "line.diagonal")
+                    .foregroundStyle(.secondary)
             }
             .font(.caption)
 
@@ -208,7 +263,7 @@ struct RadarChartPlot: View {
     }
 
     private var priceDomain: ClosedRange<Double> {
-        let overlayValues = data.fastEMA.map(\.value) + data.slowEMA.map(\.value)
+        let overlayValues = data.fastEMA.map(\.value) + data.slowEMA.map(\.value) + data.trend30.map(\.value)
         let first = data.bars.first?.minuteEpochSeconds ?? 0
         let last = data.bars.last?.minuteEpochSeconds ?? 0
         let tradePrices = visibleTrades.flatMap { trade -> [Double] in
@@ -220,10 +275,22 @@ struct RadarChartPlot: View {
             }
             return prices
         }
-        let low = (data.bars.map(\.low) + overlayValues + tradePrices).min() ?? 0
-        let high = (data.bars.map(\.high) + overlayValues + tradePrices).max() ?? 1
+        let signalPrices = signal.flatMap { signalIsVisible($0) ? signalEntryPrice : nil }.map { [$0] } ?? []
+        let low = (data.bars.map(\.low) + overlayValues + tradePrices + signalPrices).min() ?? 0
+        let high = (data.bars.map(\.high) + overlayValues + tradePrices + signalPrices).max() ?? 1
         let padding = max((high - low) * 0.08, high * 0.002)
         return max(0, low - padding)...(high + padding)
+    }
+
+    private func signalIsVisible(_ signal: ScanResult) -> Bool {
+        guard let first = data.bars.first?.minuteEpochSeconds,
+              let last = data.bars.last?.minuteEpochSeconds else { return false }
+        let epoch = signal.signalEpochMillis / 1_000
+        return epoch >= first - 90 && epoch <= last + 90
+    }
+
+    private func signalWindowMinutes(_ signal: ScanResult) -> Int64 {
+        Int64(signal.signalWindowLabel.prefix { $0.isNumber }) ?? 1
     }
 
     @ChartContentBuilder

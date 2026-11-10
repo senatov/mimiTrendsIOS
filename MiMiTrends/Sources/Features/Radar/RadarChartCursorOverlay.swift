@@ -13,6 +13,7 @@ struct RadarChartCursorOverlay: View {
     let onSelection: (MinuteBar, Double) -> Void
     let onTogglePin: () -> Void
     let onExit: () -> Void
+    @FocusState private var hasChartFocus: Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -29,7 +30,17 @@ struct RadarChartCursorOverlay: View {
                             if !isPinned { onExit() }
                         }
                     }
-                    .onTapGesture(perform: onTogglePin)
+                    .onTapGesture {
+                        hasChartFocus = true
+                        onTogglePin()
+                    }
+                    .focusable()
+                    .focused($hasChartFocus)
+                    .onKeyPress(.escape) {
+                        guard isPinned else { return .ignored }
+                        onExit()
+                        return .handled
+                    }
                     #else
                     .gesture(
                         DragGesture(minimumDistance: 0)

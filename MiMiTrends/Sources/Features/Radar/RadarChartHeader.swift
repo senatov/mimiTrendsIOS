@@ -10,7 +10,9 @@ struct RadarChartHeader: View {
     let currency: String
     let hasTrades: Bool
     let outsideTradeCount: Int
+    let focusAvailable: Bool
     @Binding var showingTrades: Bool
+    @Binding var showingSignalFocus: Bool
     @Binding var range: RadarChartRange
     let onImport: () -> Void
 
@@ -37,18 +39,37 @@ struct RadarChartHeader: View {
                 }
             }
             Divider()
-            HStack(spacing: 12) {
-                Text("TIMEFRAME")
-                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
-                    .tracking(0.8)
-                    .foregroundStyle(.secondary)
-                Picker("Chart period", selection: $range) {
-                    ForEach(RadarChartRange.allCases) { option in Text(option.title).tag(option) }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text("VIEW")
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                    TrendsActionButton(title: "Signal focus", systemImage: "scope",
+                                       tint: showingSignalFocus && focusAvailable ? .purple : .blue) {
+                        showingSignalFocus = true
+                    }
+                    .disabled(!focusAvailable)
+                    .accessibilityValue(showingSignalFocus && focusAvailable ? "Selected" : "Not selected")
+                    TrendsActionButton(title: "Full history", systemImage: "chart.xyaxis.line",
+                                       tint: showingSignalFocus && focusAvailable ? .blue : .purple) {
+                        showingSignalFocus = false
+                    }
+                    Spacer(minLength: 0)
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .frame(maxWidth: 420)
-                Spacer(minLength: 0)
+                HStack(spacing: 12) {
+                    Text("TIMEFRAME")
+                        .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                    Picker("Chart period", selection: $range) {
+                        ForEach(RadarChartRange.allCases) { option in Text(option.title).tag(option) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    .frame(maxWidth: 420)
+                    Spacer(minLength: 0)
+                }
             }
             if hasTrades && outsideTradeCount > 0 && range != .trades {
                 HStack(spacing: 10) {

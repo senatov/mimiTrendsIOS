@@ -57,24 +57,43 @@ struct RadarChartData {
     let bars: [MinuteBar]
     let fastEMA: [RadarChartPoint]
     let slowEMA: [RadarChartPoint]
+    let trend30: [RadarChartPoint]
 
     init(
         allBars: [MinuteBar], range: RadarChartRange,
-        nowEpochSeconds: Int64, latestLimit: Int = 60
+        nowEpochSeconds: Int64, latestLimit: Int = 60,
+        focusEpochSeconds: Int64? = nil
     ) {
         self.range = range
-        let selected: [MinuteBar]
+        let ranged: [MinuteBar]
         if range == .trades {
-            selected = allBars
+            ranged = allBars
         } else if let seconds = range.seconds {
-            selected = allBars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - seconds }
+            ranged = allBars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - seconds }
         } else {
-            selected = Array(allBars.suffix(latestLimit))
+            ranged = Array(allBars.suffix(latestLimit))
+        }
+        let selected: [MinuteBar]
+        if let focusEpochSeconds,
+           let focusIndex = ranged.indices.min(by: {
+               abs(ranged[$0].minuteEpochSeconds - focusEpochSeconds) <
+                   abs(ranged[$1].minuteEpochSeconds - focusEpochSeconds)
+           }), abs(ranged[focusIndex].minuteEpochSeconds - focusEpochSeconds) <= 90 {
+            selected = Array(ranged[max(0, focusIndex - 12)...min(ranged.count - 1, focusIndex + 60)])
+        } else {
+            selected = ranged
         }
         bars = selected
         let gapLimit: Int64 = range.usesDailyBars ? 4 * 86_400 : 60
-        fastEMA = Self.ema(allBars, visibleFrom: selected.first?.minuteEpochSeconds, period: 9, gapLimit: gapLimit)
-        slowEMA = Self.ema(allBars, visibleFrom: selected.first?.minuteEpochSeconds, period: 21, gapLimit: gapLimit)
+        fastEMA = Self.ema(
+            allBars, visibleFrom: selected.first?.minuteEpochSeconds, visibleThrough: selected.last?.minuteEpochSeconds,
+            period: 9, gapLimit: gapLimit
+        )
+        slowEMA = Self.ema(
+            allBars, visibleFrom: selected.first?.minuteEpochSeconds, visibleThrough: selected.last?.minuteEpochSeconds,
+            period: 21, gapLimit: gapLimit
+        )
+        trend30 = Self.regressionLine(selected.suffix(30))
     }
 
     static func nearestBar(to date: Date, in bars: [MinuteBar]) -> MinuteBar? {
@@ -87,9 +106,9 @@ struct RadarChartData {
 
     // Match the desktop TrendSeriesCalculator seed and smoothing rule.
     private static func ema(
-        _ bars: [MinuteBar], visibleFrom: Int64?, period: Int, gapLimit: Int64
+        _ bars: [MinuteBar], visibleFrom: Int64?, visibleThrough: Int64?, period: Int, gapLimit: Int64
     ) -> [RadarChartPoint] {
-        guard let visibleFrom, let first = bars.first else { return [] }
+        guard let visibleFrom, let visibleThrough, let first = bars.first else { return [] }
         let smoothing = 2.0 / Double(period + 1)
         var value = first.close
         var previousMinute: Int64?
@@ -102,7 +121,7 @@ struct RadarChartData {
             if previousMinute != nil {
                 value = bar.close * smoothing + value * (1 - smoothing)
             }
-            if bar.minuteEpochSeconds >= visibleFrom {
+            if bar.minuteEpochSeconds >= visibleFrom && bar.minuteEpochSeconds <= visibleThrough {
                 points.append(RadarChartPoint(
                     minuteEpochSeconds: bar.minuteEpochSeconds,
                     value: value,
@@ -112,5 +131,24 @@ struct RadarChartData {
             previousMinute = bar.minuteEpochSeconds
         }
         return points
+    }
+
+    private static func regressionLine<S: Collection>(_ bars: S) -> [RadarChartPoint] where S.Element == MinuteBar {
+        let values = Array(bars)
+        guard values.count >= 2 else { return [] }
+        let count = Double(values.count)
+        let meanX = (count - 1) / 2
+        let meanY = values.map(\.close).reduce(0, +) / count
+        let numerator = values.enumerated().reduce(0.0) { $0 + (Double($1.offset) - meanX) * ($1.element.close - meanY) }
+        let denominator = values.indices.reduce(0.0) { $0 + pow(Double($1) - meanX, 2) }
+        guard denominator > 0 else { return [] }
+        let slope = numerator / denominator
+        return [0, values.count - 1].map { index in
+            RadarChartPoint(
+                minuteEpochSeconds: values[index].minuteEpochSeconds,
+                value: meanY + slope * (Double(index) - meanX),
+                segment: 0
+            )
+        }
     }
 }
