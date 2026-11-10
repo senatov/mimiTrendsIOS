@@ -20,8 +20,9 @@ struct FMPCandidateSource: Sendable {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              data.count <= 2_000_000,
+        guard let http = response as? HTTPURLResponse else { throw FMPCandidateError.invalidResponse }
+        guard http.statusCode == 200 else { throw FMPCandidateError.httpStatus(http.statusCode) }
+        guard data.count <= 2_000_000,
               (try? JSONSerialization.jsonObject(with: data) as? [[String: Any]]) != nil else {
             throw FMPCandidateError.invalidResponse
         }
@@ -120,9 +121,23 @@ struct FMPCandidateSource: Sendable {
     }
 }
 
-enum FMPCandidateError: Error {
+enum FMPCandidateError: LocalizedError {
     case invalidResponse
     case httpStatus(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse:
+            "FMP returned an unexpected response or JSON format."
+        case .httpStatus(let status):
+            switch status {
+            case 401, 403: "FMP rejected the API key or this endpoint is not available on the account (HTTP \(status))."
+            case 402: "FMP plan or request limit blocked this endpoint (HTTP 402)."
+            case 429: "FMP request limit reached (HTTP 429). Check account usage and plan access in your FMP dashboard."
+            default: "FMP returned HTTP \(status)."
+            }
+        }
+    }
 }
 
 struct FMPCandidateFailure: Error, Sendable {

@@ -159,6 +159,13 @@ struct ProviderSettingsPanel: View {
             Text("Optional candidate discovery, company profiles and fallback daily history. Uses FMP's stable API address; charts and the Finnhub feed work without this key.")
                 .font(.callout)
                 .foregroundStyle(.primary.opacity(0.72))
+            if providerStatus(.fmp) == "Needs attention",
+               let reason = MarketProviderAccess.lastError(.fmp) {
+                Label(reason, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             CredentialEditor(
                 title: "Financial Modeling Prep API key",
                 detail: "Optional. FMP plan limits and endpoint access apply.",

@@ -6,6 +6,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
     var healthKey: String { "provider.health.\(rawValue).v1" }
+    var errorKey: String { "provider.error.\(rawValue).v1" }
 
     var title: String {
         switch self {
@@ -60,6 +61,7 @@ enum MarketProviderAccess {
     static func setEnabled(_ enabled: Bool, for provider: MarketProvider, defaults: UserDefaults = .standard) {
         defaults.set(enabled, forKey: provider.enabledKey)
         defaults.set(enabled ? "Not checked" : "Disabled", forKey: provider.healthKey)
+        defaults.removeObject(forKey: provider.errorKey)
         defaults.set(defaults.integer(forKey: "provider.configurationRevision.v1") + 1,
                      forKey: "provider.configurationRevision.v1")
     }
@@ -68,12 +70,19 @@ enum MarketProviderAccess {
         defaults.string(forKey: provider.healthKey) ?? "Not checked"
     }
 
+    static func lastError(_ provider: MarketProvider, defaults: UserDefaults = .standard) -> String? {
+        defaults.string(forKey: provider.errorKey)
+    }
+
     static func isOperational(_ provider: MarketProvider, defaults: UserDefaults = .standard) -> Bool {
         isEnabled(provider, defaults: defaults) && health(provider, defaults: defaults) != "Needs attention"
     }
 
-    static func setHealth(_ status: String, for provider: MarketProvider, defaults: UserDefaults = .standard) {
+    static func setHealth(_ status: String, for provider: MarketProvider,
+                          detail: String? = nil, defaults: UserDefaults = .standard) {
         defaults.set(status, forKey: provider.healthKey)
+        if let detail { defaults.set(detail, forKey: provider.errorKey) }
+        else { defaults.removeObject(forKey: provider.errorKey) }
         defaults.set(defaults.integer(forKey: "provider.healthRevision.v1") + 1,
                      forKey: "provider.healthRevision.v1")
     }
@@ -127,7 +136,7 @@ struct MarketProviderPreflight: Sendable {
         } catch {
             let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             let message = reason.isEmpty ? "Check the provider URL, account access, or API key." : reason
-            MarketProviderAccess.setHealth("Needs attention", for: provider)
+            MarketProviderAccess.setHealth("Needs attention", for: provider, detail: message)
             return MarketProviderPreflightIssue(provider: provider, reason: message)
         }
     }
