@@ -142,7 +142,8 @@ struct RadarView: View {
     }
 
     private var chartCompanyName: String {
-        companyMetadata[chartSymbol.uppercased()]?.name ?? radarCompanyNames[chartSymbol] ?? chartSymbol
+        let name = companyMetadata[chartSymbol.uppercased()]?.name ?? radarCompanyNames[chartSymbol] ?? chartSymbol
+        return RadarSearchKeyword.cleanedCompanyName(name, symbol: chartSymbol)
     }
 
     var companyMetadataRequestKey: String {
