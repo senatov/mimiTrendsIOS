@@ -27,7 +27,7 @@ struct RadarSourcePanel: View {
             .foregroundStyle(tableColor(.sourceBodyText))
             .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
             .trendsPanel()
-            if let snapshot = discoveryStatus?.snapshot {
+            if marketCycle != nil || discoveryStatus?.snapshot != nil {
                 RadarSplitHandle(
                     axis: .rows,
                     value: min(1, max(0, candidatesHeight / 600)),
@@ -46,7 +46,7 @@ struct RadarSourcePanel: View {
                 )
                 .accessibilityLabel("Resize Sources and Scanner Candidates")
                 RadarScannerDiagnostics(
-                    snapshot: snapshot, progress: marketCycle?.progress,
+                    candidates: marketCycle?.candidates ?? [], progress: marketCycle?.progress,
                     listHeight: CGFloat(candidatesHeight)
                 )
             }
@@ -59,7 +59,7 @@ struct RadarSourcePanel: View {
     private var telemetrySources: [RadarTelemetrySource] {
         [
             RadarTelemetrySource(
-                name: "Yahoo history", status: yahooStatus,
+                name: "Yahoo candles", status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,

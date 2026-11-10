@@ -51,18 +51,8 @@ actor LSCandidatePool {
             }
             _ = try await store.record(changed.map(MarketQuoteRecord.init), nowMillis: storageTime)
             for quote in changed { lastStoredQuotes[quote.identifier] = quote }
-            let observations = try await store.loadLS(sinceMillis: storageTime - 32 * 60_000)
-            let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
-            let settings = RadarScanPreferencesStore.load()
-            var savedSignals = 0
-            var reasons: [String: Int] = [:]
-            for history in Dictionary(grouping: observations, by: \.instrumentID).values {
-                let evaluation = LSQuoteMoveDetector.evaluate(history, nowMillis: storageTime, settings: settings)
-                reasons[evaluation.reason, default: 0] += 1
-                if let signal = evaluation.signal, try await signalStore.record(signal) { savedSignals += 1 }
-            }
-            AppDiagnostics.shared.record(.info, "LangSchwarz", "quote-scan-finished",
-                                         "observations=\(observations.count) signals=\(savedSignals) reasons=\(reasons.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: ","))")
+            AppDiagnostics.shared.record(.info, "LangSchwarz", "quote-history-updated",
+                                         "quotes=\(loaded.count) storedSamples=\(changed.count) candleSignals=false")
             quotes = loaded
             lastSuccessAtMillis = Int64(Date().timeIntervalSince1970 * 1_000)
             lastAttemptSucceeded = true

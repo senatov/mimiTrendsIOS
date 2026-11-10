@@ -79,11 +79,18 @@ struct RadarChartPreview: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollView { chartContent(availableHeight: geometry.size.height) }
+            ScrollView {
+                chartContent(availableHeight: geometry.size.height)
+                    .frame(width: max(0, geometry.size.width), alignment: .leading)
+            }
         }
         .trendsPanel()
         .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(providerRevision)|\(scenePhase)") {
-            guard providersReady, scenePhase == .active else { return }
+            guard scenePhase == .active, !range.usesDailyBars else { return }
+            if !providersReady {
+                await loadBars(allowNetwork: false)
+                return
+            }
             repeat {
                 await loadBars()
                 do { try await Task.sleep(for: .seconds(30)) } catch { return }
@@ -225,7 +232,7 @@ struct RadarChartPreview: View {
 
     private var sourceCurrency: String { RadarChartCurrency.source(for: symbol) }
 
-    private func loadBars() async {
+    private func loadBars(allowNetwork: Bool = true) async {
         let requestedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !requestedSymbol.isEmpty else {
             allBars = []
@@ -236,12 +243,13 @@ struct RadarChartPreview: View {
         errorMessage = nil
         do {
             let trades = importedTrades
+            let canFetch = allowNetwork && yahooEnabled
             let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
-                if yahooEnabled { await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades) }
+                if canFetch { await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades) }
                 if historyBounds == nil {
                     return try await RadarSelectedCandleHistory.shared.load(
-                        symbol: requestedSymbol, yahooEnabled: yahooEnabled
+                        symbol: requestedSymbol, yahooEnabled: canFetch
                     )
                 }
                 let store = try MarketBarStore(url: MarketBarStore.defaultURL())

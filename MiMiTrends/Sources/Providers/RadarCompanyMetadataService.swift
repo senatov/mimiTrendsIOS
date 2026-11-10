@@ -24,8 +24,8 @@ actor RadarCompanyMetadataService {
                     ? incompleteCacheLifetime : cacheLifetime
                 return now - cached.updatedAtMillis > lifetime
             }
-            let token = try? FinnhubCredentialStore.load()
-            let fmpKey = try? ProviderCredentialStore.load(FMPCredential.account)
+            let fmpKey = MarketProviderAccess.isOperational(.fmp)
+                ? try? ProviderCredentialStore.load(FMPCredential.account) : nil
             let requestSession = session
             let fmp = FMPCompanyProfileSource(session: requestSession)
             for offset in stride(from: 0, to: stale.count, by: 4) {
@@ -39,19 +39,9 @@ actor RadarCompanyMetadataService {
                             let providerProfile: FMPCompanyProfile?
                             if let fmpKey { providerProfile = await fmp.profile(symbol: symbol, apiKey: fmpKey) }
                             else { providerProfile = nil }
-                            let providerImage = await Self.loadLogo(providerProfile?.logoURL, session: requestSession)
-                            let finnhubProfile: CompanyProfileResponse?
-                            if providerImage == nil {
-                                finnhubProfile = await Self.fetchProfile(symbol: symbol, apiKey: token, session: requestSession)
-                            } else {
-                                finnhubProfile = nil
-                            }
-                            let name = providerProfile?.name ?? finnhubProfile?.profileName ?? fallbackName
-                            let country = providerProfile?.countryCode ?? finnhubProfile?.countryCode
-                                ?? cached?.countryCode ?? RadarCompanyMetadata.countryFallback(for: symbol)
-                            let finnhubLogo = finnhubProfile?.logoURL.flatMap { URL(string: $0) }
-                            var image = providerImage
-                            if image == nil { image = await Self.loadLogo(finnhubLogo, session: requestSession) }
+                            let name = providerProfile?.name ?? fallbackName
+                            let country = providerProfile?.countryCode ?? cached?.countryCode
+                            var image = await Self.loadLogo(providerProfile?.logoURL, session: requestSession)
                             if image == nil { image = cached?.logoData }
                             if image == nil { image = await Self.loadCompanyMark(name: name, session: requestSession) }
                             return (symbol, RadarCompanyMetadata(
@@ -79,21 +69,6 @@ actor RadarCompanyMetadataService {
         var seen = Set<String>()
         return Array(symbols.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
             .filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(101))
-    }
-
-    private static func fetchProfile(symbol: String, apiKey: String?, session: URLSession) async -> CompanyProfileResponse? {
-        guard let apiKey, !apiKey.isEmpty,
-              var components = URLComponents(string: "https://finnhub.io/api/v1/stock/profile2") else { return nil }
-        components.queryItems = [URLQueryItem(name: "symbol", value: symbol)]
-        guard let url = components.url else { return nil }
-        var request = URLRequest(url: url)
-        request.setValue(apiKey, forHTTPHeaderField: "X-Finnhub-Token")
-        request.timeoutInterval = 10
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 100_000 else { return nil }
-            return try JSONDecoder().decode(CompanyProfileResponse.self, from: data)
-        } catch { return nil }
     }
 
     private static func loadLogo(_ url: URL?, session: URLSession) async -> Data? {
@@ -146,15 +121,7 @@ actor RadarCompanyMetadataService {
 
     private static let legalSuffixes: Set<String> = ["inc", "incorporated", "corp", "corporation", "company", "co", "ltd", "plc", "ag", "se", "sa", "spa", "gmbh", "group"]
 
-    private struct CompanyProfileResponse: Decodable {
-        let name: String?
-        let country: String?
-        let logo: String?
 
-        var profileName: String? { name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
-        var countryCode: String? { country?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty }
-        var logoURL: String? { logo?.hasPrefix("https://") == true ? logo : nil }
-    }
 }
 
 private extension String {

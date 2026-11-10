@@ -19,6 +19,7 @@ struct MarketRadarCycle: Sendable {
     let scannedSymbols: Int
     let companyNames: [String: String]
     let progress: MarketScanProgress
+    var candidates: [RadarCompanyCandidate] = []
 }
 
 struct MarketScanProgress: Sendable, Equatable {

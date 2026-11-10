@@ -71,6 +71,9 @@ struct RadarChartHeader: View {
                 RadarCompanyMark(metadata: metadata, name: companyName, size: 22, showsPlaceholder: true)
             }
             HStack(alignment: .center, spacing: 8) {
+                if let flag = RadarCompanyMetadata.flag(for: RadarCompanyMetadata.listingCountry(for: symbol)) {
+                    Text(flag).accessibilityLabel("Listing country")
+                }
                 Text(symbol.isEmpty ? "No symbol selected" : companyName)
                     .font(.headline)
                     .foregroundStyle(.primary)
@@ -98,7 +101,7 @@ struct RadarChartHeader: View {
                 }
                 Text(RadarSignalPresentation.title(for: signal.signalSource))
                     .font(.caption).foregroundStyle(.indigo)
-                status(signal.dataStatus == "DELAYED" ? "Delayed signal" : "Signal price",
+                status(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed signal" : "Signal price",
                        epoch: signal.signalEpochMillis / 1_000)
             }
         } else if let lastBar {

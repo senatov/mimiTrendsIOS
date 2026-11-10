@@ -22,7 +22,7 @@ struct DiscoverySettingsSection: View {
             .pickerStyle(.menu)
             Text("Both lists refresh at startup and every 30 minutes. Ranking affects scan order, not signal confidence.")
                 .font(.caption).foregroundStyle(.primary.opacity(0.78))
-            Text("Wikifolio shows platform activity; turnover ranks value traded on the exchange. L&S and Finnhub validate live moves independently.")
+            Text("Wikifolio shows platform activity; turnover ranks value traded on the exchange. These lists contribute candidates to the 200-share candle scan; completed candles and reported volume confirm movements.")
                 .font(.caption).foregroundStyle(.primary.opacity(0.78))
         }
         .task(id: "\(wikifolio)|\(performance)|\(priority)") {

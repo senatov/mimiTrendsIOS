@@ -24,10 +24,9 @@ struct RadarTradeAnchorReader: View {
         guard let frame = proxy.plotFrame else { return [:] }
         let origin = geometry[frame].origin
         return Dictionary(trades.compactMap { trade in
-            let first = timeline.bars.first?.minuteEpochSeconds ?? 0
-            let isEntryVisible = trade.entryEpochSeconds >= first
-            let epoch = isEntryVisible ? trade.entryEpochSeconds : trade.exitEpochSeconds ?? trade.entryEpochSeconds
-            let price = isEntryVisible ? trade.entryPrice : trade.exitPrice ?? trade.entryPrice
+            guard let point = RadarTradeVisibleAnchor.point(trade: trade, bars: timeline.bars) else { return nil }
+            let epoch = point.epoch
+            let price = point.price
             guard let x = proxy.position(forX: timeline.position(epoch)),
                   let y = proxy.position(forY: price) else { return nil }
             return (trade.id, CGPoint(x: origin.x + x, y: origin.y + y))
@@ -77,7 +76,6 @@ struct RadarTradeCardOverlay: View {
                 RadarChartTradeCard(trade: trade, chartCurrency: currency)
                     .frame(width: cardWidth, height: 72)
                     .contentShape(Rectangle())
-                    .position(center)
                     .highPriorityGesture(DragGesture(minimumDistance: 3)
                         .onChanged { value in
                             let start = dragStarts[trade.id] ?? offsets[trade.id] ?? .zero
@@ -93,11 +91,30 @@ struct RadarTradeCardOverlay: View {
                             offsets[trade.id] = CGSize(width: x - base.x, height: y - base.y)
                             dragStarts[trade.id] = nil
                         })
+                    .position(center)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityIdentifier("trade-card-\(trade.id)")
                     .accessibilityLabel("Trade details for \(trade.symbol)")
+                    .accessibilityValue("x \(Int(center.x)), y \(Int(center.y))")
                     .accessibilityHint("Drag to reposition above the price chart")
                     .accessibilityAction(named: "Reset position") { offsets[trade.id] = nil }
                     .contextMenu { Button("Reset position") { offsets[trade.id] = nil } }
             }
         }
+    }
+}
+
+/// A position begun before this chart is attached to the first visible owned candle.
+enum RadarTradeVisibleAnchor {
+    static func point(trade: BrokerTradePosition, bars: [MinuteBar]) -> (epoch: Int64, price: Double)? {
+        guard let first = bars.first, let last = bars.last,
+              trade.entryEpochSeconds <= last.minuteEpochSeconds,
+              (trade.exitEpochSeconds ?? Int64.max) >= first.minuteEpochSeconds else { return nil }
+        if trade.entryEpochSeconds >= first.minuteEpochSeconds {
+            return (trade.entryEpochSeconds, trade.entryPrice)
+        }
+        if let exit = trade.exitEpochSeconds, let price = trade.exitPrice,
+           exit <= last.minuteEpochSeconds { return (exit, price) }
+        return (first.minuteEpochSeconds, first.close)
     }
 }

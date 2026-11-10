@@ -51,6 +51,15 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertTrue(displayed.signals.isEmpty)
     }
 
+    func testQuoteOnlySignalsAreExcludedFromCandleRadar() {
+        let quote = event("LS:43763", source: "L&S quote rise", at: 500,
+                          dataStatus: "QUOTE_NO_VOLUME")
+        let candle = event("NVDA", source: "Rapid crash", at: 500, change: -1.2,
+                           window: "4m", dataStatus: YahooCandleSignalPipeline.currentStatus)
+        let displayed = RadarSignalSelection.displayHistory([quote, candle], since: 0, limit: 10)
+        XCTAssertEqual(displayed.signals.map(\.symbol), ["NVDA"])
+    }
+
     private func event(
         _ symbol: String, source: String, at epoch: Int64,
         change: Double = 1, window: String = "1m", dataStatus: String? = nil

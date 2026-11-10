@@ -23,8 +23,15 @@ struct MiMiTrendsApp: App {
 
     var body: some Scene {
         WindowGroup(AppIdentity.windowTitle) {
-            ContentView()
-                .environment(radarSession)
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("--chart-diagnostics") {
+                RadarChartDiagnosticView()
+            } else {
+                ContentView().environment(radarSession)
+            }
+            #else
+            ContentView().environment(radarSession)
+            #endif
         }
         #if os(macOS)
         .defaultSize(width: 1180, height: 780)

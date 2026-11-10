@@ -11,7 +11,8 @@ enum RapidRiseDetector {
         bars: [MinuteBar],
         nowEpochSeconds: Int64,
         settings: RapidRiseSettings = RapidRiseSettings(),
-        dataStatus: String? = nil
+        dataStatus: String? = nil,
+        observedAtEpochSeconds: Int64? = nil
     ) -> ScanResult? {
         let recent = bars.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
         guard let latest = recent.last, recent.count >= 2,
@@ -35,7 +36,7 @@ enum RapidRiseDetector {
             symbol: symbol, bars: recent, start: start, end: latest,
             eventBarCount: eventBars.count, changePercent: change,
             source: "Sharp rebound", displayPrice: latest.close,
-            nowEpochSeconds: nowEpochSeconds, dataStatus: dataStatus
+            nowEpochSeconds: nowEpochSeconds, dataStatus: dataStatus, observedAtEpochSeconds: observedAtEpochSeconds
         )
     }
 

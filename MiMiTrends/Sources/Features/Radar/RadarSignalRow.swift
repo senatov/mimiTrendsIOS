@@ -130,8 +130,8 @@ struct RadarSignalRow: View {
         HStack(spacing: 5) {
             RadarCompanyMark(metadata: companyMetadata, name: companyName, showsPlaceholder: true)
             Text(companyName).lineLimit(1)
-            if let flag = RadarCompanyMetadata.flag(for: companyMetadata?.countryCode ?? RadarCompanyMetadata.countryFallback(for: signal.symbol)) {
-                Text(flag).accessibilityLabel("Issuer country")
+            if let flag = RadarCompanyMetadata.flag(for: RadarCompanyMetadata.listingCountry(for: signal.symbol)) {
+                Text(flag).accessibilityLabel("Listing country")
             }
         }
     }

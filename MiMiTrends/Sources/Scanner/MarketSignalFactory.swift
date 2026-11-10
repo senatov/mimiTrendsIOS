@@ -11,8 +11,10 @@ enum MarketSignalFactory {
         nowEpochSeconds: Int64,
         anomalyScore: Double = 100,
         windowLabel: String? = nil,
-        dataStatus: String? = nil
+        dataStatus: String? = nil,
+        observedAtEpochSeconds: Int64? = nil
     ) -> ScanResult {
+        let observedTime = observedAtEpochSeconds ?? nowEpochSeconds
         let session = bars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - 10_800 }
         return ScanResult(
             symbol: symbol,
@@ -28,7 +30,7 @@ enum MarketSignalFactory {
             windowVolume: session.suffix(eventBarCount).reduce(0) { $0 + $1.volume },
             sessionVolume: session.reduce(0) { $0 + $1.volume },
             sessionTurnover: session.reduce(0) { $0 + $1.close * $1.volume },
-            signalAgeMinutes: Int(max(0, nowEpochSeconds - end.minuteEpochSeconds) / 60),
+            signalAgeMinutes: Int(max(0, observedTime - end.minuteEpochSeconds) / 60),
             signalSource: source,
             updatedAtMillis: end.minuteEpochSeconds * 1_000,
             dataStatus: dataStatus ?? (MarketCandidateFilter.isGermanSymbol(symbol) ? "DELAYED" : "LIVE"),
@@ -36,7 +38,7 @@ enum MarketSignalFactory {
             signalPrice: start.close,
             signalEpochMillis: end.minuteEpochSeconds * 1_000,
             analysisUpdatedAtMillis: end.minuteEpochSeconds * 1_000,
-            scanEvaluatedAtMillis: nowEpochSeconds * 1_000
+            scanEvaluatedAtMillis: observedTime * 1_000
         )
     }
 }

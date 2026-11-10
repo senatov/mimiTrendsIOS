@@ -81,7 +81,7 @@ struct RadarScanSettingsView: View {
         section("Shared quality checks") {
             doubleRow("Minimum price", value: $draft.minimumPrice, range: 0...10_000, step: 0.5, unit: "")
             amountRow("30-minute turnover", value: $draft.minimumTurnover)
-            Text("Turnover uses the instrument's source currency. Changes stop an active feed; start it again to scan with the saved thresholds.")
+            Text("Turnover uses the instrument's source currency. Saved thresholds apply to the next automatic candle scan.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
             HStack {

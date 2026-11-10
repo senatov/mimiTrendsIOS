@@ -68,14 +68,8 @@ struct RadarView: View {
                         )
                     },
                     controls: {
-                        RadarHeader(
-                            symbol: $symbol, scanWatchlist: $scanWatchlist,
-                            session: session, setupMessage: setupMessage,
-                            isPreparingFeed: isPreparingFeed,
-                            watchlist: watchlistPreview, onManageWatchlist: onManageWatchlist
-                        ) {
-                            if session.isScanning { session.stop() } else { startFeed() }
-                        }
+                        RadarHeader(symbol: $symbol, progress: marketCycle?.progress,
+                                    onManageWatchlist: onManageWatchlist)
                     },
                     showingSources: $showingSources
                 )
@@ -174,15 +168,7 @@ struct RadarView: View {
     }
 
     private var emptyRadarMessage: String {
-        if session.isScanning {
-            return session.isSubscribed
-                ? "Finnhub is connected and waiting for a qualifying trade move. Lang & Schwarz is checking quote changes independently."
-                : "Finnhub is connecting. Yahoo and FMP update candidate and history data; they do not create live signals."
-        }
-        if !MarketProviderAccess.isEnabled(.finnhub) {
-            return "Yahoo and FMP update candidates and price history. Enable Finnhub in Settings to start live trade signals; Lang & Schwarz checks quote changes independently."
-        }
-        return "Yahoo and FMP update candidates and price history. Lang & Schwarz checks quote changes; Finnhub trade signals require the live feed to be started."
+        "Scanning up to 200 shares for sharp drops, rebounds and sustained rises in completed candles with reported volume. Closed German sessions are skipped; German quotes may be delayed."
     }
 
     private func signalList(compact: Bool) -> some View {
@@ -198,8 +184,6 @@ struct RadarView: View {
             compact: compact,
             errorMessage: historyError,
             emptyStateMessage: emptyRadarMessage,
-            canStartFinnhubFeed: !session.isScanning && !isPreparingFeed,
-            onStartFinnhubFeed: startFeed,
             sourcesOpen: showingSources,
             onToggleSources: { showingSources.toggle() },
             onSelect: { signal in

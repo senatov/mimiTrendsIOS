@@ -55,7 +55,8 @@ struct RadarChartPlot: View {
                 ForEach(data.bars, id: \.minuteEpochSeconds) { bar in
                     let time = timeline.position(bar.minuteEpochSeconds)
                     let halfWidth: TimeInterval = 20
-                    let color: Color = bar.close >= bar.open ? .green : .red
+                    let rising = bar.close >= bar.open
+                    let color = rising ? RadarCandleVisualStyle.rise : RadarCandleVisualStyle.fall
                     RuleMark(
                         x: .value("Minute", time),
                         yStart: .value("Low", bar.low),
@@ -69,26 +70,37 @@ struct RadarChartPlot: View {
                         yStart: .value("Open", bar.open),
                         yEnd: .value("Close", bar.close)
                     )
-                    .foregroundStyle(color)
+                    .foregroundStyle(RadarCandleVisualStyle.body(rising: rising))
+                    .alignsMarkStylesWithPlotArea(false)
                     .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
                 }
                 ForEach(data.fastEMA) { point in
+                    LineMark(x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
+                             y: .value("EMA 9 depth", point.value),
+                             series: .value("Overlay segment", "EMA 9 depth"))
+                        .foregroundStyle(RadarCandleVisualStyle.fastLine.opacity(0.15))
+                        .lineStyle(StrokeStyle(lineWidth: 4.5, lineCap: .round, lineJoin: .round))
                     LineMark(
                         x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
                         y: .value("EMA 9", point.value),
                         series: .value("Overlay segment", "EMA 9")
                     )
-                    .foregroundStyle(.blue)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+                    .foregroundStyle(RadarCandleVisualStyle.fastLine)
+                    .lineStyle(StrokeStyle(lineWidth: 1.9, lineCap: .round, lineJoin: .round))
                 }
                 ForEach(data.slowEMA) { point in
+                    LineMark(x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
+                             y: .value("EMA 21 depth", point.value),
+                             series: .value("Overlay segment", "EMA 21 depth"))
+                        .foregroundStyle(RadarCandleVisualStyle.slowLine.opacity(0.15))
+                        .lineStyle(StrokeStyle(lineWidth: 4.5, lineCap: .round, lineJoin: .round))
                     LineMark(
                         x: .value("Minute", timeline.position(point.minuteEpochSeconds)),
                         y: .value("EMA 21", point.value),
                         series: .value("Overlay segment", "EMA 21")
                     )
-                    .foregroundStyle(.orange)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5))
+                    .foregroundStyle(RadarCandleVisualStyle.slowLine)
+                    .lineStyle(StrokeStyle(lineWidth: 1.9, lineCap: .round, lineJoin: .round))
                 }
                 ForEach(data.trend30) { point in
                     LineMark(
@@ -103,12 +115,7 @@ struct RadarChartPlot: View {
                     RuleMark(y: .value("Current price", last.close))
                         .foregroundStyle(.teal.opacity(0.8))
                         .lineStyle(StrokeStyle(lineWidth: 1.2, dash: [2, 3]))
-                        .annotation(position: .trailing, alignment: .center, spacing: 4) {
-                            Text("Current / exit · \(last.close.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))")
-                                .font(.caption2.monospacedDigit().weight(.semibold))
-                                .padding(.horizontal, 5).padding(.vertical, 3)
-                                .background(.teal.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
-                        }
+
                 }
                 ForEach(visibleTrades) { trade in
                     tradeMarks(for: trade)
@@ -124,6 +131,10 @@ struct RadarChartPlot: View {
             }
             .accessibilityLabel("\(data.range.usesDailyBars ? "Daily" : "Minute") candle chart with EMA 9 and EMA 21 for \(symbol)")
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { plotWidth = $0 }
+            .chartPlotStyle { plot in
+                plot.background(.background.opacity(0.65))
+                    .overlay(Rectangle().stroke(.secondary.opacity(0.12), lineWidth: 0.5))
+            }
             .chartYScale(domain: priceDomain)
             .chartXScale(domain: timeline.domain)
             .chartXAxis { timelineAxis }
@@ -141,6 +152,9 @@ struct RadarChartPlot: View {
             }
             .chartOverlay { proxy in
                 ZStack {
+                    if selectedBar == nil, let last = data.bars.last {
+                        RadarChartLastPriceLabel(proxy: proxy, price: last.close, currency: displayCurrency)
+                    }
                     RadarChartCursorOverlay(
                     proxy: proxy, bars: data.bars, timeline: timeline, displayCurrency: displayCurrency, readsPrice: true,
                     selectedBar: selectedBar, selectedPrice: selectedPrice,
@@ -186,7 +200,9 @@ struct RadarChartPlot: View {
                             x: .value("Minute", timeline.position(bar.minuteEpochSeconds)),
                             y: .value("Reported volume", bar.volume)
                         )
-                        .foregroundStyle(bar.close >= bar.open ? .green.opacity(0.55) : .red.opacity(0.55))
+                        .foregroundStyle(RadarCandleVisualStyle.body(rising: bar.close >= bar.open))
+                        .alignsMarkStylesWithPlotArea(false)
+                        .cornerRadius(1.5)
                         .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
                     }
                     if let selectedBar {

@@ -19,8 +19,6 @@ struct RadarSignalList: View {
     let compact: Bool
     let errorMessage: String?
     let emptyStateMessage: String
-    let canStartFinnhubFeed: Bool
-    let onStartFinnhubFeed: () -> Void
     let sourcesOpen: Bool
     let onToggleSources: () -> Void
     let onSelect: (ScanResult) -> Void
@@ -78,7 +76,7 @@ struct RadarSignalList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .center, spacing: 10) {
-                Label(showingSavedHistory ? "SAVED RADAR" : "LIVE RADAR", systemImage: "dot.radiowaves.left.and.right")
+                Label(showingSavedHistory ? "SAVED RADAR" : "CANDLE RADAR", systemImage: "dot.radiowaves.left.and.right")
                     .font(.system(.subheadline, design: .monospaced).weight(.bold))
                     .tracking(0.7)
                     .foregroundStyle(.primary)
@@ -128,14 +126,6 @@ struct RadarSignalList: View {
                         .foregroundStyle(tableColor(.signalMutedText))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: 520)
-                    if canStartFinnhubFeed {
-                        TrendsActionButton(
-                            title: "Start Finnhub live feed",
-                            systemImage: "play.fill",
-                            tint: .green,
-                            action: onStartFinnhubFeed
-                        )
-                    }
                     Spacer(minLength: 16)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

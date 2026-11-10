@@ -21,10 +21,10 @@ struct RadarCompanyMetadata: Codable, Sendable {
         return scalars.count == 2 ? String(String.UnicodeScalarView(scalars)) : nil
     }
 
-    static func countryFallback(for symbol: String) -> String? {
-        // Lang & Schwarz quote identifiers refer to instruments traded on its German venue.
-        // They are not exchange tickers, so suffix-based country detection cannot resolve them.
+    static func listingCountry(for symbol: String) -> String? {
+        // The flag describes this listing venue, not issuer domicile.
         if symbol.uppercased().hasPrefix("LS:") { return "DE" }
+        if MarketCandidateFilter.supportsYahooBars(symbol: symbol), !symbol.contains(".") { return "US" }
         let suffix = symbol.uppercased().split(separator: ".").last
         return switch suffix {
         case "DE", "F", "BE", "DU", "HM", "MU", "SG", "HA", "X": "DE"

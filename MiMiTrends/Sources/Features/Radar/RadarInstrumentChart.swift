@@ -32,7 +32,7 @@ struct RadarInstrumentChart: View {
                     TrendsActionButton(title: "L&S quotes", systemImage: "waveform.path",
                                        tint: showingQuotes ? .purple : .blue) { showingQuotes = true }
                     if let resolvedSymbol {
-                        Text("\(symbol) quote signal · \(resolvedSymbol) primary-listing candles")
+                        Text("\(symbol) L&S instrument · \(resolvedSymbol) candles")
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 0)

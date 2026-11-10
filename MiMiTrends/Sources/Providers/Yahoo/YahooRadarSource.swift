@@ -8,7 +8,7 @@ struct YahooRadarSource: Sendable {
     }
 
     func mostActiveCandidates(limit: Int = 20) async throws -> [RadarCompanyCandidate] {
-        let path = "/v1/finance/screener/predefined/saved?scrIds=most_actives&count=50&start=0"
+        let path = "/v1/finance/screener/predefined/saved?scrIds=most_actives&count=100&start=0"
         let root = try await loadWithFallback(path: path)
         guard let finance = root["finance"] as? [String: Any],
               let result = finance["result"] as? [[String: Any]],
@@ -25,7 +25,14 @@ struct YahooRadarSource: Sendable {
             throw RadarSourceError.invalidSymbol
         }
         let path = "/v8/finance/chart/\(encoded)?range=1d&interval=1m&includePrePost=false"
-        return try Self.decodeBars(try await loadWithFallback(path: path), symbol: symbol)
+        let root = try await loadWithFallback(path: path)
+        guard let chart = root["chart"] as? [String: Any],
+              let result = (chart["result"] as? [[String: Any]])?.first,
+              let meta = result["meta"] as? [String: Any],
+              (meta["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame else {
+            throw RadarSourceError.invalidResponse
+        }
+        return try Self.decodeBars(root, symbol: symbol)
     }
 
     func diagnose(symbol: String) async -> YahooSymbolEvidence {

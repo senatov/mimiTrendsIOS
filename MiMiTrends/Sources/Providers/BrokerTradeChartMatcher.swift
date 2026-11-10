@@ -20,7 +20,7 @@ enum BrokerTradeChartMatcher {
         let transactionName = normalized(execution.description)
         let instrumentName = normalized(companyName)
         let namesMatch = transactionName == instrumentName ||
-            transactionName.hasPrefix(instrumentName) || instrumentName.hasPrefix(transactionName)
+            transactionName.hasPrefix(instrumentName + " ") || instrumentName.hasPrefix(transactionName + " ")
         if !transactionName.isEmpty, !instrumentName.isEmpty, namesMatch {
             return true
         }
@@ -107,16 +107,15 @@ enum BrokerTradeChartMatcher {
     }
 
     private static func openPositions(from lots: [BuyLot], symbol: String) -> [BrokerTradePosition] {
-        let remaining = lots.filter { $0.remaining > quantityEpsilon }
-        guard let first = remaining.first else { return [] }
-        let quantity = remaining.reduce(0) { $0 + $1.remaining }
-        let gross = remaining.reduce(0) { $0 + $1.grossRemaining }
-        return [BrokerTradePosition(
-            id: "open-\(first.execution.id)", symbol: symbol, quantity: quantity,
-            entryEpochSeconds: first.execution.occurredAtEpochSeconds,
-            entryPrice: gross / quantity, exitEpochSeconds: nil, exitPrice: nil,
-            profitAmount: nil, profitPercent: nil, currency: first.execution.currency
-        )]
+        lots.filter { $0.remaining > quantityEpsilon }.map { lot in
+            BrokerTradePosition(
+                id: "open-\(lot.execution.id)", symbol: symbol, quantity: lot.remaining,
+                entryEpochSeconds: lot.execution.occurredAtEpochSeconds,
+                entryPrice: lot.grossRemaining / lot.remaining,
+                exitEpochSeconds: nil, exitPrice: nil,
+                profitAmount: nil, profitPercent: nil, currency: lot.execution.currency
+            )
+        }
     }
 
     private struct BuyLot {

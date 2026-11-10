@@ -82,18 +82,13 @@ actor MarketRadarScanner {
         }
         unreadableSymbols = await YahooSymbolResolutionStore.shared.skippedSymbols()
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
-        let secondaryUS = secondaryCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
-        let secondaryGerman = secondaryCandidates.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
-        let usSymbols = Self.interleave(yahooCandidates.map(\.symbol), secondaryUS.map(\.symbol), limit: 80)
-        let germanSymbols = (germanCandidates + secondaryGerman).map(\.symbol)
-        let supplemental = Self.interleave(usSymbols, germanSymbols, limit: 160)
-        let pool = Self.interleave(baselineCandidates.map(\.symbol), [], limit: 2_000)
-            .appendingUnique(supplemental)
-            .filter { !unsupportedSymbols.contains($0) }
-        let activePool = pool.filter {
-            (!MarketCandidateFilter.isGermanSymbol($0) || GermanMarketSession.isOpen(at: Date()))
-                && !unreadableSymbols.contains($0)
-        }
+        let activePool = RadarScanPool.symbols(
+            baseline: baselineCandidates.map(\.symbol), yahoo: yahooCandidates.map(\.symbol),
+            secondary: secondaryCandidates.map(\.symbol), german: germanCandidates.map(\.symbol),
+            germanOpen: GermanMarketSession.isOpen(at: Date()),
+            excluded: unsupportedSymbols.union(unreadableSymbols)
+        )
+        initialScanSymbols.formIntersection(activePool)
         initialScanTotal = activePool.count
         let names = Dictionary(
             (baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
@@ -106,7 +101,8 @@ actor MarketRadarScanner {
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
                                     scannedSymbols: 0, companyNames: names,
-                                    progress: progress())
+                                    progress: progress(),
+                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
         }
         yahooCooldownUntil = nil
         guard enabledProviders.contains(.yahoo) else {
@@ -116,7 +112,8 @@ actor MarketRadarScanner {
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
                                     scannedSymbols: 0, companyNames: names,
-                                    progress: progress())
+                                    progress: progress(),
+                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
         }
         let pending = activePool.filter { !initialScanSymbols.contains($0) }
         let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 16)
@@ -130,7 +127,8 @@ actor MarketRadarScanner {
                                     initialScanProcessed: initialScanSymbols.count,
                                     initialScanTotal: initialScanTotal,
                                     scannedSymbols: 0, companyNames: names,
-                                    progress: progress())
+                                    progress: progress(),
+                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
         }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
         let nowSeconds = Int64(Date().timeIntervalSince1970)
@@ -149,52 +147,8 @@ actor MarketRadarScanner {
             await withTaskGroup(of: SymbolOutcome.self) { tasks in
                 for symbol in group {
                     tasks.addTask { [yahoo] in
-                        do {
-                            let bars = try await yahoo.minuteBars(symbol: symbol)
-                            try Task.checkCancellation()
-                            let evaluationTime = RadarMarketDataPolicy.evaluationTime(symbol: symbol, now: nowSeconds)
-                            guard let last = bars.last,
-                                  last.minuteEpochSeconds <= nowSeconds + 60,
-                                  last.minuteEpochSeconds >= evaluationTime - 600 else {
-                                RadarMarketDataPolicy.logStale(symbol: symbol, bars: bars, now: nowSeconds)
-                                return SymbolOutcome(symbol: symbol, received: bars.count,
-                                                     failure: nil, skipped: true)
-                            }
-                            for bar in bars { _ = try await barStore.upsert(bar) }
-                            RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)
-                            return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil)
-                        } catch RadarSourceError.rateLimited {
-                            return SymbolOutcome(symbol: symbol, received: 0,
-                                                 failure: "Yahoo temporarily limited requests (HTTP 429). Radar pauses scanning for 30 minutes, then retries automatically.",
-                                                 rateLimited: true)
-                        } catch RadarSourceError.invalidSymbol {
-                            return SymbolOutcome(symbol: symbol, received: 0,
-                                                 failure: nil,
-                                                 rejectedSymbol: symbol, skipped: true)
-                        } catch {
-                            if Task.isCancelled {
-                                return SymbolOutcome(symbol: symbol, received: 0, failure: nil, skipped: true)
-                            }
-                            let unreadableSymbol: String?
-                            var failureMessage = MarketRadarErrorDescription.message(error, provider: "Yahoo (\(symbol))")
-                            if let radarError = error as? RadarSourceError,
-                               case .invalidResponse = radarError {
-                                unreadableSymbol = symbol
-                                let resolution = await YahooSymbolDiagnosisService().diagnose(symbol: symbol)
-                                await YahooSymbolResolutionStore.shared.save(resolution)
-                                failureMessage += " Auto-check: \(resolution.summary)"
-                                AppDiagnostics.shared.record(.warning, "Yahoo", "symbol-auto-diagnosed",
-                                    "symbol=\(symbol) evidence=\(resolution.providerEvidence.joined(separator: " | ")) recheckAtMillis=\(resolution.retryAfterMillis)")
-                            } else {
-                                unreadableSymbol = nil
-                            }
-                            return SymbolOutcome(
-                                symbol: symbol, received: 0,
-                                failure: failureMessage,
-                                rateLimited: false,
-                                unreadableSymbol: unreadableSymbol
-                            )
-                        }
+                        await RadarCandleScan.load(symbol: symbol, yahoo: yahoo, barStore: barStore,
+                                                   nowSeconds: nowSeconds, settings: settings)
                     }
                 }
                 for await outcome in tasks {
@@ -263,7 +217,8 @@ actor MarketRadarScanner {
             initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
             initialScanTotal: initialScanTotal,
             scannedSymbols: symbols.count, companyNames: names,
-            progress: progress()
+            progress: progress(),
+            candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) }
         )
     }
 
@@ -299,7 +254,7 @@ actor MarketRadarScanner {
         var traderFoxRefreshErrors: [String] = []
         if enabledProviders.contains(.yahoo) {
           do {
-            let symbols = try await yahoo.mostActiveCandidates()
+            let symbols = try await yahoo.mostActiveCandidates(limit: 100)
             yahooTotals.operations += 1
             if !symbols.isEmpty {
                 yahooCandidates = symbols
@@ -330,7 +285,7 @@ actor MarketRadarScanner {
         } else { yahooCandidates = [] }
         if let fmpKey {
             do {
-                let symbols = try await fmp.activeCandidates(apiKey: fmpKey)
+                let symbols = try await fmp.activeCandidates(apiKey: fmpKey, limit: 200)
                 fmpTotals.operations += 3
                 fmpTotals.received += symbols.count
                 fmpTotals.valid += symbols.count
@@ -366,7 +321,7 @@ actor MarketRadarScanner {
             }
         } else if enabledProviders.contains(.traderFox) {
             do {
-                let symbols = try await traderFox.activeCandidates()
+                let symbols = try await traderFox.activeCandidates(limit: 200)
                 traderFoxTotals.operations += 1
                 traderFoxTotals.received += symbols.count
                 traderFoxTotals.valid += symbols.count
@@ -384,7 +339,7 @@ actor MarketRadarScanner {
                 )
             }
         }
-        if enabledProviders.contains(.traderFox) {
+        if enabledProviders.contains(.traderFox) && GermanMarketSession.isOpen(at: Date()) {
           do {
             let symbols = try await traderFox.germanCandidates()
             traderFoxTotals.operations += 3
@@ -405,7 +360,7 @@ actor MarketRadarScanner {
           }
         } else {
             germanCandidates = []
-            traderFoxCandidates = []
+            if !enabledProviders.contains(.traderFox) { traderFoxCandidates = [] }
         }
         traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
             ? nil : traderFoxRefreshErrors.joined(separator: "\n")
@@ -433,14 +388,4 @@ actor MarketRadarScanner {
         return pending.isEmpty ? scanSlice(symbols, offset: offset, limit: limit)
             : Array(pending.prefix(max(0, limit)))
     }
-}
-
-private struct SymbolOutcome: Sendable {
-    let symbol: String
-    let received: Int
-    let failure: String?
-    var rateLimited = false
-    var rejectedSymbol: String? = nil
-    var unreadableSymbol: String? = nil
-    var skipped = false
 }

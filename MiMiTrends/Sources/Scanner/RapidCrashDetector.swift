@@ -13,7 +13,8 @@ enum RapidCrashDetector {
         bars: [MinuteBar],
         nowEpochSeconds: Int64,
         settings: RapidCrashSettings = RapidCrashSettings(),
-        dataStatus: String? = nil
+        dataStatus: String? = nil,
+        observedAtEpochSeconds: Int64? = nil
     ) -> ScanResult? {
         let recent = bars.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
         guard let latest = recent.last, recent.count >= 2,
@@ -35,7 +36,7 @@ enum RapidCrashDetector {
             symbol: symbol, bars: recent, start: move.start, end: move.end,
             eventBarCount: move.count, changePercent: move.change,
             source: "Rapid crash", displayPrice: move.end.close,
-            nowEpochSeconds: nowEpochSeconds, dataStatus: dataStatus
+            nowEpochSeconds: nowEpochSeconds, dataStatus: dataStatus, observedAtEpochSeconds: observedAtEpochSeconds
         )
     }
 

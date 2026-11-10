@@ -37,11 +37,11 @@ struct ScannerSettingsView: View {
 
     private var scopePanel: some View {
         SettingsGroup(title: "Current scan scope") {
-            SettingsValueRow(title: "Confirmed signals", value: "Live Finnhub trades; fresh Lang & Schwarz quotes")
-            SettingsValueRow(title: "Historical data", value: "Yahoo candles for charts and price history")
-            SettingsValueRow(title: "Symbols", value: scanWatchlist ? "Selected + saved, up to 5" : "Selected only")
+            SettingsValueRow(title: "Confirmed signals", value: "Completed Yahoo candles with reported volume")
+            SettingsValueRow(title: "Historical data", value: "Yahoo minute and daily candles")
+            SettingsValueRow(title: "Symbols", value: "Up to 200 US and German shares")
             SettingsValueRow(title: "Activity", value: "Foreground only")
-            Text("Finnhub signals use live trades and volume. Lang & Schwarz signals use fresh bid/ask quotes without trade volume. Yahoo data does not generate live signals.")
+            Text("Radar checks completed candles for rapid drops, rebounds and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
         }
