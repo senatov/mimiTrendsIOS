@@ -19,7 +19,17 @@ struct WallstreetRankingPageSource: Sendable {
     init(session: URLSession = .shared) { self.session = session }
 
     func load(_ kind: WallstreetRankingKind) async throws -> [WallstreetRankingEntry] {
-        var request = URLRequest(url: ProviderEndpointStore.url(for: kind.endpoint))
+        try await load(endpoint: kind.endpoint, german: false, kind: kind)
+    }
+
+    func loadGerman(at date: Date = Date()) async throws -> [WallstreetRankingEntry] {
+        guard GermanMarketSession.isOpen(at: date) else { return [] }
+        return try await load(endpoint: .wallstreetGermanPerformance, german: true, kind: .performance)
+    }
+
+    private func load(endpoint: ProviderEndpoint, german: Bool,
+                      kind: WallstreetRankingKind) async throws -> [WallstreetRankingEntry] {
+        var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
         request.timeoutInterval = 20
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
@@ -28,17 +38,26 @@ struct WallstreetRankingPageSource: Sendable {
               data.count <= 3_000_000, let html = String(data: data, encoding: .utf8) else {
             throw DiscoveryDataError.invalidCandidate
         }
-        return try Self.decode(html, kind: kind)
+        return try Self.decode(html, kind: kind, german: german)
     }
 
-    static func decode(_ html: String, kind: WallstreetRankingKind) throws -> [WallstreetRankingEntry] {
+    static func decodeGerman(_ html: String) throws -> [WallstreetRankingEntry] {
+        try decode(html, kind: .performance, german: true)
+    }
+
+    static func decode(_ html: String, kind: WallstreetRankingKind,
+                       german: Bool = false) throws -> [WallstreetRankingEntry] {
         // Tooltips contain nested tables; remove their attributes before reading real table rows.
         let clean = html.replacingOccurrences(of: #"data-bs-title="[^"]*""#,
                                               with: "", options: .regularExpression)
         let tables = MarketPageHTML.matches(#"<table\b[^>]*>(.*?)</table>"#, in: clean)
-        guard let table = tables.first(where: {
-            $0.contains("Wertpapier") && $0.contains(kind == .wikifolio ? "Käufe/Verkäufe" : "Umsatz")
-        }), let header = MarketPageHTML.first(#"<thead\b[^>]*>(.*?)</thead>"#, in: table) else {
+        let matching = tables.filter {
+            $0.contains("Wertpapier") && $0.contains(german ? "Perf. %" :
+                (kind == .wikifolio ? "Käufe/Verkäufe" : "Umsatz"))
+        }
+        // Later tables contain weekly, monthly and yearly rankings, not today.
+        let table = matching.first ?? ""
+        guard !table.isEmpty, let header = MarketPageHTML.first(#"<thead\b[^>]*>(.*?)</thead>"#, in: table) else {
             throw DiscoveryDataError.invalidCandidate
         }
         let columns = MarketPageHTML.matches(#"<th\b[^>]*>(.*?)</th>"#, in: header)

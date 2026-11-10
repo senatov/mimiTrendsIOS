@@ -30,7 +30,7 @@ struct RadarDiscoveryPreferences: Equatable, Sendable {
 
     static func load(defaults: UserDefaults = .standard) -> Self {
         var value = Self()
-        value.endpointSignature = ProviderEndpointStore.url(for: .wallstreetWikifolio).absoluteString + "|" + ProviderEndpointStore.url(for: .wallstreetPerformance).absoluteString
+        value.endpointSignature = ProviderEndpointStore.url(for: .wallstreetWikifolio).absoluteString + "|" + ProviderEndpointStore.url(for: .wallstreetPerformance).absoluteString + "|" + ProviderEndpointStore.url(for: .wallstreetGermanPerformance).absoluteString
         value.wikifolio = defaults.object(forKey: wikifolioKey) as? Bool ?? true
         value.performance = defaults.object(forKey: performanceKey) as? Bool ?? true
         if !value.wikifolio && !value.performance { value.wikifolio = true; value.performance = true }

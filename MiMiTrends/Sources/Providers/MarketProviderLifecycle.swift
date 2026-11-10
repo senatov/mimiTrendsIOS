@@ -34,7 +34,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .finnhub: [.finnhubTrades]
         case .yahoo: [.yahooPrimary, .yahooAlternate]
-        case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline]
+        case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline]
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
         case .fmp: []
@@ -163,6 +163,7 @@ struct MarketProviderPreflight: Sendable {
         for kind in kinds {
             if let entries = try? await page.load(kind), !entries.isEmpty { return }
         }
+        if let entries = try? await page.loadGerman(), !entries.isEmpty { return }
         throw MarketProviderPreflightError.unavailable
     }
 

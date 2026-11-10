@@ -28,7 +28,7 @@ struct ProviderSettingsPanel: View {
                     VStack(spacing: 6) {
                         providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
                         providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
-                                      endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline], includesDiscoverySettings: true)
+                                      endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                         providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
                     }
                     VStack(spacing: 6) {
@@ -43,7 +43,7 @@ struct ProviderSettingsPanel: View {
                     providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
                     providerGroup("Yahoo Finance", detail: "Candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
                     providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
-                                  endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetOnline], includesDiscoverySettings: true)
+                                  endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                     providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
                     providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])

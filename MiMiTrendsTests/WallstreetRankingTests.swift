@@ -90,6 +90,49 @@ final class WallstreetRankingTests: XCTestCase {
         XCTAssertEqual(mover.priority(settings: settings), 100, accuracy: 0.00001)
     }
 
+    func testGermanPerformanceReadsTodayAndIgnoresOtherPeriods() throws {
+        let header = "<thead><tr><th>Platz</th><th>Wertpapier</th><th>Kurs</th><th>Perf. %</th></tr></thead>"
+        let html = """
+        <table>\(header)<tr><td>1.</td><td><a href="/aktien/sap-aktie">SAP</a></td><td>200</td><td>+2,0</td></tr>
+        <tr><td>2.</td><td><a href="/aktien/bayer-aktie">Bayer</a></td><td>30</td><td>-3,0</td></tr>
+        <tr><td>3.</td><td><a href="/aktien/sap-aktie">SAP</a></td><td>200</td><td>+2,0</td></tr></table>
+        <table>\(header)<tr><td>1.</td><td><a href="/aktien/weekly-only-aktie">Weekly</a></td><td>10</td><td>+7,0</td></tr></table>
+        """
+        let rows = try WallstreetRankingPageSource.decodeGerman(html)
+        XCTAssertEqual(Set(rows.map(\.path)), ["/aktien/sap-aktie", "/aktien/bayer-aktie"])
+        XCTAssertEqual(rows.count, 2)
+        XCTAssertThrowsError(try WallstreetRankingPageSource.decode(html, kind: .performance))
+        XCTAssertThrowsError(try WallstreetRankingPageSource.decodeGerman("<html>Unavailable</html>"))
+    }
+
+    func testGermanMarketSkipsExchangeHolidaysButNotEveryPublicHoliday() {
+        let formatter = ISO8601DateFormatter()
+        for date in ["2026-01-01", "2026-04-03", "2026-04-06", "2026-05-01", "2026-12-24", "2026-12-25", "2026-12-31"] {
+            XCTAssertFalse(GermanMarketSession.isOpen(at: formatter.date(from: date + "T11:00:00Z")!), date)
+        }
+        XCTAssertTrue(GermanMarketSession.isOpen(at: formatter.date(from: "2026-05-14T11:00:00Z")!))
+    }
+
+    func testGermanRankingSkipsRequestsOnWeekend() async throws {
+        let saturday = ISO8601DateFormatter().date(from: "2026-11-14T11:00:00Z")!
+        let rows = try await WallstreetRankingPageSource().loadGerman(at: saturday)
+        XCTAssertTrue(rows.isEmpty)
+    }
+
+    func testGermanRankingHasIndependentReplaceableAddress() throws {
+        let suite = "GermanRankingTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let endpoint = ProviderEndpoint.wallstreetGermanPerformance
+        XCTAssertEqual(ProviderEndpointStore.url(for: endpoint, defaults: defaults).absoluteString,
+                       "https://www.wallstreet-online.de/statistik/top-dax-aktien-performance")
+        let replacement = "https://www.wallstreet-online.de/statistik/top-mdax-aktien-performance"
+        defaults.set(replacement, forKey: "provider.endpoint.wallstreetGermanPerformance.v1")
+        XCTAssertEqual(ProviderEndpointStore.url(for: endpoint, defaults: defaults).absoluteString, replacement)
+        XCTAssertEqual(ProviderEndpointStore.url(for: .wallstreetPerformance, defaults: defaults).absoluteString,
+                       ProviderEndpoint.wallstreetPerformance.defaultURL)
+    }
+
     private func entry(_ name: String, rank: Int, trades: Int?) -> WallstreetRankingEntry {
         WallstreetRankingEntry(path: "/aktien/\(name)-aktie", name: name, rank: rank, trades: trades, metrics: nil)
     }

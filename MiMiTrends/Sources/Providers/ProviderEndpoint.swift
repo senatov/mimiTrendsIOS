@@ -4,7 +4,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
     case finnhubTrades
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope, langSchwarzAmerica
     case yahooPrimary, yahooAlternate
-    case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, traderFox
+    case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, wallstreetGermanPerformance, traderFox
 
     var id: String { rawValue }
 
@@ -20,6 +20,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .wallstreetOnline: "Instrument pages"
         case .wallstreetWikifolio: "Wikifolio · today"
         case .wallstreetPerformance: "Trading volume · 24h"
+        case .wallstreetGermanPerformance: "Germany · DAX performance"
         case .traderFox: "Market universe"
         }
     }
@@ -36,6 +37,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .wallstreetOnline: "https://www.wallstreet-online.de"
         case .wallstreetWikifolio: "https://www.wallstreet-online.de/statistik/top-aktien-wikifolio"
         case .wallstreetPerformance: "https://www.wallstreet-online.de/statistik/top-aktien-meistgehandelt"
+        case .wallstreetGermanPerformance: "https://www.wallstreet-online.de/statistik/top-dax-aktien-performance"
         case .traderFox: "https://markets.traderfox.com/aktien/"
         }
     }
@@ -45,7 +47,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica: ""
         case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
-        case .wallstreetWikifolio, .wallstreetPerformance: ""
+        case .wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance: ""
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
         case .traderFox: "dax-bestandteile"
         }
@@ -126,6 +128,10 @@ struct ProviderEndpointChecker: Sendable {
         guard let response = response as? HTTPURLResponse, response.statusCode == 200,
               data.count < 3_000_000 else { throw ProviderEndpointError.checkFailed }
         let body = String(decoding: data, as: UTF8.self)
+        if endpoint == .wallstreetGermanPerformance {
+            let rows = try WallstreetRankingPageSource.decodeGerman(body)
+            return "German ranking table OK · \(rows.count) candidates"
+        }
         if endpoint == .wallstreetWikifolio || endpoint == .wallstreetPerformance {
             let kind: WallstreetRankingKind = endpoint == .wallstreetWikifolio ? .wikifolio : .performance
             do {
@@ -163,6 +169,7 @@ struct ProviderEndpointChecker: Sendable {
         case .wallstreetOnline: expected = "ASML"
         case .wallstreetWikifolio: expected = "Käufe/Verkäufe"
         case .wallstreetPerformance: expected = "Umsatz"
+        case .wallstreetGermanPerformance: expected = "Perf. %"
         case .traderFox: expected = "equities"
         }
         guard body.localizedCaseInsensitiveContains(expected) else {

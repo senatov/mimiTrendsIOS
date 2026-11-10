@@ -6,7 +6,28 @@ actor RadarBaselineSource {
     private var resolved: [String: RadarCompanyCandidate] = [:]
 
     func loadCandidates() async throws -> [RadarCompanyCandidate] {
-        let candidates = try await source.loadCandidates()
+        var candidates = (try? await source.loadCandidates()) ?? []
+        if GermanMarketSession.isOpen(at: Date()) {
+            do {
+                let rows = try await WallstreetRankingPageSource().loadGerman()
+                let now = Int64(Date().timeIntervalSince1970 * 1_000)
+                candidates += rows.map {
+                    DiscoveryCandidate(sourceID: "wallstreet_germany", instrumentID: $0.path,
+                        category: .top, rank: $0.rank, observedAtMillis: now, resolved: nil,
+                        displayName: $0.name)
+                }
+                AppDiagnostics.shared.record(.info, "Discovery", "german-ranking-loaded",
+                                             "candidates=\(rows.count)")
+            } catch {
+                try Task.checkCancellation()
+                AppDiagnostics.shared.record(.warning, "Discovery", "german-ranking-failed",
+                                             "error=\(String(describing: error))")
+            }
+        } else {
+            AppDiagnostics.shared.record(.info, "Discovery", "german-ranking-skipped", "market=closed")
+        }
+        try Task.checkCancellation()
+        guard !candidates.isEmpty else { throw DiscoveryDataError.invalidCandidate }
         var result: [RadarCompanyCandidate] = []
         for start in stride(from: 0, to: candidates.count, by: 4) {
             try Task.checkCancellation()
@@ -15,10 +36,10 @@ actor RadarBaselineSource {
             let loaded = await withTaskGroup(of: (String, RadarCompanyCandidate?).self) { group in
                 for candidate in batch {
                     group.addTask {
-                        if let value = cached[candidate.instrumentID] {
-                            return (candidate.instrumentID, value)
+                        if let value = cached[candidate.sourceID + candidate.instrumentID] {
+                            return (candidate.sourceID + candidate.instrumentID, value)
                         }
-                        return (candidate.instrumentID, try? await Self.resolve(candidate))
+                        return (candidate.sourceID + candidate.instrumentID, try? await Self.resolve(candidate))
                     }
                 }
                 var values: [String: RadarCompanyCandidate] = [:]
@@ -26,8 +47,8 @@ actor RadarBaselineSource {
                 return values
             }
             for candidate in batch {
-                if let value = loaded[candidate.instrumentID] {
-                    resolved[candidate.instrumentID] = value
+                if let value = loaded[candidate.sourceID + candidate.instrumentID] {
+                    resolved[candidate.sourceID + candidate.instrumentID] = value
                     result.append(value)
                 }
             }
@@ -73,7 +94,7 @@ actor RadarBaselineSource {
         guard let isin = identifiers["ISIN"], let ticker = identifiers["ticker"] else { return nil }
         // The publisher's German ticker identifies the local listing. Never treat it as a US ticker.
         let symbol: String
-        if isin.hasPrefix("DE") {
+        if isin.hasPrefix("DE") || candidate.sourceID == "wallstreet_germany" {
             symbol = ticker.hasSuffix(".DE") ? ticker : ticker + ".DE"
         } else {
             guard let matched = try await searchISIN(isin) else { return nil }
