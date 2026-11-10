@@ -13,6 +13,7 @@ struct RadarChartPreview: View {
     let fmpEnabled: Bool
     let providerRevision: Int
 
+    @Environment(\.scenePhase) private var scenePhase
     @State private var allBars: [MinuteBar] = []
     @State private var dailyProvider = ""
     @State private var dailyBars: [MinuteBar] = []
@@ -77,27 +78,21 @@ struct RadarChartPreview: View {
     }
 
     var body: some View {
-        Group {
-            if symbol.hasPrefix("LS:") {
-                LSQuoteHistoryChart(
-                    symbol: symbol, companyName: companyName, refreshID: refreshID,
-                    range: rangeSelection, signal: signal,
-                    showingSignalFocus: $showingSignalFocus
-                )
-            } else {
-                GeometryReader { geometry in
-                    ScrollView { chartContent(availableHeight: geometry.size.height) }
-                }
-                .trendsPanel()
-            }
+        GeometryReader { geometry in
+            ScrollView { chartContent(availableHeight: geometry.size.height) }
         }
-        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(providerRevision)") {
-            if providersReady, !symbol.hasPrefix("LS:") { await loadBars() }
+        .trendsPanel()
+        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(providerRevision)|\(scenePhase)") {
+            guard providersReady, scenePhase == .active else { return }
+            repeat {
+                await loadBars()
+                do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            } while !Task.isCancelled
         }
         .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(fmpEnabled)|\(providerRevision)") {
-            if providersReady, !symbol.hasPrefix("LS:") { await loadDailyBarsIfNeeded() }
+            if providersReady { await loadDailyBarsIfNeeded() }
         }
-        .task(id: "trades|\(symbol)|\(companyName)") { if !symbol.hasPrefix("LS:") { await loadImportedTrades() } }
+        .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
         .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
         .onChange(of: symbol) { _, _ in
             showingSignalFocus = true
@@ -138,7 +133,7 @@ struct RadarChartPreview: View {
                     description: Text(range == .trades
                                       ? "Recent minute history is unavailable for these imported trades."
                                       : range.usesDailyBars ? "No daily prices are available for this symbol and period."
-                                      : "Start a live feed to collect bars, or choose Latest to view older saved bars.")
+                                      : "No minute candles are available in this period. Choose Latest to view older saved candles.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 180)
             } else {
@@ -148,7 +143,7 @@ struct RadarChartPreview: View {
                     signal: chartSignal,
                     signalEntryPrice: chartSignalEntryPrice,
                     trades: showingTrades ? chartTrades : [],
-                    priceHeight: max(140, availableHeight - 240),
+                    priceHeight: max(140, availableHeight - 180),
                     volumeHeight: 60,
                     inspection: $cursorInspection
                 )
@@ -244,6 +239,11 @@ struct RadarChartPreview: View {
             let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
                 if yahooEnabled { await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades) }
+                if historyBounds == nil {
+                    return try await RadarSelectedCandleHistory.shared.load(
+                        symbol: requestedSymbol, yahooEnabled: yahooEnabled
+                    )
+                }
                 let store = try MarketBarStore(url: MarketBarStore.defaultURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,

@@ -39,6 +39,7 @@ actor LSCandidatePool {
         do {
             let loaded = try await source.loadQuotes()
             try Task.checkCancellation()
+            await LSChartInstrumentResolver.shared.register(loaded)
             let store = try MarketQuoteStore(url: MarketQuoteStore.defaultURL())
             let storageTime = Int64(Date().timeIntervalSince1970 * 1_000)
             let changed = loaded.filter { quote in
@@ -54,12 +55,14 @@ actor LSCandidatePool {
             let signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL())
             let settings = RadarScanPreferencesStore.load()
             var savedSignals = 0
+            var reasons: [String: Int] = [:]
             for history in Dictionary(grouping: observations, by: \.instrumentID).values {
-                if let signal = LSQuoteMoveDetector.detect(history, nowMillis: storageTime, settings: settings),
-                   try await signalStore.record(signal) { savedSignals += 1 }
+                let evaluation = LSQuoteMoveDetector.evaluate(history, nowMillis: storageTime, settings: settings)
+                reasons[evaluation.reason, default: 0] += 1
+                if let signal = evaluation.signal, try await signalStore.record(signal) { savedSignals += 1 }
             }
             AppDiagnostics.shared.record(.info, "LangSchwarz", "quote-scan-finished",
-                                         "observations=\(observations.count) signals=\(savedSignals)")
+                                         "observations=\(observations.count) signals=\(savedSignals) reasons=\(reasons.sorted { $0.key < $1.key }.map { "\($0.key):\($0.value)" }.joined(separator: ","))")
             quotes = loaded
             lastSuccessAtMillis = Int64(Date().timeIntervalSince1970 * 1_000)
             lastAttemptSucceeded = true

@@ -29,6 +29,21 @@ final class LSQuoteMoveDetectorTests: XCTestCase {
                                                settings: RadarScanPreferences()))
     }
 
+    func testDiagnosticsDistinguishStaleQuotesGapsAndThresholds() {
+        let settings = RadarScanPreferences()
+        XCTAssertEqual(LSQuoteMoveDetector.evaluate(quotes(), nowMillis: 1_200_000,
+                                                   settings: settings).reason, "staleQuote")
+        let gaps = quotes().enumerated().filter { [0, 4, 10].contains($0.offset) }.map(\.element)
+        XCTAssertEqual(LSQuoteMoveDetector.evaluate(gaps, nowMillis: 1_000_000,
+                                                   settings: settings).reason, "quoteGap")
+        var highThresholds = settings
+        highThresholds.crashPercent = 20
+        highThresholds.sustainedCrashPercent = 20
+        highThresholds.risePercent = 20
+        XCTAssertEqual(LSQuoteMoveDetector.evaluate(quotes(), nowMillis: 1_000_000,
+                                                   settings: highThresholds).reason, "belowThreshold")
+    }
+
     private func quotes() -> [LSQuoteObservation] {
         (0...10).map { index in
             LSQuoteObservation(instrumentID: "123", observedAtMillis: 700_000 + Int64(index) * 30_000,

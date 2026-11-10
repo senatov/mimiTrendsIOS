@@ -53,7 +53,7 @@ struct RadarView: View {
                         )
                     },
                     plot: {
-                        RadarChartPreview(
+                        RadarInstrumentChart(
                             symbol: chartSymbol,
                             companyName: chartCompanyName,
                             companyMetadata: companyMetadata[chartSymbol.uppercased()],

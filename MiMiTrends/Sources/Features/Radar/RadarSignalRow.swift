@@ -219,7 +219,7 @@ enum RadarSearchKeyword {
     private static func displayName(_ companyName: String, symbol: String) -> String? {
         let source = companyName
             .replacingOccurrences(
-                of: #"(?i)\s+DL\s*[-.,]?\s*\d+(?:[.,]\d+)?\s*$"#,
+                of: #"(?i)\s+DL\s*[-.,]*\s*\d+(?:[.,]\d+)?\s*$"#,
                 with: "", options: .regularExpression
             )
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -249,7 +249,7 @@ enum RadarSearchKeyword {
         guard !cleaned.isEmpty else { return nil }
         if cleaned.contains(where: \.isLowercase) { return cleaned }
 
-        return words.map { word in
+        return words.prefix(2).map { word in
             let letters = word.filter(\.isLetter)
             guard letters.count > 3 else { return word }
             let lowercased = word.lowercased()

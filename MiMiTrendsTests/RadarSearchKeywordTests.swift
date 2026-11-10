@@ -9,6 +9,12 @@ final class RadarSearchKeywordTests: XCTestCase {
         XCTAssertEqual(RadarSearchKeyword.from(companyName: "Comcast Corporation", symbol: "CMCSA"), "Comcast")
     }
 
+    func testUppercaseNamesLoseDenominationAndStayWithinTwoWords() {
+        XCTAssertEqual(RadarSearchKeyword.cleanedCompanyName("NVIDIA CORP. DL-,001", symbol: "LS:43763"), "Nvidia")
+        XCTAssertEqual(RadarSearchKeyword.cleanedCompanyName("DOW INC DL- 01", symbol: "DOW"), "DOW")
+        XCTAssertEqual(RadarSearchKeyword.cleanedCompanyName("DELL TECHS INC C DL-,01", symbol: "DELL"), "Dell Techs")
+    }
+
     func testLongHyphenatedCompanyNameUsesFirstWordAsSearchKeyword() {
         XCTAssertEqual(
             RadarSearchKeyword.from(
