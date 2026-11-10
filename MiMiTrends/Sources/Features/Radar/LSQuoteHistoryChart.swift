@@ -91,48 +91,39 @@ struct LSQuoteHistoryChart: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Label("PRICE HISTORY", systemImage: "chart.xyaxis.line")
-                    .font(.system(.caption2, design: .monospaced).weight(.bold))
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(companyName)
+                .font(.headline)
+                .help(companyName)
+            Label("PRICE HISTORY", systemImage: "chart.xyaxis.line")
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .foregroundStyle(.secondary)
+            Text("\(symbol) · Lang & Schwarz · EUR")
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(.indigo)
+            if let signal {
+                Text("\(signal.signalSource) · \(signal.signalWindowLabel) · Volume unavailable")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("\(symbol) · Lang & Schwarz · EUR")
-                    .font(.system(.caption, design: .monospaced))
-                    .foregroundStyle(.indigo)
-                Spacer(minLength: 4)
-                if let quote = displayedQuote {
-                    Text((selectedPrice ?? quote.midpoint), format: .currency(code: "EUR").precision(.fractionLength(2)))
-                        .font(.headline.monospacedDigit())
-                        .contentTransition(.numericText())
-                    Text("BID \(quote.bid.formatted(.currency(code: "EUR").precision(.fractionLength(2))))  ASK \(quote.ask.formatted(.currency(code: "EUR").precision(.fractionLength(2))))")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
             }
-            HStack(spacing: 10) {
-                if let signal {
-                    Text("\(signal.signalSource) · \(signal.signalWindowLabel) · Volume unavailable")
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 4)
-                if let quote = displayedQuote {
-                    Text(quoteDate(quote))
-                        .monospacedDigit()
-                        .foregroundStyle(.purple)
-                }
+            Spacer(minLength: 4)
+            if let quote = displayedQuote {
+                Text((selectedPrice ?? quote.midpoint), format: .currency(code: "EUR").precision(.fractionLength(2)))
+                    .font(.headline.monospacedDigit())
+                    .contentTransition(.numericText())
+                Text("BID \(quote.bid.formatted(.currency(code: "EUR").precision(.fractionLength(2))))  ASK \(quote.ask.formatted(.currency(code: "EUR").precision(.fractionLength(2))))")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                Text(quoteDate(quote))
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.purple)
             }
-            .font(.caption)
         }
         .lineLimit(1)
     }
 
     private var chartControls: some View {
         HStack(spacing: 8) {
-                Text(companyName)
-                    .font(.headline)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .help(companyName)
                 Spacer(minLength: 4)
                 Text("VIEW")
                     .font(.system(.caption2, design: .monospaced).weight(.semibold))
