@@ -55,8 +55,16 @@ struct LSQuoteHistoryChart: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            chartControls
-            header
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .center, spacing: 16) {
+                    header
+                    Divider().frame(height: 20)
+                    chartControls
+                }
+                .frame(minWidth: 0, minHeight: 32)
+                .padding(.vertical, 2)
+            }
+            .fixedSize(horizontal: false, vertical: true)
             if let errorMessage {
                 ContentUnavailableView("Quote history unavailable", systemImage: "chart.xyaxis.line",
                                        description: Text(errorMessage))
@@ -91,22 +99,20 @@ struct LSQuoteHistoryChart: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             Text(companyName)
                 .font(.headline)
                 .help(companyName)
-            Label("PRICE HISTORY", systemImage: "chart.xyaxis.line")
-                .font(.system(.caption2, design: .monospaced).weight(.bold))
-                .foregroundStyle(.secondary)
-            Text("\(symbol) · Lang & Schwarz · EUR")
+            Text("\(symbol) · EUR")
+                .help("Lang & Schwarz quote history")
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.indigo)
             if let signal {
-                Text("\(signal.signalSource) · \(signal.signalWindowLabel) · Volume unavailable")
+                Text("\(signal.signalSource) · \(signal.signalWindowLabel)")
+                    .help("Quote movement; volume unavailable")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer(minLength: 4)
             if let quote = displayedQuote {
                 Text((selectedPrice ?? quote.midpoint), format: .currency(code: "EUR").precision(.fractionLength(2)))
                     .font(.headline.monospacedDigit())
@@ -124,7 +130,6 @@ struct LSQuoteHistoryChart: View {
 
     private var chartControls: some View {
         HStack(spacing: 8) {
-                Spacer(minLength: 4)
                 Text("VIEW")
                     .font(.system(.caption2, design: .monospaced).weight(.semibold))
                     .tracking(0.8)
