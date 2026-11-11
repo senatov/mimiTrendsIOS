@@ -8,7 +8,7 @@ actor BoerseDAXSource {
     private var lastSuccessfulRefresh: Date?
     private var lastCandidates: [RadarCompanyCandidate] = []
 
-    func candidates(for sessions: RadarTradingSessions, store: MarketBarStore?) async throws -> [RadarCompanyCandidate] {
+    func candidates(for sessions: RadarTradingSessions, store: RadarCandidateStore?) async throws -> [RadarCompanyCandidate] {
         guard sessions.german.isTrading else { return [] }
         guard Date() >= nextRefreshAt else { return currentCandidates }
         nextRefreshAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
@@ -89,10 +89,7 @@ actor BoerseDAXSource {
     static func decodePageRows(_ data: Data, now: Date) throws -> [RadarCompanyCandidate] {
         let rows = try JSONDecoder().decode([PageRow].self, from: data)
         let ranked = rows.compactMap { row -> (RadarCompanyCandidate, Double)? in
-            guard row.text.count == 14,
-                  MarketPageHTML.germanNumber(row.text[5]) != nil,
-                  MarketPageHTML.quoteTime(row.text[12], now: now) != nil
-            else { return nil }
+            guard row.text.count == 14 else { return nil }
             let isin = MarketPageHTML.first(#"\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b"#, in: row.markup)
             guard let company = isin.flatMap({ knownSymbols[$0] })
                 ?? knownSymbols.values.first(where: { $0.name.caseInsensitiveCompare(row.text[1]) == .orderedSame })
@@ -101,8 +98,11 @@ actor BoerseDAXSource {
                 .replacingOccurrences(of: ",", with: ".")
                 .replacingOccurrences(of: "%", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let change = Double(changeText), change.isFinite else { return nil }
-            return (RadarCompanyCandidate(symbol: company.symbol, name: company.name), abs(change))
+            let change = Double(changeText)
+            let isFresh = MarketPageHTML.quoteTime(row.text[12], now: now) != nil
+                && MarketPageHTML.germanNumber(row.text[5]) != nil
+            let rank = isFresh ? change.flatMap { $0.isFinite ? abs($0) : nil } ?? -1 : -1
+            return (RadarCompanyCandidate(symbol: company.symbol, name: company.name), rank)
         }.sorted { $0.1 == $1.1 ? $0.0.symbol < $1.0.symbol : $0.1 > $1.1 }
         var seen = Set<String>()
         return ranked.map(\.0).filter { seen.insert($0.symbol).inserted }

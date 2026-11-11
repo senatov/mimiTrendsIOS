@@ -24,9 +24,10 @@ final class RadarCandleRoutingTests: XCTestCase {
     func testSelectedTickerOutsidePoolFetchesAndPersistsCandles() async throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("bars.db")
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let now = Date(timeIntervalSince1970: 1_794_320_000)
+        let now = Date()
+        let recentMinute = Int64(now.timeIntervalSince1970 / 60) * 60 - 60
         let history = RadarSelectedCandleHistory(storeURL: url, fetch: { symbol in
-            [MinuteBar(symbol: symbol, minuteEpochSeconds: 1_794_319_920,
+            [MinuteBar(symbol: symbol, minuteEpochSeconds: recentMinute,
                        open: 100, high: 102, low: 99, close: 101, volume: 1_000)]
         })
         let loaded = try await history.load(symbol: "NVDA", yahooEnabled: true, now: now)

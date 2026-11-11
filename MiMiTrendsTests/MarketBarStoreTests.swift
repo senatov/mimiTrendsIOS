@@ -7,7 +7,7 @@ final class MarketBarStoreTests: XCTestCase {
     func testUpsertReloadAndReopen() async throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let store = try MarketBarStore(url: url)
+        let store = try MarketBarStore(url: url, retentionEnabled: false)
         let original = MinuteBar(
             symbol: "AAPL", minuteEpochSeconds: 60,
             open: 100, high: 101, low: 99, close: 100.5, volume: 1_000
@@ -25,7 +25,7 @@ final class MarketBarStoreTests: XCTestCase {
         XCTAssertTrue(changed)
         XCTAssertEqual(loaded, [updated])
 
-        let reopened = try MarketBarStore(url: url)
+        let reopened = try MarketBarStore(url: url, retentionEnabled: false)
         let loadedAgain = try await reopened.loadMinuteBars(symbol: "AAPL", fromEpochSeconds: 0)
         XCTAssertEqual(loadedAgain, [updated])
     }
@@ -33,7 +33,7 @@ final class MarketBarStoreTests: XCTestCase {
     func testInvalidBarIsRejectedAndFutureSchemaIsNotOpened() async throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let store = try MarketBarStore(url: url)
+        let store = try MarketBarStore(url: url, retentionEnabled: false)
         let invalid = MinuteBar(
             symbol: "AAPL", minuteEpochSeconds: 60,
             open: 100, high: 100, low: 100, close: 100, volume: 0
@@ -52,7 +52,7 @@ final class MarketBarStoreTests: XCTestCase {
             "INSERT INTO native_schema_migrations(version, applied_at) VALUES (2, 0)",
             nil, nil, nil
         ), SQLITE_OK)
-        XCTAssertThrowsError(try MarketBarStore(url: url)) { error in
+        XCTAssertThrowsError(try MarketBarStore(url: url, retentionEnabled: false)) { error in
             guard case MarketBarStoreError.unsupportedSchema = error else {
                 return XCTFail("Wrong schema error")
             }
@@ -62,7 +62,7 @@ final class MarketBarStoreTests: XCTestCase {
     func testRecentBarsAreBoundedAndChronological() async throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let store = try MarketBarStore(url: url)
+        let store = try MarketBarStore(url: url, retentionEnabled: false)
         for minute in 1...5 {
             let bar = MinuteBar(
                 symbol: "AAPL", minuteEpochSeconds: Int64(minute * 60),
@@ -80,7 +80,7 @@ final class MarketBarStoreTests: XCTestCase {
     func testBatchRejectsInvalidBarWithoutPartialWrites() async throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-        let store = try MarketBarStore(url: url)
+        let store = try MarketBarStore(url: url, retentionEnabled: false)
         let valid = MinuteBar(
             symbol: "AAPL", minuteEpochSeconds: 60,
             open: 100, high: 101, low: 99, close: 100, volume: 1_000
@@ -96,6 +96,21 @@ final class MarketBarStoreTests: XCTestCase {
             let loaded = try await store.loadMinuteBars(symbol: "AAPL", fromEpochSeconds: 0)
             XCTAssertTrue(loaded.isEmpty)
         }
+    }
+
+    func testRetentionKeepsOnlyRecentBars() async throws {
+        let url = temporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let store = try MarketBarStore(url: url)
+        let minute = Int64(Date().timeIntervalSince1970 / 60) * 60
+        let old = MinuteBar(symbol: "AAPL", minuteEpochSeconds: minute - 3_600,
+                            open: 100, high: 101, low: 99, close: 100, volume: 10)
+        let recent = MinuteBar(symbol: "AAPL", minuteEpochSeconds: minute - 60,
+                               open: 101, high: 102, low: 100, close: 101, volume: 10)
+        let changed = try await store.upsertBatch([old, recent])
+        XCTAssertEqual(changed, 1)
+        let loaded = try await store.loadMinuteBars(symbol: "AAPL", fromEpochSeconds: 0)
+        XCTAssertEqual(loaded, [recent])
     }
 
     private func temporaryDatabaseURL() -> URL {

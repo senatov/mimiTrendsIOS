@@ -3,8 +3,11 @@ import SQLite3
 
 actor MarketBarStore {
     private let database: OpaquePointer
+    static let retentionSeconds: Int64 = 30 * 60
+    private let retentionEnabled: Bool
+    private var lastPrunedAt: Date = .distantPast
 
-    init(url: URL) throws {
+    init(url: URL, retentionEnabled: Bool = true) throws {
         try FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
@@ -18,12 +21,6 @@ actor MarketBarStore {
         do {
             try Self.configure(connection)
             try Self.migrate(connection)
-            try Self.execute("""
-                CREATE TABLE IF NOT EXISTS radar_candidate_snapshots (
-                    source TEXT PRIMARY KEY NOT NULL, saved_at REAL NOT NULL, payload TEXT NOT NULL
-                )
-                """, on: connection)
-            try Self.checkIntegrity(connection)
         } catch {
             AppDiagnostics.shared.record(
                 .error, "MarketBarStore", "open-failed",
@@ -33,6 +30,7 @@ actor MarketBarStore {
             throw error
         }
         database = connection
+        self.retentionEnabled = retentionEnabled
     }
 
     isolated deinit {
@@ -50,38 +48,13 @@ actor MarketBarStore {
         ).appendingPathComponent("mimitrends-native.db")
     }
 
-    func candidateSnapshot(source: String) throws -> [RadarCompanyCandidate] {
-        let cutoff = Date().addingTimeInterval(-24 * 60 * 60).timeIntervalSince1970
-        let statement = try prepare("SELECT payload FROM radar_candidate_snapshots WHERE source = ? AND saved_at >= ?")
-        defer { sqlite3_finalize(statement) }
-        try bind(source, to: 1, in: statement)
-        sqlite3_bind_double(statement, 2, cutoff)
-        switch sqlite3_step(statement) {
-        case SQLITE_DONE: return []
-        case SQLITE_ROW:
-            guard let payload = sqlite3_column_text(statement, 0) else {
-                throw MarketBarStoreError.databaseUnavailable
-            }
-            return try JSONDecoder().decode([RadarCompanyCandidate].self, from: Data(String(cString: payload).utf8))
-        default: throw MarketBarStoreError.databaseUnavailable
-        }
-    }
-
-    func saveCandidateSnapshot(_ candidates: [RadarCompanyCandidate], source: String) throws {
-        guard !candidates.isEmpty else { return }
-        let statement = try prepare("""
-            INSERT INTO radar_candidate_snapshots(source, saved_at, payload) VALUES (?, ?, ?)
-            ON CONFLICT(source) DO UPDATE SET saved_at = excluded.saved_at, payload = excluded.payload
-            """)
-        defer { sqlite3_finalize(statement) }
-        try bind(source, to: 1, in: statement)
-        sqlite3_bind_double(statement, 2, Date().timeIntervalSince1970)
-        try bind(String(decoding: JSONEncoder().encode(candidates), as: UTF8.self), to: 3, in: statement)
-        guard sqlite3_step(statement) == SQLITE_DONE else { throw MarketBarStoreError.databaseUnavailable }
-    }
-
     func upsert(_ bar: MinuteBar) throws -> Bool {
         guard bar.isValid else { throw MarketBarStoreError.invalidBar }
+        if retentionEnabled {
+            let now = Date()
+            try pruneIfNeeded(now: now)
+            guard bar.minuteEpochSeconds >= Int64(now.timeIntervalSince1970) - Self.retentionSeconds else { return false }
+        }
         let sql = """
             INSERT INTO minute_bars(symbol, minute_epoch, open, high, low, close, volume,
                 volume_status, source_currency, currency_status)
@@ -118,6 +91,7 @@ actor MarketBarStore {
         guard bars.count <= 360, bars.allSatisfy(\.isValid) else {
             throw MarketBarStoreError.invalidBar
         }
+        if retentionEnabled { try pruneIfNeeded(now: Date()) }
         try Self.execute("BEGIN IMMEDIATE", on: database)
         do {
             var changed = 0
@@ -141,7 +115,7 @@ actor MarketBarStore {
         defer { sqlite3_finalize(statement) }
         let normalized = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         try bind(normalized, to: 1, in: statement)
-        sqlite3_bind_int64(statement, 2, fromEpochSeconds)
+        sqlite3_bind_int64(statement, 2, retentionCutoff(from: fromEpochSeconds))
         sqlite3_bind_int(statement, 3, Int32(min(max(limit, 1), 10_000)))
         var bars: [MinuteBar] = []
         while true {
@@ -174,7 +148,7 @@ actor MarketBarStore {
         defer { sqlite3_finalize(statement) }
         let normalized = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         try bind(normalized, to: 1, in: statement)
-        sqlite3_bind_int64(statement, 2, fromEpochSeconds)
+        sqlite3_bind_int64(statement, 2, retentionCutoff(from: fromEpochSeconds))
         sqlite3_bind_int64(statement, 3, throughEpochSeconds)
         sqlite3_bind_int(statement, 4, Int32(min(max(limit, 1), 2_000)))
         var bars: [MinuteBar] = []
@@ -260,15 +234,26 @@ actor MarketBarStore {
         }
     }
 
-    private static func checkIntegrity(_ connection: OpaquePointer) throws {
+    private func retentionCutoff(from requested: Int64) -> Int64 {
+        guard retentionEnabled else { return requested }
+        return max(requested, Int64(Date().timeIntervalSince1970) - Self.retentionSeconds)
+    }
+
+    private func pruneIfNeeded(now: Date) throws {
+        guard retentionEnabled, now.timeIntervalSince(lastPrunedAt) >= 60 else { return }
+        try Self.pruneOldBars(on: database, now: now)
+        lastPrunedAt = now
+    }
+
+    private static func pruneOldBars(on connection: OpaquePointer, now: Date) throws {
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(connection, "PRAGMA quick_check", -1, &statement, nil) == SQLITE_OK,
-              let statement else { throw MarketBarStoreError.databaseUnavailable }
-        defer { sqlite3_finalize(statement) }
-        guard sqlite3_step(statement) == SQLITE_ROW,
-              String(cString: sqlite3_column_text(statement, 0)) == "ok" else {
-            throw MarketBarStoreError.integrityCheckFailed
+        guard sqlite3_prepare_v2(connection, "DELETE FROM minute_bars WHERE minute_epoch < ?",
+                                 -1, &statement, nil) == SQLITE_OK, let statement else {
+            throw MarketBarStoreError.databaseUnavailable
         }
+        defer { sqlite3_finalize(statement) }
+        sqlite3_bind_int64(statement, 1, Int64(now.timeIntervalSince1970) - retentionSeconds)
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw MarketBarStoreError.databaseUnavailable }
     }
 
     private static func execute(_ sql: String, on connection: OpaquePointer) throws {

@@ -28,7 +28,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertEqual(candidates.map(\.symbol), ["NVDA", "BRK-B"])
     }
 
-    func testCompletedDropCreatesVolumeBackedSignalAndIsVisible() throws {
+    func testCompletedDropCreatesVolumeBackedSignalButIsExcludedFromLiveDisplay() throws {
         let bars = history(symbol: "NVDA", end: now - 60, dropping: true)
         let signal = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "NVDA", bars: bars,
             nowEpochSeconds: now, settings: RadarScanPreferences()))
@@ -37,7 +37,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertGreaterThan(signal.windowVolume, 0)
         XCTAssertEqual(signal.signalEpochMillis, (now - 60) * 1_000)
         let display = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10)
-        XCTAssertEqual(display.signals.count, 1)
+        XCTAssertTrue(display.signals.isEmpty)
     }
 
     func testUnfinishedCandleCannotCreateSignal() {
@@ -98,7 +98,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertTrue(mixed.contains("US0"))
     }
 
-    func testDAXRanksBothDirectionsAndSkipsStaleRows() throws {
+    func testDAXRanksFreshMoversButKeepsStaleConstituents() throws {
         let json = """
         [
           {"text":["","SAP","A","177,68","177,68","177,68","5,32","3,09","","","","","09:08:00","STU"],"markup":"DE0007164600"},
@@ -108,7 +108,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         """
         let now = ISO8601DateFormatter().date(from: "2026-11-11T08:10:00Z")!
         let candidates = try BoerseDAXSource.decodePageRows(Data(json.utf8), now: now)
-        XCTAssertEqual(candidates.map(\.symbol), ["RHM.DE", "SAP.DE"])
+        XCTAssertEqual(candidates.map(\.symbol), ["RHM.DE", "SAP.DE", "SIE.DE"])
     }
 
     func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {

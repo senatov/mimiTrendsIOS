@@ -136,13 +136,15 @@ actor MarketQuoteStore {
                 }
                 inserted += Int(sqlite3_changes(database))
             }
-            let cutoff = nowMillis - 72 * 3_600_000
+            let lsCutoff = nowMillis - 30 * 60_000
+            let otherCutoff = nowMillis - 72 * 3_600_000
             var prune: OpaquePointer?
-            guard sqlite3_prepare_v2(database, "DELETE FROM quote_observations WHERE observed_at < ?",
+            guard sqlite3_prepare_v2(database, "DELETE FROM quote_observations WHERE (provider = 'LANG_SCHWARZ' AND observed_at < ?) OR (provider != 'LANG_SCHWARZ' AND observed_at < ?)",
                                      -1, &prune, nil) == SQLITE_OK, let prune else {
                 throw MarketQuoteStoreError.databaseUnavailable
             }
-            sqlite3_bind_int64(prune, 1, cutoff)
+            sqlite3_bind_int64(prune, 1, lsCutoff)
+            sqlite3_bind_int64(prune, 2, otherCutoff)
             let pruned = sqlite3_step(prune) == SQLITE_DONE
             sqlite3_finalize(prune)
             guard pruned, sqlite3_exec(database, "COMMIT", nil, nil, nil) == SQLITE_OK else {
@@ -160,7 +162,7 @@ actor MarketQuoteStore {
         guard sqlite3_prepare_v2(database, "SELECT instrument_id, observed_at, bid_eur, ask_eur FROM quote_observations WHERE provider = 'LANG_SCHWARZ' AND observed_at >= ? ORDER BY observed_at", -1, &statement, nil) == SQLITE_OK,
               let statement else { throw MarketQuoteStoreError.databaseUnavailable }
         defer { sqlite3_finalize(statement) }
-        sqlite3_bind_int64(statement, 1, sinceMillis)
+        sqlite3_bind_int64(statement, 1, max(sinceMillis, Int64(Date().timeIntervalSince1970 * 1_000) - 30 * 60_000))
         var rows: [LSQuoteObservation] = []
         while true {
             let status = sqlite3_step(statement)

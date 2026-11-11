@@ -1,7 +1,7 @@
 import Foundation
 
 actor MarketRadarScanner {
-    private var candidateStore: MarketBarStore?
+    private var candidateStore: RadarCandidateStore?
     private let yahoo = YahooRadarSource()
     private let dax = BoerseDAXSource()
     private var previousSessions: RadarTradingSessions?
@@ -45,7 +45,7 @@ actor MarketRadarScanner {
         }
         let sessions = RadarTradingSessions(at: Date())
         if candidateStore == nil {
-            candidateStore = try? MarketBarStore(url: MarketBarStore.defaultURL())
+            candidateStore = try? RadarCandidateStore(directory: RadarCandidateStore.defaultDirectory())
         }
         let store = candidateStore
         let baselineKey = "baseline|\(discovery.wikifolio)|\(discovery.performance)|\(discovery.priority.rawValue)|\(discovery.endpointSignature)"
@@ -237,7 +237,7 @@ actor MarketRadarScanner {
     }
 
     private func restoreCandidates(
-        _ key: String, fallback: [RadarCompanyCandidate], store: MarketBarStore
+        _ key: String, fallback: [RadarCompanyCandidate], store: RadarCandidateStore
     ) async -> [RadarCompanyCandidate] {
         do {
             let cached = try await store.candidateSnapshot(source: key)

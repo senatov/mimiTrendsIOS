@@ -8,7 +8,7 @@ final class MarketQuoteStoreTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = try MarketQuoteStore(url: directory.appendingPathComponent("quotes.db"))
-        let now: Int64 = 1_793_617_200_000
+        let now = Int64(Date().timeIntervalSince1970 * 1_000)
         let quotes = [now, now - 30_000].map { time in
             MarketPageQuote(identifier: "123", name: "Example", path: "/de/aktie/example",
                 bidEUR: 100, askEUR: 100.1, sourceCurrency: "EUR", sourceBid: 100,
@@ -70,5 +70,20 @@ final class MarketQuoteStoreTests: XCTestCase {
         XCTAssertEqual(sqlite3_step(statement), SQLITE_ROW)
         XCTAssertEqual(sqlite3_column_int(statement, 0), 0)
         sqlite3_finalize(statement)
+    }
+
+    func testOldLSQuotesArePrunedAfterThirtyMinutes() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = try MarketQuoteStore(url: directory.appendingPathComponent("quotes.db"))
+        let now = Int64(Date().timeIntervalSince1970 * 1_000)
+        let oldTime = now - 31 * 60_000
+        let quote = MarketPageQuote(identifier: "123", name: "Example", path: "/de/aktie/example",
+            bidEUR: 100, askEUR: 100.1, sourceCurrency: "EUR", sourceBid: 100,
+            sourceAsk: 100.1, euroUSDRate: nil, fxObservedAtMillis: nil, observedAtMillis: oldTime)
+        _ = try await store.record([MarketQuoteRecord(quote)], nowMillis: oldTime)
+        _ = try await store.record([], nowMillis: now)
+        let loaded = try await store.loadLS(sinceMillis: 0)
+        XCTAssertTrue(loaded.isEmpty)
     }
 }
