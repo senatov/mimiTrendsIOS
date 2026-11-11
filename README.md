@@ -84,6 +84,7 @@ Run these commands from the repository root. `Scripts/_common.zsh` supplies the 
 | `write_build_info.zsh` | Xcode build phase, run automatically, that writes build date and the compiling Mac's Computer Name into `BuildInfo.plist` for the window title. |
 | `release_version.py` | Internal release helper that validates four single-digit version components, calculates carry after 9, and synchronizes `MARKETING_VERSION` and numeric build version in `project.yml` and both checked-in projects. `current` and `next` are available for inspection. |
 | `release_notes.py` | Selects the last published release tag on the current history and writes release notes containing every commit subject and body since that tag, in chronological order. |
+| `render_app_assets.zsh` | Renders the SVG app icon into the macOS sizes and opaque iPad/iPhone icon, and the static DMG Finder background. Requires `rsvg-convert` and ImageMagick. |
 | `release_macos.zsh` | On a clean `main`, calculates the next version, regenerates the project, builds and Developer ID signs Release with hardened runtime, creates a DMG, submits it to Apple, staples and verifies it, then commits the version and generates notes from all commits since the previous published release. It opens the notes in Visual Studio Code with `code --wait` so you can edit them before the script pushes the matching tag and publishes the DMG. `--dry-run` reports the next and previous release versions without opening an editor. |
 
 Examples:
@@ -93,11 +94,14 @@ zsh Scripts/generate_project.zsh
 SIMULATOR_UDID=YOUR_IPAD_SIMULATOR_UDID zsh Scripts/test_ios.zsh
 zsh Scripts/build_macos.zsh Release
 zsh Scripts/check_macos_sandbox.zsh
+zsh Scripts/render_app_assets.zsh
 zsh Scripts/release_macos.zsh --dry-run
 zsh Scripts/release_macos.zsh
 ```
 
 The release script requires Xcode, XcodeGen, the `code` command from Visual Studio Code, an authenticated GitHub CLI, a Developer ID Application certificate for the team in `project.yml`, and a usable `notarytool` Keychain profile. It uses this Mac's existing `MiMiNotary` profile by default and checks access before building; set `MIMITRENDS_NOTARY_PROFILE` only to use a different profile. Apple's [notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow) explains how profiles are stored; credentials stay in Keychain. `MIMITRENDS_MAC_SIGN_IDENTITY` can select a different installed identity for the same team. The version and GitHub Release title use exactly `0.0.0.0`: `0.0.1.9` advances to `0.0.2.0`. The script considers existing tags and releases, refuses to wrap after `9.9.9.9`, and stops before publication if signing, notarization, stapling, or verification fails. Release notes, DMGs, and notarization results stay under ignored `DerivedData/Releases/`. For the first release, notes include the full commit history; later releases include commits after the previous published release tag.
+
+The Mac DMG contains the app and an Applications shortcut in a static Finder window. Its colored arrow is part of the background image; no installer helper runs.
 
 ## App Store preparation
 

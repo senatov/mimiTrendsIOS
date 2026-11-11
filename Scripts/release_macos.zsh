@@ -119,41 +119,12 @@ if [[ "${signed_team}" != "${team_id}" ]]; then
 fi
 
 staging="${release_dir}/staging"
+rm -rf "${staging}"
 mkdir -p "${staging}"
 ditto "${app_path}" "${staging}/${APP_NAME}.app"
 ln -sfn /Applications "${staging}/Applications"
-installer_app="${staging}/How to Install.app"
-mkdir -p "${installer_app}/Contents/MacOS" "${installer_app}/Contents/Resources"
-swiftc -parse-as-library -O -framework AppKit -framework SwiftUI \
-    "${SCRIPT_DIR}/InstallerGuide.swift" -o "${installer_app}/Contents/MacOS/InstallerGuide"
-cp "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png" \
-    "${installer_app}/Contents/Resources/AppIcon.png"
-cp "${SCRIPT_DIR}/assets/InstallerBackground.png" \
-    "${installer_app}/Contents/Resources/InstallerBackground.png"
-cat > "${installer_app}/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>CFBundleDevelopmentRegion</key><string>en</string>
-<key>CFBundleExecutable</key><string>InstallerGuide</string>
-<key>CFBundleIconFile</key><string>AppIcon.png</string>
-<key>CFBundleIdentifier</key><string>org.senatov.mimitrends.installer</string>
-<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-<key>CFBundleName</key><string>How to Install</string>
-<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>${next}</string>
-<key>CFBundleVersion</key><string>${next}</string>
-<key>LSMinimumSystemVersion</key><string>27.0</string>
-<key>NSPrincipalClass</key><string>NSApplication</string>
-</dict></plist>
-PLIST
-codesign --force --sign "${signing_identity}" --options runtime --timestamp "${installer_app}"
-codesign --verify --deep --strict "${installer_app}"
-installer_team="$(codesign -dv --verbose=4 "${installer_app}" 2>&1 | /usr/bin/sed -n 's/^TeamIdentifier=//p')"
-if [[ "${installer_team}" != "${team_id}" ]]; then
-    echo "Installer helper has team ${installer_team}; expected ${team_id}." >&2
-    exit 1
-fi
+mkdir -p "${staging}/.background"
+cp "${SCRIPT_DIR}/assets/InstallerBackground.png" "${staging}/.background/background.png"
 
 dmg="${release_dir}/${APP_NAME}-${next}.dmg"
 volume_name="${APP_NAME}-${next}"
