@@ -76,10 +76,10 @@
 		5556BEF27F928909A12797F5 /* ControlAppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36A099FF21160485E1E3753 /* ControlAppearanceSettingsView.swift */; };
 		57A571C0E8463F1C5450D3D9 /* RadarCoverageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916C77192FB721C92825AF27 /* RadarCoverageView.swift */; };
 		5A0171F5A350156537C276E2 /* WallstreetOnlineQuoteSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0D5D50A3021AA14990B75EF /* WallstreetOnlineQuoteSource.swift */; };
+		5B6E8B3E20079967916CBAD4 /* YahooRankingPageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6969C8C47E648270EC4C13C1 /* YahooRankingPageSource.swift */; };
 		5D450505D6D7625389567466 /* FinnhubTradeStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80B2E9DCDE37394950FD413 /* FinnhubTradeStream.swift */; };
 		5F44F4381DE6A442C630CB05 /* RadarSourceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5C11318DF9D01C1B379601 /* RadarSourceTable.swift */; };
 		5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */; };
-		D4FDD237C75342D88EA65A41 /* YahooRankingPageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */; };
 		6184C352E9EF0D6AE8168EAC /* MarketRadarScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67B9688545B10D9D3BE1B0CB /* MarketRadarScanner.swift */; };
 		63B9B07BFF4A3AD1D7941D8E /* RadarCandleRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AA95188C0D77DFC263CB6D /* RadarCandleRoutingTests.swift */; };
 		63CCFD98B74866A8A0FFE2AB /* RecentCoverageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8FE9A77C93F472DE6630A6 /* RecentCoverageClient.swift */; };
@@ -288,6 +288,7 @@
 		67B9688545B10D9D3BE1B0CB /* MarketRadarScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRadarScanner.swift; sourceTree = "<group>"; };
 		68FDEC073F4CA91446FEAE78 /* RadarDailyHistoryServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarDailyHistoryServiceTests.swift; sourceTree = "<group>"; };
 		69643EB0435692625D61DB01 /* RadarSearchKeywordTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSearchKeywordTests.swift; sourceTree = "<group>"; };
+		6969C8C47E648270EC4C13C1 /* YahooRankingPageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRankingPageSource.swift; sourceTree = "<group>"; };
 		6ABD71D692C066C6F70FD7DA /* ProviderInstrument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderInstrument.swift; sourceTree = "<group>"; };
 		6B9ED758354DE55D4CAFFCEE /* FinnhubCredentialStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinnhubCredentialStore.swift; sourceTree = "<group>"; };
 		6DB748D1A71D77B911C33C02 /* DiscoveryRefreshCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryRefreshCache.swift; sourceTree = "<group>"; };
@@ -312,7 +313,6 @@
 		856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCompanyProfileSource.swift; sourceTree = "<group>"; };
 		8663D070C2CC864433FFCE6F /* BrokerTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransaction.swift; sourceTree = "<group>"; };
 		87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRadarSource.swift; sourceTree = "<group>"; };
-		1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRankingPageSource.swift; sourceTree = "<group>"; };
 		887C91981DCF4049CE7C1006 /* RadarTradeCardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTradeCardOverlay.swift; sourceTree = "<group>"; };
 		8B215D2A814E439DF586FFF1 /* RadarChartDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartDataTests.swift; sourceTree = "<group>"; };
 		916C77192FB721C92825AF27 /* RadarCoverageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCoverageView.swift; sourceTree = "<group>"; };
@@ -643,7 +643,7 @@
 			isa = PBXGroup;
 			children = (
 				87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */,
-				1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */,
+				6969C8C47E648270EC4C13C1 /* YahooRankingPageSource.swift */,
 			);
 			path = Yahoo;
 			sourceTree = "<group>";
@@ -1069,7 +1069,7 @@
 				4671A231FD13F03F8FA3E100 /* WatchlistView.swift in Sources */,
 				54FCCC9F3B518FB14B5151DE /* YahooCandleSignalPipeline.swift in Sources */,
 				5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */,
-				D4FDD237C75342D88EA65A41 /* YahooRankingPageSource.swift in Sources */,
+				5B6E8B3E20079967916CBAD4 /* YahooRankingPageSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1173,7 +1173,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1189,7 +1189,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.3.6;
+				MARKETING_VERSION = 0.0.3.7;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
@@ -1291,7 +1291,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 36;
+				CURRENT_PROJECT_VERSION = 37;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1313,7 +1313,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.3.6;
+				MARKETING_VERSION = 0.0.3.7;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
