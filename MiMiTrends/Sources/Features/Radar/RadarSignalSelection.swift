@@ -10,12 +10,15 @@ enum RadarSignalSelection {
             let source = signal.signalSource.lowercased()
             let requiresLiveTrades = ["rapid crash", "sharp rebound", "smooth rise"].contains(source)
             let verifiedYahoo = signal.dataStatus == YahooCandleSignalPipeline.verifiedStatus
-            guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || verifiedYahoo else { return false }
-            if verifiedYahoo {
+            let validatedYahoo = verifiedYahoo ||
+                signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
+                signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
+            guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return false }
+            if validatedYahoo {
                 let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
                 guard minutes <= 30 else { return false }
             }
-            if requiresLiveTrades && signal.dataStatus != "FINNHUB_LIVE" && !verifiedYahoo {
+            if requiresLiveTrades && signal.dataStatus != "FINNHUB_LIVE" && !validatedYahoo {
                 return false
             }
             guard source == "rapid crash" else { return true }

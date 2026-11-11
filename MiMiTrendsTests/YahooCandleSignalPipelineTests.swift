@@ -38,6 +38,25 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertEqual(signal.signalEpochMillis, (now - 60) * 1_000)
         let display = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10)
         XCTAssertTrue(display.isEmpty)
+        let validated = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "NVDA", bars: bars,
+            nowEpochSeconds: now, settings: RadarScanPreferences(), volumeValidated: true))
+        XCTAssertEqual(validated.dataStatus, YahooCandleSignalPipeline.volumeValidatedStatus)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([validated], since: 0, limit: 10).count, 1)
+    }
+
+    func testVolumeValidationRejectsGappedOrMissingRecentCandles() {
+        let bars = history(symbol: "NVDA", end: now - 60, dropping: true)
+        let missing = bars.enumerated().map { index, bar in
+            MinuteBar(symbol: bar.symbol, minuteEpochSeconds: bar.minuteEpochSeconds,
+                open: bar.open, high: bar.high, low: bar.low, close: bar.close,
+                volume: index == bars.count - 2 ? 0 : bar.volume,
+                volumeStatus: index == bars.count - 2 ? .missing : .reported)
+        }
+        XCTAssertNil(YahooCandleSignalPipeline.detect(symbol: "NVDA", bars: missing,
+            nowEpochSeconds: now, settings: RadarScanPreferences(), volumeValidated: true))
+        let gapped = Array(bars.dropLast(3)) + [bars.last!]
+        XCTAssertNil(YahooCandleSignalPipeline.detect(symbol: "NVDA", bars: gapped,
+            nowEpochSeconds: now, settings: RadarScanPreferences(), volumeValidated: true))
     }
 
     func testUnfinishedCandleCannotCreateSignal() {
@@ -78,6 +97,10 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertEqual(signal.signalEpochMillis, end * 1_000)
         XCTAssertEqual(signal.signalAgeMinutes, 16)
         XCTAssertEqual(signal.scanEvaluatedAtMillis, actualNow * 1_000)
+        let validated = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "SAP.DE", bars: bars,
+            nowEpochSeconds: actualNow, settings: RadarScanPreferences(), volumeValidated: true))
+        XCTAssertEqual(validated.dataStatus, YahooCandleSignalPipeline.delayedVolumeValidatedStatus)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([validated], since: 0, limit: 10).count, 1)
         let closed = Int64(ISO8601DateFormatter().date(from: "2026-11-10T18:00:00Z")!.timeIntervalSince1970)
         XCTAssertNil(YahooCandleSignalPipeline.detect(symbol: "SAP.DE", bars: bars,
             nowEpochSeconds: closed, settings: RadarScanPreferences()))

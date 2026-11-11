@@ -5,9 +5,12 @@ enum YahooCandleSignalPipeline {
     static let currentStatus = "YAHOO_CANDLES"
     static let delayedStatus = "YAHOO_CANDLES_DELAYED"
     static let verifiedStatus = "YAHOO_CANDLES_FINNHUB_VERIFIED"
+    static let volumeValidatedStatus = "YAHOO_CANDLES_VOLUME_VALIDATED"
+    static let delayedVolumeValidatedStatus = "YAHOO_CANDLES_DELAYED_VOLUME_VALIDATED"
 
     static func detect(symbol: String, bars: [MinuteBar], nowEpochSeconds: Int64,
-                       settings: RadarScanPreferences, verified: Bool = false) -> ScanResult? {
+                       settings: RadarScanPreferences, verified: Bool = false,
+                       volumeValidated: Bool = false) -> ScanResult? {
         let german = MarketCandidateFilter.isGermanSymbol(symbol)
         let market: RadarTradingMarket = german ? .germany : .unitedStates
         let observed = Date(timeIntervalSince1970: Double(nowEpochSeconds))
@@ -22,7 +25,17 @@ enum YahooCandleSignalPipeline {
                 && $0.minuteEpochSeconds + 60 <= evaluationTime
         }.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
         guard let last = completed.last, last.minuteEpochSeconds >= evaluationTime - 180 else { return nil }
-        let status = verified ? verifiedStatus : (german ? delayedStatus : currentStatus)
+        if volumeValidated {
+            let recent = Array(completed.suffix(3))
+            guard recent.count == 3,
+                  recent.allSatisfy({ $0.volumeStatus == .reported && $0.volume > 0 }),
+                  !zip(recent, recent.dropFirst()).contains(where: {
+                      $0.1.minuteEpochSeconds - $0.0.minuteEpochSeconds > 120
+                  }) else { return nil }
+        }
+        let status = verified ? verifiedStatus : volumeValidated
+            ? (german ? delayedVolumeValidatedStatus : volumeValidatedStatus)
+            : (german ? delayedStatus : currentStatus)
         return RapidCrashDetector.detect(symbol: symbol, bars: completed,
             nowEpochSeconds: evaluationTime, settings: settings.rapidCrash, dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
             ?? RapidRiseDetector.detect(symbol: symbol, bars: completed,

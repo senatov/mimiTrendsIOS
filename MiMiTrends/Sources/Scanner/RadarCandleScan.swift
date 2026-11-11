@@ -30,24 +30,23 @@ enum RadarCandleScan {
                 _ = try await barStore.upsertBatch(Array(recent[start..<min(start + 360, recent.count)]))
             }
             let signal = YahooCandleSignalPipeline.detect(symbol: symbol, bars: bars,
-                nowEpochSeconds: nowSeconds, settings: settings)
+                nowEpochSeconds: nowSeconds, settings: settings, volumeValidated: true)
             if let signal {
-                guard await FinnhubCandlePriceVerifier().matches(signal: signal, latestBar: last,
-                                                                    nowSeconds: nowSeconds) else {
-                    AppDiagnostics.shared.record(.info, "Radar", "candle-signal-unverified",
-                        "symbol=\(symbol) eventMillis=\(signal.signalEpochMillis) provider=Finnhub")
-                    return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil,
-                        usable: usable, skipped: !usable, missingVolume: !usable)
+                let finnhubMatches: Bool
+                if MarketProviderAccess.isOperational(.finnhub) {
+                    finnhubMatches = await FinnhubCandlePriceVerifier().matches(
+                        signal: signal, latestBar: last, nowSeconds: nowSeconds)
+                } else {
+                    finnhubMatches = false
                 }
-                guard let verified = YahooCandleSignalPipeline.detect(symbol: symbol, bars: bars,
-                    nowEpochSeconds: nowSeconds, settings: settings, verified: true) else {
-                    return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil,
-                        usable: usable, skipped: !usable, missingVolume: !usable)
-                }
+                let recorded = finnhubMatches
+                    ? YahooCandleSignalPipeline.detect(symbol: symbol, bars: bars,
+                        nowEpochSeconds: nowSeconds, settings: settings, verified: true)
+                    : signal
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
-                if try await store.record(verified) {
+                if let recorded, try await store.record(recorded) {
                     AppDiagnostics.shared.record(.info, "Radar", "candle-signal-recorded",
-                        "symbol=\(symbol) event=\(verified.signalSource) window=\(verified.signalWindowLabel) move=\(verified.windowChangePercent) status=\(verified.dataStatus) eventMillis=\(verified.signalEpochMillis)")
+                        "symbol=\(symbol) event=\(recorded.signalSource) window=\(recorded.signalWindowLabel) move=\(recorded.windowChangePercent) status=\(recorded.dataStatus) eventMillis=\(recorded.signalEpochMillis)")
                 }
             }
             RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)

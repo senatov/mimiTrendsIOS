@@ -101,7 +101,7 @@ actor MarketRadarScanner {
         let activePool = RadarScanPool.symbols(
             baseline: baselineCandidates.map(\.symbol), yahoo: yahooCandidates.map(\.symbol),
             secondary: secondaryCandidates.map(\.symbol), german: (daxCandidates + germanCandidates).map(\.symbol),
-            germanOpen: sessions.german.isTrading, usOpen: sessions.us.isTrading
+            germanOpen: sessions.german == .regular, usOpen: sessions.us.isTrading
         )
         let daxQueueCount = Set(daxCandidates.map(\.symbol)).intersection(activePool).count
         if daxQueueCount != lastDAXQueueCount {
