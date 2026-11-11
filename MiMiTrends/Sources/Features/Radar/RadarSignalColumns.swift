@@ -148,6 +148,8 @@ enum RadarSignalPresentation {
 
     static func badge(for source: String) -> String {
         switch source.lowercased() {
+        case "boerse.de price rise": "↑ BOERSE.DE · NO VOLUME"
+        case "boerse.de price drop": "↓ BOERSE.DE · NO VOLUME"
         case "l&s quote rise": "↑ L&S QUOTE · NO VOLUME"
         case "l&s quote drop": "↓ L&S QUOTE · NO VOLUME"
         case "rapid crash": "↓ RAPID DROP"

@@ -30,7 +30,7 @@ struct ProviderSettingsPanel: View {
                         providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                       endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                         providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
-                        providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
+                        providerGroup("boerse.de DAX", detail: "DAX and US-Tech 100 price monitoring · no volume", provider: .boerseDAX, endpoints: [])
                     }
                     VStack(spacing: 6) {
                         providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
@@ -47,7 +47,7 @@ struct ProviderSettingsPanel: View {
                     providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
                     providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
-                    providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
+                    providerGroup("boerse.de DAX", detail: "DAX and US-Tech 100 price monitoring · no volume", provider: .boerseDAX, endpoints: [])
                 }
             }
             if let savingMessage {

@@ -67,6 +67,38 @@ extension RadarView {
         }
     }
 
+    @MainActor
+    func monitorBoerseWhileActive() async {
+        guard scenePhase == .active, MarketProviderAccess.isEnabled(.boerseDAX) else { return }
+        let pages = BoerseQuotePages()
+        defer { pages.stop() }
+        var previousCounts: (german: Int, us: Int)?
+        while !Task.isCancelled {
+            let sessions = RadarTradingSessions(at: Date())
+            let samples = await pages.sample(germanOpen: sessions.german.isTrading, usOpen: sessions.us.isTrading)
+            guard !Task.isCancelled else { return }
+            let germanCount = samples.filter { $0.symbol != nil }.count
+            let usCount = Set(samples.filter { $0.symbol == nil }.map(\.isin)).count
+            if previousCounts?.german != germanCount || previousCounts?.us != usCount {
+                previousCounts = (germanCount, usCount)
+                AppDiagnostics.shared.record(.info, "boerse.de", "quote-monitor-coverage",
+                                             "dax=\(germanCount) usTech=\(usCount)")
+            }
+            do {
+                if try await boerseQuoteMonitor.accept(samples, settings: RadarScanPreferencesStore.load()) > 0 {
+                    await refreshSignals(selectNewest: true)
+                }
+                try await Task.sleep(for: .seconds(15))
+            } catch is CancellationError {
+                return
+            } catch {
+                AppDiagnostics.shared.record(.warning, "boerse.de", "quote-monitor-failed",
+                                             "error=\(String(describing: type(of: error)))")
+                do { try await Task.sleep(for: .seconds(15)) } catch { return }
+            }
+        }
+    }
+
     func scanMarketWhileActive() async {
         guard scenePhase == .active else { return }
         while !Task.isCancelled {

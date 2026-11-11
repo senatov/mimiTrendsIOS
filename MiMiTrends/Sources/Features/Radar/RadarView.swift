@@ -27,6 +27,7 @@ struct RadarView: View {
     @State var lsCandidatePool = LSCandidatePool()
     @State var lsStatus: LSCandidateStatus?
     @State var marketScanner = MarketRadarScanner()
+    @State var boerseQuoteMonitor = BoerseQuoteMonitor()
     @State var marketCycle: MarketRadarCycle?
     @State var currencyRates: DisplayCurrencyRates?
     @State var currencyService = DisplayCurrencyService()
@@ -99,6 +100,7 @@ struct RadarView: View {
             }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDiscoveryWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await monitorBoerseWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDisplayCurrency() }
             .task { await detectInitialCurrency() }
@@ -184,7 +186,7 @@ struct RadarView: View {
     private var emptyRadarMessage: String {
         session.isScanning
             ? "Watching live Finnhub trades for sharp drops, rebounds and sustained rises."
-            : "Start the Finnhub feed to detect sharp drops, rebounds and sustained rises from live trades."
+            : "Waiting for price movements from boerse.de. Start Finnhub for signals confirmed by live trades."
     }
 
     private func signalList(compact: Bool) -> some View {

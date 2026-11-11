@@ -57,7 +57,7 @@ actor RadarBaselineSource {
         return result.filter { seen.insert($0.symbol).inserted }
     }
 
-    static func searchISIN(_ isin: String, germanOnly: Bool = false) async throws -> String? {
+    static func searchISIN(_ isin: String, germanOnly: Bool = false, usOnly: Bool = false) async throws -> String? {
         var components = URLComponents(url: YahooAPIEndpoint.primary.appendingPathComponent("v1/finance/search"),
                                        resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "q", value: isin),
@@ -73,7 +73,8 @@ actor RadarBaselineSource {
             $0["quoteType"] as? String == "EQUITY" &&
             ($0["symbol"] as? String).map { symbol in
                 MarketCandidateFilter.supportsYahooBars(symbol: symbol) &&
-                    (!germanOnly || MarketCandidateFilter.isGermanSymbol(symbol))
+                    (!germanOnly || MarketCandidateFilter.isGermanSymbol(symbol)) &&
+                    (!usOnly || FinnhubBidAskClient.supports(symbol: symbol))
             } == true
         })?["symbol"] as? String
     }
