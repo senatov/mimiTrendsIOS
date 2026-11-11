@@ -52,7 +52,8 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
         let signalWidth = RadarPaneLayout.signalWidth(totalWidth: width, sourcesOpen: showingSources && inlineDrawer)
         return HStack(alignment: .top, spacing: 6) {
             signals(signalWidth < 620 || dynamicTypeSize.isAccessibilitySize)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(width: signalWidth)
+                .frame(maxHeight: .infinity)
             if showingSources && inlineDrawer {
                 ScrollView(.vertical) {
                     sources().fixedSize(horizontal: false, vertical: true)
@@ -61,6 +62,7 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
+        .frame(width: width, alignment: .leading)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: showingSources)
         .sheet(isPresented: Binding(
             get: { showingSources && !inlineDrawer },
