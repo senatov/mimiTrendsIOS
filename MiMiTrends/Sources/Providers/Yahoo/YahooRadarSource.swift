@@ -5,6 +5,11 @@ enum YahooAPIEndpoint {
     static let alternate = URL(string: "https://query2.finance.yahoo.com")!
 }
 
+struct YahooMinuteHistory: Sendable {
+    let bars: [MinuteBar]
+    let companyName: String?
+}
+
 struct YahooRadarSource: Sendable {
     private let session: URLSession
 
@@ -28,6 +33,10 @@ struct YahooRadarSource: Sendable {
     }
 
     func minuteBars(symbol: String, includeExtendedHours: Bool = false) async throws -> [MinuteBar] {
+        try await minuteHistory(symbol: symbol, includeExtendedHours: includeExtendedHours).bars
+    }
+
+    func minuteHistory(symbol: String, includeExtendedHours: Bool = false) async throws -> YahooMinuteHistory {
         guard MarketCandidateFilter.supportsYahooBars(symbol: symbol),
               let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               !encoded.isEmpty else {
@@ -41,7 +50,20 @@ struct YahooRadarSource: Sendable {
               (meta["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame else {
             throw RadarSourceError.invalidResponse
         }
-        return try Self.decodeBars(root, symbol: symbol, maximumBars: includeExtendedHours ? 1_500 : 600)
+        return try YahooMinuteHistory(
+            bars: Self.decodeBars(root, symbol: symbol, maximumBars: includeExtendedHours ? 1_500 : 600),
+            companyName: Self.companyName(in: meta, symbol: symbol)
+        )
+    }
+
+    static func companyName(in meta: [String: Any], symbol: String) -> String? {
+        for key in ["longName", "shortName"] {
+            guard let value = meta[key] as? String else { continue }
+            let name = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty, name.count <= 160, !name.contains("\n"),
+               name.caseInsensitiveCompare(symbol) != .orderedSame { return name }
+        }
+        return nil
     }
 
     func diagnose(symbol: String) async -> YahooSymbolEvidence {

@@ -21,7 +21,7 @@ enum MarketCandidateFilter {
         }
         let symbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let exchange = exchange.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let isUS = FinnhubBidAskClient.supports(symbol: symbol) && usExchanges.contains(exchange)
+        let isUS = supportsUSSymbol(symbol) && usExchanges.contains(exchange)
         let isGerman = symbol.range(of: "^[A-Z0-9]{1,10}\\.DE$", options: .regularExpression) != nil
             && germanExchanges.contains(exchange)
         guard isUS || isGerman else { return false }
@@ -37,8 +37,13 @@ enum MarketCandidateFilter {
     }
 
     static func supportsYahooBars(symbol: String) -> Bool {
-        FinnhubBidAskClient.supports(symbol: symbol) ||
+        supportsUSSymbol(symbol) ||
             symbol.uppercased().range(of: "^[A-Z0-9]{1,10}\\.DE$", options: .regularExpression) != nil
+    }
+
+    static func supportsUSSymbol(_ symbol: String) -> Bool {
+        symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            .range(of: "^[A-Z][A-Z0-9-]{0,9}$", options: .regularExpression) != nil
     }
 
     static func isGermanSymbol(_ symbol: String) -> Bool {

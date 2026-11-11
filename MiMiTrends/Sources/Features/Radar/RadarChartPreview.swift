@@ -14,7 +14,7 @@ struct RadarChartPreview: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var allBars: [MinuteBar] = []
-    @State private var minuteProvider = "Saved Finnhub"
+    @State private var minuteProvider = "Saved Yahoo"
     @State private var yahooMinutes: (symbol: String, date: Date, bars: [MinuteBar])?
     @State private var dailyProvider = ""
     @State private var dailyBars: [MinuteBar] = []
@@ -106,7 +106,7 @@ struct RadarChartPreview: View {
             showingSignalFocus = true
             cursorInspection = nil
             allBars = []
-            minuteProvider = "Saved Finnhub"
+            minuteProvider = "Saved Yahoo"
         }
     }
 
@@ -247,7 +247,7 @@ struct RadarChartPreview: View {
         do {
             let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
-                let store = try MarketBarStore(url: MarketBarStore.finnhubURL())
+                let store = try MarketBarStore(url: MarketBarStore.defaultURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,
                     fromEpochSeconds: historyBounds?.lowerBound ?? 0,
@@ -257,7 +257,7 @@ struct RadarChartPreview: View {
             }.value
             guard !Task.isCancelled else { return }
             var visibleBars = loaded
-            var provider = "Saved Finnhub"
+            var provider = "Saved Yahoo"
             if providersReady, yahooEnabled, range != .trades, !hasBarsInRange(loaded) {
                 let fallback = await yahooMinuteHistory(symbol: requestedSymbol)
                 guard !Task.isCancelled else { return }

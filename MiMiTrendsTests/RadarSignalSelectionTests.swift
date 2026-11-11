@@ -40,7 +40,7 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(displayed.map(\.symbol), ["AAPL", "MSFT"])
     }
 
-    func testHidesLegacyYahooRapidDropsWithoutFinnhubProvenance() {
+    func testHidesLegacyRapidDropsWithoutValidatedCandles() {
         let legacyYahoo = event("DELL", source: "Rapid crash", at: 500, change: -1.02,
                                 window: "4m", dataStatus: "LIVE")
 
@@ -49,31 +49,28 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertTrue(displayed.isEmpty)
     }
 
-    func testDisplaysOnlyIndependentlyVerifiedYahooCandles() {
+    func testDisplaysOnlyVolumeValidatedYahooCandles() {
         let raw = event("DELL", source: "Rapid crash", at: 500, change: -1.2,
                         window: "4m", dataStatus: YahooCandleSignalPipeline.currentStatus)
-        let verified = event("AAPL", source: "Rapid crash", at: 500, change: -1.2,
-                             window: "4m", dataStatus: YahooCandleSignalPipeline.verifiedStatus)
+        let validated = event("AAPL", source: "Rapid crash", at: 500, change: -1.2,
+                             window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
         let tooLong = event("NOK", source: "Smooth rise", at: 500, change: 2.1,
-                            window: "71m", dataStatus: YahooCandleSignalPipeline.verifiedStatus)
-        XCTAssertEqual(RadarSignalSelection.displayHistory([raw, verified, tooLong], since: 0, limit: 10)
+                            window: "71m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([raw, validated, tooLong], since: 0, limit: 10)
             .map(\.symbol), ["AAPL"])
     }
 
-    func testFinnhubPriceVerificationRejectsOldOrDivergentQuotes() {
-        XCTAssertTrue(FinnhubCandlePriceVerifier.isMatching(
-            price: 100.4, timestamp: 1_000, candlePrice: 100, nowSeconds: 1_030))
-        XCTAssertFalse(FinnhubCandlePriceVerifier.isMatching(
-            price: 100.6, timestamp: 1_000, candlePrice: 100, nowSeconds: 1_030))
-        XCTAssertFalse(FinnhubCandlePriceVerifier.isMatching(
-            price: 100, timestamp: 800, candlePrice: 100, nowSeconds: 1_030))
+    func testLegacyLiveFeedSignalsAreHidden() {
+        let old = event("NVDA", source: "Rapid crash", at: 500, change: -1.2,
+                        window: "4m", dataStatus: "FINNHUB_LIVE")
+        XCTAssertTrue(RadarSignalSelection.displayHistory([old], since: 0, limit: 10).isEmpty)
     }
 
     func testQuoteOnlySignalsAreExcludedFromCandleRadar() {
         let quote = event("LS:43763", source: "L&S quote rise", at: 500,
                           dataStatus: "QUOTE_NO_VOLUME")
         let candle = event("NVDA", source: "Rapid crash", at: 500, change: -1.2,
-                           window: "4m", dataStatus: "FINNHUB_LIVE")
+                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
         let displayed = RadarSignalSelection.displayHistory([quote, candle], since: 0, limit: 10)
         XCTAssertEqual(displayed.map(\.symbol), ["NVDA"])
     }
@@ -89,7 +86,8 @@ final class RadarSignalSelectionTests: XCTestCase {
             windowChangePercent: change, windowVolume: 0, sessionVolume: 0,
             sessionTurnover: 0, signalAgeMinutes: 0, signalSource: source,
             updatedAtMillis: epoch,
-            dataStatus: dataStatus ?? (source == "Rapid crash" ? "FINNHUB_LIVE" : "CACHE"),
+            dataStatus: dataStatus ?? (["Rapid crash", "Rapid rise"].contains(source)
+                ? YahooCandleSignalPipeline.volumeValidatedStatus : "CACHE"),
             signalWindowLabel: window, signalEpochMillis: epoch
         )
     }

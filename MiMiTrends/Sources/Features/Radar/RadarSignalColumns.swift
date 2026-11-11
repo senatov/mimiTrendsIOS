@@ -92,6 +92,14 @@ struct RadarSignalColumnWidths {
             overflow -= reduction
         }
 
+        let remainingWidth = max(0, availableWidth - widths.values.reduce(0, +))
+        for (column, share) in [
+            (RadarSortColumn.company, 0.50), (.event, 0.25),
+            (.movement, 0.05), (.window, 0.05), (.price, 0.10), (.age, 0.05)
+        ] {
+            widths[column, default: column.minimumWidth] += remainingWidth * share
+        }
+
         return Self(
             company: widths[.company] ?? RadarSortColumn.company.minimumWidth,
             event: widths[.event] ?? RadarSortColumn.event.minimumWidth,
@@ -137,7 +145,6 @@ struct RadarSignalColumnWidths {
 enum RadarSignalPresentation {
     static func badge(for signal: ScanResult) -> String {
         let label = badge(for: signal.signalSource)
-        if signal.dataStatus == YahooCandleSignalPipeline.verifiedStatus { return "\(label) · Y+F" }
         if signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus {
             return "\(label) · Y delayed"
         }

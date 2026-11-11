@@ -3,7 +3,6 @@ import SwiftUI
 struct ScannerSettingsView: View {
     @AppStorage("radar.historyLimit.v1") private var maxResults = 30
     @AppStorage("radar.historyAgeHours.v1") private var maxAgeHours = 2
-    @AppStorage("radar.scanWatchlist.v1") private var scanWatchlist = false
 
     var body: some View {
         SettingsPage(title: "Scanner", subtitle: "Current radar scope and saved results") { width in
@@ -37,8 +36,8 @@ struct ScannerSettingsView: View {
 
     private var scopePanel: some View {
         SettingsGroup(title: "Current scan scope") {
-            SettingsValueRow(title: "Confirmed signals", value: "Candles built from live Finnhub trades")
-            SettingsValueRow(title: "Historical data", value: "Saved Finnhub minute bars and daily summaries")
+            SettingsValueRow(title: "Candle signals", value: "Fresh Yahoo minute bars with reported volume")
+            SettingsValueRow(title: "Historical data", value: "Saved Yahoo minute bars and daily summaries")
             SettingsValueRow(title: "Symbols", value: "Up to 200 US and German shares")
             SettingsValueRow(title: "Activity", value: "Foreground only")
             Text("Radar checks completed candles for rapid drops, rebounds and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")

@@ -30,23 +30,22 @@ struct RecentCoverageClient: Sendable {
         async let yahoo = capture("Yahoo Finance") { try await yahooNews(symbol: symbol, companyName: companyName) }
         async let benzinga = capture("Benzinga") { try await benzingaNews(symbol: symbol, companyName: companyName) }
         async let wallstreet = capture("wallstreetONLINE") { try await wallstreetOnlineNews(symbol: symbol, companyName: companyName) }
-        async let reuters = capture("Reuters") { try await reutersNews(symbol: symbol) }
-        let sources = await [yahoo, benzinga, wallstreet, reuters]
-        let items = Self.recentItems(sources.flatMap(\.items), now: Date())
+        let sources = await [yahoo, benzinga, wallstreet]
+        let items = Self.displayItems(sources.flatMap(\.items))
         return CoverageResult(items: items, unavailableSources: sources.compactMap(\.unavailable))
     }
 
-    static func recentItems(_ items: [CoverageItem], now: Date) -> [CoverageItem] {
-        let cutoff = now.addingTimeInterval(-10 * 3_600)
-        var seen = Set<String>()
-        return Array(items
-            .filter { item in
-                guard let published = item.publishedAt else { return false }
-                return published >= cutoff && published <= now
-            }
-            .sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
-            .filter { seen.insert($0.id).inserted }
-            .prefix(20))
+    static func displayItems(_ items: [CoverageItem]) -> [CoverageItem] {
+        var links = Set<String>()
+        var titles = Set<String>()
+        let unique = items.filter { item in
+            let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !links.contains(item.id), !titles.contains(title) else { return false }
+            links.insert(item.id)
+            titles.insert(title)
+            return true
+        }
+        return unique.sorted { ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast) }
     }
 
     private func capture(
@@ -60,16 +59,42 @@ struct RecentCoverageClient: Sendable {
     }
 
     private func yahooNews(symbol: String, companyName: String) async throws -> [CoverageItem] {
+        let feedItems = try? await yahooFeed(symbol: symbol)
         let tickerItems = try? await yahooSearch(symbol)
         let ticker = tickerItems ?? []
         let name = searchName(companyName)
         if ticker.count >= 5 || name.caseInsensitiveCompare(symbol) == .orderedSame {
-            if let tickerItems { return tickerItems }
+            if feedItems != nil || tickerItems != nil { return ticker + (feedItems ?? []) }
             throw CoverageClientError.unavailable
         }
         let nameItems = try? await yahooSearch(name).filter { matchesCompany($0.title, symbol: symbol, companyName: name) }
-        if tickerItems == nil && nameItems == nil { throw CoverageClientError.unavailable }
-        return ticker + (nameItems ?? [])
+        if feedItems == nil && tickerItems == nil && nameItems == nil { throw CoverageClientError.unavailable }
+        return ticker + (feedItems ?? []) + (nameItems ?? [])
+    }
+
+    private func yahooFeed(symbol: String) async throws -> [CoverageItem] {
+        guard var parts = URLComponents(string: "https://finance.yahoo.com/rss/headline") else {
+            throw CoverageClientError.invalidURL
+        }
+        parts.queryItems = [URLQueryItem(name: "s", value: symbol)]
+        guard let url = parts.url else { throw CoverageClientError.invalidURL }
+        return try Self.yahooFeedItems(await request(url))
+    }
+
+    static func yahooFeedItems(_ data: Data) throws -> [CoverageItem] {
+        let parser = XMLParser(data: data)
+        let delegate = CoverageRSSParser()
+        parser.shouldResolveExternalEntities = false
+        parser.delegate = delegate
+        guard parser.parse() else { throw CoverageClientError.invalidResponse }
+        return delegate.items.compactMap { item in
+            guard !item.title.isEmpty, let url = safeURL(item.link) else { return nil }
+            let publisher = item.fields["source"] ?? item.fields["dc:creator"] ??
+                (url.host == "finance.yahoo.com" ? "Yahoo Finance" : url.host ?? "Yahoo Finance")
+            return CoverageItem(title: item.title,
+                publisher: publisher,
+                url: url, publishedAt: parseRSSDate(item.fields["pubDate"]), publishedLabel: nil)
+        }
     }
 
     private func yahooSearch(_ query: String) async throws -> [CoverageItem] {
@@ -79,9 +104,12 @@ struct RecentCoverageClient: Sendable {
         ) else { throw CoverageClientError.invalidURL }
         components.queryItems = [URLQueryItem(name: "q", value: query),
                                  URLQueryItem(name: "quotesCount", value: "0"),
-                                 URLQueryItem(name: "newsCount", value: "20")]
+                                 URLQueryItem(name: "newsCount", value: "100")]
         guard let url = components.url else { throw CoverageClientError.invalidURL }
-        let data = try await request(url)
+        return try Self.yahooSearchItems(await request(url))
+    }
+
+    static func yahooSearchItems(_ data: Data) throws -> [CoverageItem] {
         guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let news = root["news"] as? [[String: Any]] else { throw CoverageClientError.invalidResponse }
         return news.compactMap { entry in
@@ -98,11 +126,6 @@ struct RecentCoverageClient: Sendable {
     private func benzingaNews(symbol: String, companyName: String) async throws -> [CoverageItem] {
         let data = try await request(URL(string: "https://www.benzinga.com/feed")!)
         return try parseRSS(data, symbol: symbol, companyName: companyName, publisher: "Benzinga", dateField: "pubDate")
-    }
-
-    private func reutersNews(symbol: String) async throws -> [CoverageItem] {
-        guard let url = ReutersSearch.url(symbol: symbol) else { throw CoverageClientError.invalidURL }
-        return ReutersSearchParser.parse(try await request(url))
     }
 
     private func wallstreetOnlineNews(symbol: String, companyName: String) async throws -> [CoverageItem] {
@@ -130,7 +153,7 @@ struct RecentCoverageClient: Sendable {
         return rows.prefix(30).compactMap { row in
             guard let href = firstCapture(#"(?is)<a\b[^>]*href=["']([^"']*/nachricht/[^"']*)["'][^>]*>(.*?)</a>"#, in: row, group: 1),
                   let titleHTML = firstCapture(#"(?is)<a\b[^>]*href=["'][^"']*/nachricht/[^"']*["'][^>]*>(.*?)</a>"#, in: row),
-                  let url = safeURL(href, base: ProviderEndpointStore.url(for: .wallstreetOnline)) else { return nil }
+                  let url = Self.safeURL(href, base: ProviderEndpointStore.url(for: .wallstreetOnline)) else { return nil }
             let title = plainText(titleHTML)
             guard !title.isEmpty else { return nil }
             let subtitle = firstCapture(#"(?is)newsListSubtitle[^>]*>(.*?)</[^>]+>"#, in: row).map(plainText) ?? ""
@@ -170,8 +193,8 @@ struct RecentCoverageClient: Sendable {
         return delegate.items.compactMap { item in
             guard !item.title.isEmpty,
                   matchesCompany("\(item.title) \(item.description)", symbol: symbol, companyName: companyName),
-                  let url = safeURL(item.link) else { return nil }
-            let date = item.fields[dateField].flatMap(parseRSSDate)
+                  let url = Self.safeURL(item.link) else { return nil }
+            let date = item.fields[dateField].flatMap(Self.parseRSSDate)
             return CoverageItem(title: item.title, publisher: publisher, url: url,
                                 publishedAt: date, publishedLabel: nil)
         }
@@ -193,7 +216,7 @@ struct RecentCoverageClient: Sendable {
                                   with: "", options: .regularExpression)
     }
 
-    private func safeURL(_ value: String, base: URL? = nil) -> URL? {
+    private static func safeURL(_ value: String, base: URL? = nil) -> URL? {
         let url = URL(string: value, relativeTo: base)?.absoluteURL
         return url?.scheme.map { ["https", "http"].contains($0.lowercased()) } == true ? url : nil
     }
@@ -231,7 +254,7 @@ struct RecentCoverageClient: Sendable {
         return formatter.date(from: value)
     }
 
-    private func parseRSSDate(_ value: String?) -> Date? {
+    private static func parseRSSDate(_ value: String?) -> Date? {
         guard let value else { return nil }
         if let date = ISO8601DateFormatter().date(from: value) { return date }
         let formatter = DateFormatter()

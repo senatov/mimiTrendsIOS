@@ -1,6 +1,6 @@
 # Dynamic scan pool: desktop behavior and native port
 
-The desktop screenshot shows three different counts: the full candidate pool, the symbols eligible for the current market scan, and the number already analyzed in this cycle. They must remain separate in the native Radar. The current Apple app can request one manually selected Finnhub symbol or that symbol plus up to four saved watchlist symbols. Its watchlist is not a dynamic discovery pool, and requested subscriptions are not a count of analyzed symbols.
+The desktop screenshot shows three different counts: the full candidate pool, the symbols eligible for the current market scan, and the number already analyzed in this cycle. They must remain separate in the native Radar. The Apple app now scans a deduplicated pool of up to 200 US and German shares using Yahoo minute candles. The watchlist selects a chart symbol but does not control the scan pool.
 
 ## Desktop reference
 
@@ -19,7 +19,7 @@ The native project now has a provider-independent `DiscoveryCandidate` with sour
 
 `WallstreetOnlineQuoteSource` now follows up to eight visible ranking paths directly when a linked quote is requested. It accepts a price only with an explicit EUR or USD currency and a fresh page timestamp. USD is converted to EUR only with a fresh EUR/USD quote from wallstreetONLINE. Raw Info1 prices are hidden because the JSON omits currency. Normalized direct observations go to a separate EUR quote database; they are not minute trade bars or confirmed signals. `LSCandidatePool` independently polls the three configured Lang & Schwarz tables every 30 seconds while Radar is active. It validates quote time and spread, converts USD rows before storage, and reports quote health in source telemetry. Its bid/ask observations are not displayed as confirmed Radar signals because they do not verify traded volume. The two candidate pools do not currently resolve a cross-source instrument identity or produce a common confirmed signal.
 
-Radar shows a transient activity banner while fetching the ranking, preparing the Finnhub feed, or sending its symbol subscriptions. It reports the saved candidate count or requested symbol count where available. The current native feed has no bounded scan cycle or provider acknowledgment count, so the banner uses an indeterminate progress indicator rather than an invented percentage. The ranking decoder accepts stock detail paths with or without an `-aktie` suffix; both variants occur in the live JSON.
+Radar shows a transient activity banner while fetching rankings. Scanner diagnostics report candidates checked, usable candle histories, skipped symbols, and errors. The ranking decoder accepts stock detail paths with or without an `-aktie` suffix; both variants occur in the live JSON.
 
 1. Define a provider-independent candidate record with a stable instrument identifier, source category, rank, observation time, and optional resolved ticker. Keep source parsing, ticker resolution, pool selection, quote collection, and signal detection in separate services. Reject unresolved or ambiguous names instead of guessing a ticker.
 2. Extend the bounded JSON discovery adapter with separately identified index and activity feeds as they become available. Keep fixture tests for each feed shape, foreground-only fetching, 30-minute caching, last-good retention, and failure backoff. Preserve per-page and per-period availability, including an empty morning ranking. Deduplicate instruments across rankings and verify their exchange/currency before scanning.
@@ -27,7 +27,7 @@ Radar shows a transient activity banner while fetching the ranking, preparing th
 4. Add a market-hours and provider-capability gate, then a foreground multi-symbol scan coordinator. Keep source coverage, pool size, eligible count, processed count, last successful refresh, and errors as separate telemetry. Stop all network work when the scene becomes inactive or enters the background.
 5. Port live source panels and selected-signal chart behavior. Show each source only when its adapter actually runs. Validate signal semantics against desktop fixtures and fresh device runs before calling the Radar equivalent to the prototype.
 
-The bounded Finnhub Watchlist feed is insufficient for this pool: a public ranking page returns company names and website instrument paths, while a market feed needs exact provider symbols, exchange coverage, subscription capacity, and minute history. The watchlist path assumes user-entered provider tickers and excludes names needing resolution; it does not prove that the account receives trades for every requested ticker. The Apple app must validate ranking mappings and account limits before subscribing to discovered symbols. The desktop's Yahoo, Tradegate, and Euronext paths do not become available merely by saving their keys or URLs.
+Ranking paths still require exact ticker and exchange resolution before Yahoo candle scanning. An unresolved name must not be guessed from a ranking row.
 
 ## Distribution boundary
 

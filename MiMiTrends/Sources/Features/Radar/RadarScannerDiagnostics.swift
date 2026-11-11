@@ -52,7 +52,7 @@ struct RadarScannerDiagnostics: View {
                 }
             }
             .frame(height: listHeight)
-            Text("Candle signals: Finnhub live trades or US Yahoo candles verified against a fresh Finnhub price.")
+            Text("Candle signals use fresh Yahoo minute bars with reported volume. German Yahoo candles are delayed.")
                 .font(.caption2).foregroundStyle(color(.sourceMutedText))
         }
         .foregroundStyle(color(.sourceBodyText))

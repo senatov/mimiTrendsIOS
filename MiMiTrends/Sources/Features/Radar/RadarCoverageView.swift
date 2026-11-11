@@ -13,7 +13,7 @@ struct RadarCoverageView: View {
                 if let result {
                     coverageList(result)
                 } else {
-                    ProgressView("Loading recent messages…")
+                    ProgressView("Loading news…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
@@ -40,23 +40,14 @@ struct RadarCoverageView: View {
                 Text(request.companyName)
                     .font(.headline)
                     .foregroundStyle(.secondary)
-                if let url = ReutersSearch.url(symbol: request.symbol) {
-                    Link(destination: url) {
-                        Label("Reuters · \(request.symbol)", systemImage: "newspaper")
-                    }
-                    .buttonStyle(TrendsActionButtonStyle(compact: true))
-                    Text("Open the full Reuters search for \(request.symbol).")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Text("News published in the last 10 hours · newest first")
+                Text("News for \(request.symbol) · newest first")
                     .font(.subheadline.weight(.medium))
                 if result.items.isEmpty {
                     ContentUnavailableView(
-                        result.unavailableSources.count == 4 ? "News sources unavailable" : "No news in the last 10 hours",
-                        systemImage: result.unavailableSources.count == 4 ? "wifi.slash" : "newspaper",
-                        description: Text(result.unavailableSources.count == 4
-                                          ? "Try again later." : "No dated news was found for this stock in the last 10 hours.")
+                        result.unavailableSources.count == 3 ? "News sources unavailable" : "No news found",
+                        systemImage: result.unavailableSources.count == 3 ? "wifi.slash" : "newspaper",
+                        description: Text(result.unavailableSources.count == 3
+                                          ? "Try again later." : "No news was found for this stock.")
                     )
                     .frame(maxWidth: .infinity, minHeight: 180)
                 } else {

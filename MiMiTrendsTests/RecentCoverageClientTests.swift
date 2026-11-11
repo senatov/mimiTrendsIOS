@@ -2,7 +2,7 @@ import XCTest
 @testable import MiMiTrends
 
 final class RecentCoverageClientTests: XCTestCase {
-    func testRecentNewsRequiresVerifiedTimeAndSortsNewestFirst() throws {
+    func testNewsKeepsOlderAndUndatedItemsAndSortsNewestFirst() throws {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let items = [
             item("older", date: now.addingTimeInterval(-11 * 3_600)),
@@ -12,40 +12,35 @@ final class RecentCoverageClientTests: XCTestCase {
             item("future", date: now.addingTimeInterval(60)),
             item("current", date: now.addingTimeInterval(-2 * 3_600))
         ]
-        XCTAssertEqual(RecentCoverageClient.recentItems(items, now: now).map(\.title),
-                       ["current", "recent"])
+        XCTAssertEqual(RecentCoverageClient.displayItems(items).map(\.title),
+                       ["future", "current", "recent", "older", "unknown"])
     }
 
-    func testReutersSearchUsesTickerAsQuery() throws {
-        let url = try XCTUnwrap(ReutersSearch.url(symbol: " aapl "))
-        let parts = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
-        XCTAssertEqual(parts.host, "www.reuters.com")
-        XCTAssertEqual(parts.path, "/site-search/")
-        XCTAssertEqual(parts.queryItems, [URLQueryItem(name: "query", value: "AAPL")])
-        XCTAssertEqual(ReutersSearch.url(symbol: "IFX.DE")?.query, "query=IFX.DE")
-        XCTAssertNil(ReutersSearch.url(symbol: "AAPL&bad"))
-    }
-
-    func testReutersStoryCardsBecomeDatedNewsAndOldResultsAreDiscarded() throws {
-        let html = """
-        <ul data-testid="ListContainer">
-          <li data-testid="StoryCard">
-            <time data-testid="DateLineText" datetime="2026-11-04T14:30:00.000Z">November 4</time>
-            <a data-testid="TitleLink" href="/business/amd-new-chips/"><span data-testid="TitleHeading">AMD &amp; partners announce chips</span></a>
-          </li>
-          <li data-testid="StoryCard">
-            <time data-testid="DateLineText" datetime="2026-02-04T15:41:30.780Z">February 4</time>
-            <a data-testid="TitleLink" href="/business/older-amd-story/"><span data-testid="TitleHeading">Older AMD story</span></a>
-          </li>
-        </ul>
+    func testTickerFeedKeepsNewsLinkAndPublisher() throws {
+        let xml = """
+        <rss><channel><item><title>Cipher opens new data center</title>
+        <link>https://finance.yahoo.com/news/cipher-opens-center-123.html</link>
+        <source>Example Wire</source><pubDate>Wed, 11 Nov 2026 18:00:00 GMT</pubDate>
+        </item></channel></rss>
         """
-        let items = ReutersSearchParser.parse(Data(html.utf8))
-        XCTAssertEqual(items.count, 2)
-        XCTAssertEqual(items[0].title, "AMD & partners announce chips")
-        XCTAssertEqual(items[0].url.absoluteString, "https://www.reuters.com/business/amd-new-chips/")
-        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-11-04T16:00:00Z"))
-        XCTAssertEqual(RecentCoverageClient.recentItems(items, now: now).map(\.title),
-                       ["AMD & partners announce chips"])
+        let items = try RecentCoverageClient.yahooFeedItems(Data(xml.utf8))
+        XCTAssertEqual(items.map(\.publisher), ["Example Wire"])
+        XCTAssertEqual(items.first?.url.absoluteString,
+                       "https://finance.yahoo.com/news/cipher-opens-center-123.html")
+        XCTAssertNotNil(items.first?.publishedAt)
+    }
+
+    func testYahooSearchKeepsEveryNewsItemAndItsPublisher() throws {
+        let json = """
+        {"news":[
+          {"title":"Cipher report","publisher":"Business Wire","link":"https://finance.yahoo.com/news/cipher-report.html","providerPublishTime":1794416176},
+          {"title":"Cipher outlook","publisher":"Example News","link":"https://example.com/cipher-outlook","providerPublishTime":1794416000}
+        ]}
+        """
+        let items = try RecentCoverageClient.yahooSearchItems(Data(json.utf8))
+        XCTAssertEqual(items.map(\.title), ["Cipher report", "Cipher outlook"])
+        XCTAssertEqual(items.map(\.publisher), ["Business Wire", "Example News"])
+        XCTAssertEqual(RecentCoverageClient.displayItems(items).count, 2)
     }
 
     private func item(_ title: String, date: Date?) -> CoverageItem {

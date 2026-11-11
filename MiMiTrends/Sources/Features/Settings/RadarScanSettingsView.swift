@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct RadarScanSettingsView: View {
-    @Environment(RadarSession.self) private var radarSession
     @State private var draft = RadarScanPreferences()
     @State private var saved = RadarScanPreferences()
     @State private var message: String?
@@ -108,7 +107,6 @@ struct RadarScanSettingsView: View {
             try RadarScanPreferencesStore.save(draft)
             saved = draft.validated
             draft = saved
-            radarSession.stop()
             message = "Thresholds saved on this device."
         } catch {
             message = "Could not save scanner thresholds."

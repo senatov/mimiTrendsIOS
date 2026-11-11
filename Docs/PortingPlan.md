@@ -1,5 +1,7 @@
 # Kotlin-to-Swift porting plan
 
+> Historical porting notes. The Finnhub integration described below was removed on 2026-11-11; current Radar scanning uses Yahoo candles without provider credentials.
+
 The desktop Kotlin app remains the behavioral reference. Work through these stages in order and verify each slice before expanding the next one. A Swift model alone does not imply that its provider, scanner, or screen is functional.
 
 | Stage | Kotlin source | Native destination | Completion gate | Status |

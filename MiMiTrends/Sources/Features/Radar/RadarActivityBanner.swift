@@ -2,14 +2,10 @@ import SwiftUI
 
 enum RadarActivity: Equatable {
     case loadingRankings(previousCount: Int?)
-    case preparingFeed
-    case connectingFeed(symbolCount: Int)
 
     var title: String {
         switch self {
         case .loadingRankings: "Collecting ranking candidates…"
-        case .preparingFeed: "Preparing live feed…"
-        case .connectingFeed: "Connecting to Finnhub…"
         }
     }
 
@@ -18,10 +14,6 @@ enum RadarActivity: Equatable {
         case .loadingRankings(let previousCount):
             if let previousCount { "\(previousCount) saved candidates remain available" }
             else { "Fetching the current market ranking" }
-        case .preparingFeed:
-            "Loading the selected symbols and scan settings"
-        case .connectingFeed(let symbolCount):
-            "Requesting live trades for \(symbolCount) \(symbolCount == 1 ? "symbol" : "symbols")"
         }
     }
 }

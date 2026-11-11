@@ -20,20 +20,28 @@ actor RadarCompanyMetadataService {
             let now = Int64(Date().timeIntervalSince1970 * 1_000)
             let stale = normalized.filter { symbol in
                 guard let cached = metadata[symbol] else { return true }
-                let lifetime = cached.logoData == nil || cached.countryCode == nil
+                let preferred = Self.preferredName(symbol: symbol, candidate: names[symbol], cached: cached.name)
+                let lifetime = cached.logoData == nil || cached.countryCode == nil || cached.name == symbol
                     ? incompleteCacheLifetime : cacheLifetime
-                return now - cached.updatedAtMillis > lifetime
+                return cached.name != preferred || now - cached.updatedAtMillis > lifetime
             }
             let requestSession = session
             for offset in stride(from: 0, to: stale.count, by: 4) {
                 let batch = Array(stale[offset..<min(offset + 4, stale.count)])
                 await withTaskGroup(of: (String, RadarCompanyMetadata?).self) { group in
                     for symbol in batch {
-                        let fallbackName = names[symbol] ?? metadata[symbol]?.name ?? symbol
+                        let fallbackName = Self.preferredName(
+                            symbol: symbol, candidate: names[symbol], cached: metadata[symbol]?.name)
                         let cached = metadata[symbol]
                         group.addTask {
                             guard !Task.isCancelled else { return (symbol, nil) }
-                            let name = fallbackName
+                            var name = fallbackName
+                            if name == symbol, MarketCandidateFilter.supportsYahooBars(symbol: symbol) {
+                                let evidence = await YahooRadarSource(session: requestSession).diagnose(symbol: symbol)
+                                if evidence.found, let resolved = evidence.name {
+                                    name = Self.preferredName(symbol: symbol, candidate: resolved, cached: nil)
+                                }
+                            }
                             let country = cached?.countryCode
                             var image = cached?.logoData
                             if image == nil { image = await Self.loadCompanyMark(name: name, session: requestSession) }
@@ -62,6 +70,15 @@ actor RadarCompanyMetadataService {
         var seen = Set<String>()
         return Array(symbols.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
             .filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(101))
+    }
+
+    static func preferredName(symbol: String, candidate: String?, cached: String?) -> String {
+        for raw in [candidate, cached] {
+            guard let raw else { continue }
+            let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty, name.caseInsensitiveCompare(symbol) != .orderedSame { return name }
+        }
+        return symbol
     }
 
     private static func loadLogo(_ url: URL?, session: URLSession) async -> Data? {

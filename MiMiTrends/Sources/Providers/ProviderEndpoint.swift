@@ -1,7 +1,6 @@
 import Foundation
 
 enum ProviderEndpoint: String, CaseIterable, Identifiable {
-    case finnhubTrades
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope, langSchwarzAmerica
     case yahooPrimary, yahooAlternate
     case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, wallstreetGermanPerformance, traderFox
@@ -10,7 +9,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .finnhubTrades: "Live trades"
         case .langSchwarzGermany: "Germany"
         case .langSchwarzStoxx: "STOXX 50"
         case .langSchwarzEurope: "Europe"
@@ -27,7 +25,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var defaultURL: String {
         switch self {
-        case .finnhubTrades: "wss://ws.finnhub.io"
         case .langSchwarzGermany: "https://www.ls-tc.de/de/aktien/deutschland"
         case .langSchwarzStoxx: "https://www.ls-tc.de/de/aktien/europa/stoxx50"
         case .langSchwarzEurope: "https://www.ls-tc.de/de/aktien/europa"
@@ -44,7 +41,6 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
 
     var probePath: String {
         switch self {
-        case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica: ""
         case .yahooPrimary, .yahooAlternate: ""
         case .wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance: ""
@@ -83,6 +79,7 @@ enum ProviderEndpointStore {
 
     static func removeUnusedLegacyValues(defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: "provider.endpoint.finnhubProfiles.v1")
+        defaults.removeObject(forKey: "provider.endpoint.finnhubTrades.v1")
         migrateLegacyRankingURL(defaults: defaults)
         migrateYahooAPIHosts(defaults: defaults)
     }
@@ -112,7 +109,7 @@ enum ProviderEndpointStore {
     static func validate(_ value: String, for endpoint: ProviderEndpoint) throws -> URL {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let components = URLComponents(string: trimmed),
-              components.scheme?.lowercased() == (endpoint == .finnhubTrades ? "wss" : "https"),
+              components.scheme?.lowercased() == "https",
               let host = components.host, !host.isEmpty,
               components.user == nil, components.password == nil,
               components.query == nil, components.fragment == nil,
@@ -128,9 +125,6 @@ enum ProviderEndpointStore {
 struct ProviderEndpointChecker: Sendable {
     func check(_ value: String, for endpoint: ProviderEndpoint) async throws -> String {
         let base = try ProviderEndpointStore.validate(value, for: endpoint)
-        guard endpoint != .finnhubTrades else {
-            throw ProviderEndpointError.checkFailed
-        }
         if endpoint == .yahooPrimary || endpoint == .yahooAlternate {
             let candidates = try await YahooRankingPageSource().loadCandidates(from: base)
             return "Yahoo Finance ranking page OK · \(candidates.count) symbols"
@@ -178,7 +172,6 @@ struct ProviderEndpointChecker: Sendable {
         }
         let expected: String
         switch endpoint {
-        case .finnhubTrades: expected = ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica:
             expected = "bidWithCurrencySymbol"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"

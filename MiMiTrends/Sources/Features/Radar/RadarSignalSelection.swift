@@ -6,19 +6,18 @@ enum RadarSignalSelection {
         preferences: RadarScanPreferences = RadarScanPreferences()
     ) -> [ScanResult] {
         let qualified = history.filter { signal in
-            guard signal.dataStatus != "QUOTE_NO_VOLUME", !signal.symbol.hasPrefix("LS:") else { return false }
+            guard signal.dataStatus != "QUOTE_NO_VOLUME", signal.dataStatus != "FINNHUB_LIVE",
+                  !signal.symbol.hasPrefix("LS:") else { return false }
             let source = signal.signalSource.lowercased()
-            let requiresLiveTrades = ["rapid crash", "sharp rebound", "smooth rise"].contains(source)
-            let verifiedYahoo = signal.dataStatus == YahooCandleSignalPipeline.verifiedStatus
-            let validatedYahoo = verifiedYahoo ||
-                signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
+            let requiresLiveTrades = ["rapid crash", "rapid rise", "sharp rebound", "smooth rise"].contains(source)
+            let validatedYahoo = signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
                 signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
             guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return false }
             if validatedYahoo {
                 let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
                 guard minutes <= 30 else { return false }
             }
-            if requiresLiveTrades && signal.dataStatus != "FINNHUB_LIVE" && !validatedYahoo {
+            if requiresLiveTrades && !validatedYahoo {
                 return false
             }
             guard source == "rapid crash" else { return true }

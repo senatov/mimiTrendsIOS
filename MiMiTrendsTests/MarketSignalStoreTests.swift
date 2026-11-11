@@ -63,7 +63,7 @@ final class MarketSignalStoreTests: XCTestCase {
         XCTAssertEqual(ageFiltered, [recent])
     }
 
-    func testVerifiedYahooSignalDoesNotCollideWithFinnhubEvent() async throws {
+    func testValidatedYahooSignalDoesNotCollideWithLegacyEvent() async throws {
         let url = temporaryDatabaseURL()
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let store = try MarketSignalStore(url: url)
@@ -76,7 +76,7 @@ final class MarketSignalStoreTests: XCTestCase {
                 dataStatus: status, signalWindowLabel: "4m")
         }
         let liveInserted = try await store.record(signal(status: "FINNHUB_LIVE"))
-        let yahooInserted = try await store.record(signal(status: YahooCandleSignalPipeline.verifiedStatus))
+        let yahooInserted = try await store.record(signal(status: YahooCandleSignalPipeline.volumeValidatedStatus))
         let loaded = try await store.loadRecent()
         XCTAssertTrue(liveInserted)
         XCTAssertTrue(yahooInserted)

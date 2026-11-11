@@ -3,7 +3,6 @@ import SwiftUI
 @main
 struct MiMiTrendsApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var radarSession = RadarSession()
 
     init() {
         #if os(macOS)
@@ -27,10 +26,10 @@ struct MiMiTrendsApp: App {
             if ProcessInfo.processInfo.arguments.contains("--chart-diagnostics") {
                 RadarChartDiagnosticView()
             } else {
-                ContentView().environment(radarSession)
+                ContentView()
             }
             #else
-            ContentView().environment(radarSession)
+            ContentView()
             #endif
         }
         #if os(macOS)
@@ -38,9 +37,6 @@ struct MiMiTrendsApp: App {
         #endif
         .onChange(of: scenePhase) { _, phase in
             AppDiagnostics.shared.record(.info, "App", "scene-phase", "phase=\(phase)")
-            if phase != .active {
-                radarSession.stop()
-            }
         }
     }
 }

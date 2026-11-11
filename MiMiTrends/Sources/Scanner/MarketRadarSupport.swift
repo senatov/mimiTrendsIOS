@@ -93,11 +93,6 @@ struct YahooSymbolResolution: Codable, Sendable {
     let retryAfterMillis: Int64
 }
 
-private struct SecondarySymbolEvidence: Sendable {
-    let matched: Bool
-    let detail: String
-}
-
 actor YahooSymbolResolutionStore {
     static let shared = YahooSymbolResolutionStore()
     private let defaults = UserDefaults.standard
@@ -134,25 +129,12 @@ struct YahooSymbolDiagnosisService: Sendable {
         let symbol = rawSymbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let checkedAt = Int64(Date().timeIntervalSince1970 * 1_000)
         let yahoo = await YahooRadarSource(session: session).diagnose(symbol: symbol)
-        var evidence = ["Yahoo: \(yahoo.detail)"]
-        var independentMatches: [String] = []
-        let finnhubEnabled = MarketProviderAccess.isEnabled(.finnhub)
-        let finnhubKey = finnhubEnabled ? try? FinnhubCredentialStore.load() : nil
-        async let finnhubEvidence = lookupFinnhub(symbol: symbol, apiKey: finnhubKey)
-        if let finnhub = await finnhubEvidence {
-            evidence.append("Finnhub: \(finnhub.detail)")
-            if finnhub.matched { independentMatches.append("Finnhub") }
-        } else {
-            evidence.append(finnhubEnabled ? "Finnhub: not queried (API key is not configured)." : "Finnhub: not checked (provider disabled).")
-        }
+        let evidence = ["Yahoo: \(yahoo.detail)"]
 
         let summary: String
         let retryDelay: Int64
         if yahoo.found {
-            summary = "Auto-check confirms Yahoo recognizes \(symbol), but its minute response did not match Radar's expected format. \(independentMatches.isEmpty ? "" : "Also confirmed by \(independentMatches.joined(separator: " and ")).") Rechecking in 24 hours."
-            retryDelay = 24 * 60 * 60 * 1_000
-        } else if !independentMatches.isEmpty {
-            summary = "Auto-check confirms \(symbol) with \(independentMatches.joined(separator: " and ")), but Yahoo returned no usable instrument metadata. Rechecking in 24 hours."
+            summary = "Auto-check confirms Yahoo recognizes \(symbol), but its minute response did not match Radar's expected format. Rechecking in 24 hours."
             retryDelay = 24 * 60 * 60 * 1_000
         } else {
             summary = "Auto-check could not confirm \(symbol) with any queried source. Temporarily skipped; rechecking in 6 hours."
@@ -162,40 +144,4 @@ struct YahooSymbolDiagnosisService: Sendable {
                                      checkedAtMillis: checkedAt, retryAfterMillis: checkedAt + retryDelay)
     }
 
-    private func finnhubMatch(symbol: String, apiKey: String) async -> SecondarySymbolEvidence {
-        guard var components = URLComponents(string: "https://finnhub.io/api/v1/stock/profile2") else {
-            return SecondarySymbolEvidence(matched: false, detail: "profile URL could not be created.")
-        }
-        components.queryItems = [URLQueryItem(name: "symbol", value: symbol)]
-        guard let url = components.url else { return SecondarySymbolEvidence(matched: false, detail: "profile URL could not be created.") }
-        var request = URLRequest(url: url)
-        request.setValue(apiKey, forHTTPHeaderField: "X-Finnhub-Token")
-        request.timeoutInterval = 10
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                return SecondarySymbolEvidence(matched: false, detail: "invalid HTTP response.")
-            }
-            guard http.statusCode == 200 else {
-                return SecondarySymbolEvidence(matched: false, detail: "profile unavailable (HTTP \(http.statusCode)).")
-            }
-            guard data.count <= 100_000,
-                  let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-                return SecondarySymbolEvidence(matched: false, detail: "profile returned unreadable JSON.")
-            }
-            guard (object["ticker"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame else {
-                return SecondarySymbolEvidence(matched: false, detail: "no exact-symbol profile.")
-            }
-            let name = object["name"] as? String ?? "name unavailable"
-            let currency = object["currency"] as? String ?? "currency unavailable"
-            let exchange = object["exchange"] as? String ?? "exchange unavailable"
-            return SecondarySymbolEvidence(matched: true, detail: "exact profile: \(name), \(exchange), \(currency).")
-        } catch { return SecondarySymbolEvidence(matched: false, detail: "profile request failed: \(error.localizedDescription)") }
-    }
-
-    private func lookupFinnhub(symbol: String, apiKey: String?) async -> SecondarySymbolEvidence? {
-        guard let apiKey else { return nil }
-        return await finnhubMatch(symbol: symbol, apiKey: apiKey)
-    }
 }

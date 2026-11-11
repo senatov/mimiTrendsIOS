@@ -74,7 +74,7 @@ actor RadarBaselineSource {
             ($0["symbol"] as? String).map { symbol in
                 MarketCandidateFilter.supportsYahooBars(symbol: symbol) &&
                     (!germanOnly || MarketCandidateFilter.isGermanSymbol(symbol)) &&
-                    (!usOnly || FinnhubBidAskClient.supports(symbol: symbol))
+                    (!usOnly || MarketCandidateFilter.supportsUSSymbol(symbol))
             } == true
         })?["symbol"] as? String
     }

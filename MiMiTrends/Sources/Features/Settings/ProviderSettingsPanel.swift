@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ProviderSettingsPanel: View {
-    @Environment(RadarSession.self) private var radarSession
     let width: CGFloat
     @State private var drafts: [ProviderEndpoint: String] = [:]
     @State private var checks: [ProviderEndpoint: String] = [:]
@@ -26,7 +25,6 @@ struct ProviderSettingsPanel: View {
             if width >= 980 {
                 HStack(alignment: .top, spacing: 8) {
                     VStack(spacing: 6) {
-                        providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
                         providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                       endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                         providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
@@ -40,7 +38,6 @@ struct ProviderSettingsPanel: View {
                 }
             } else {
                 VStack(spacing: 6) {
-                    providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
                     providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
                     providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                   endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
@@ -110,82 +107,12 @@ struct ProviderSettingsPanel: View {
             if includesDiscoverySettings {
                 DiscoverySettingsSection()
             }
-            if endpoints.contains(.finnhubTrades) {
-                CredentialEditor(
-                    title: "Finnhub API key",
-                    detail: "Required for the live trade feed and optional US bid/ask validation. Stored securely on this device.",
-                    help: CredentialHelp(
-                        title: "Get your Finnhub API key",
-                        message: "Sign in to your Finnhub account and copy the API key from your account dashboard. Paste that key here. Account-plan permissions determine which symbols and endpoints are available.",
-                        linkTitle: "Open Finnhub account",
-                        url: URL(string: "https://finnhub.io/dashboard")
-                    ),
-                    load: { try FinnhubCredentialStore.load() },
-                    save: { try FinnhubCredentialStore.save($0) },
-                    remove: {
-                        try FinnhubCredentialStore.delete()
-                        credentialChanged(.finnhub)
-                        checks[.finnhubTrades] = nil
-                        radarSession.stop()
-                    },
-                    compact: true,
-                    onSave: {
-                        credentialChanged(.finnhub)
-                        checks[.finnhubTrades] = nil
-                    }
-                )
-                CredentialEditor(
-                    title: "Finnhub webhook secret",
-                    detail: "Not used by this app's live feed.",
-                    help: CredentialHelp(
-                        title: "Webhook secret is for your webhook server",
-                        message: "This app does not receive Finnhub webhooks, so you can leave this blank. For a separate webhook integration, the server owner creates the shared secret and configures it on both the receiver and sender; it is not the Finnhub API key."
-                    ),
-                    load: { try FinnhubCredentialStore.loadWebhookSecret() },
-                    save: { try FinnhubCredentialStore.saveWebhookSecret($0) },
-                    remove: { try FinnhubCredentialStore.deleteWebhookSecret() },
-                    compact: true
-                )
-            }
         }
     }
 
     private var defaultStatus: String { "Not checked" }
 
     private func check(_ endpoint: ProviderEndpoint) {
-        if endpoint == .finnhubTrades {
-            guard MarketProviderAccess.isEnabled(.finnhub) else {
-                checks[endpoint] = "Enable Finnhub before checking the live feed."
-                return
-            }
-            checks[endpoint] = "Checking REST and WebSocket…"
-            let value = drafts[endpoint] ?? endpoint.defaultURL
-            Task {
-                let restResult: String
-                do {
-                    guard let key = try FinnhubCredentialStore.load() else {
-                        throw FinnhubStreamError.missingKey
-                    }
-                    try await FinnhubQuoteSmokeTest().check(symbol: "AAPL", apiKey: key)
-                    restResult = "REST quote OK"
-                    AppDiagnostics.shared.record(.info, "Finnhub", "quote-smoke-test-success", "symbol=AAPL")
-                } catch {
-                    restResult = "REST quote failed: \(error.localizedDescription)"
-                    let nsError = error as NSError
-                    AppDiagnostics.shared.record(.warning, "Finnhub", "quote-smoke-test-failed",
-                        "errorType=\(String(describing: type(of: error))) domain=\(nsError.domain) code=\(nsError.code)")
-                }
-                let websocketResult: String
-                if let issue = await MarketProviderPreflight().check(.finnhub, finnhubEndpoint: value) {
-                    websocketResult = "WebSocket failed: \(issue.reason)"
-                } else {
-                    websocketResult = "WebSocket reachable; trades not confirmed"
-                }
-                guard drafts[endpoint] == value else { return }
-                checks[endpoint] = "\(restResult) · \(websocketResult)"
-            }
-            return
-        }
         let value = drafts[endpoint] ?? endpoint.defaultURL
         checks[endpoint] = "Checking…"
         Task {
@@ -223,7 +150,6 @@ struct ProviderSettingsPanel: View {
             get: { MarketProviderAccess.isEnabled(provider) },
             set: { enabled in
                 MarketProviderAccess.setEnabled(enabled, for: provider)
-                if !enabled, provider == .finnhub { radarSession.stop() }
             }
         )
     }
@@ -238,13 +164,6 @@ struct ProviderSettingsPanel: View {
         MarketProviderAccess.isEnabled(provider) && MarketProviderAccess.health(provider) == "Connected"
     }
 
-    private func credentialChanged(_ provider: MarketProvider) {
-        MarketProviderAccess.setHealth("Not checked", for: provider)
-        UserDefaults.standard.set(
-            UserDefaults.standard.integer(forKey: "provider.configurationRevision.v1") + 1,
-            forKey: "provider.configurationRevision.v1"
-        )
-    }
 }
 
 private struct ProviderEndpointRow: View {

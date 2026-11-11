@@ -1,7 +1,7 @@
 import Foundation
 
 enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
-    case finnhub, yahoo, wallstreetOnline, langSchwarz, traderFox, boerseDAX
+    case yahoo, wallstreetOnline, langSchwarz, traderFox, boerseDAX
 
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
@@ -10,7 +10,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .finnhub: "Finnhub"
         case .yahoo: "Yahoo Finance"
         case .wallstreetOnline: "wallstreetONLINE"
         case .langSchwarz: "Lang & Schwarz"
@@ -21,7 +20,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
 
     var accountURL: URL? {
         switch self {
-        case .finnhub: URL(string: "https://finnhub.io/dashboard")
         case .yahoo: URL(string: "https://finance.yahoo.com/")
         case .wallstreetOnline: URL(string: "https://www.wallstreet-online.de/")
         case .langSchwarz: URL(string: "https://www.ls-tc.de/")
@@ -32,7 +30,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
 
     var endpoints: [ProviderEndpoint] {
         switch self {
-        case .finnhub: [.finnhubTrades]
         case .yahoo: [.yahooPrimary, .yahooAlternate]
         case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline]
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
@@ -44,15 +41,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
 
 enum MarketProviderAccess {
     static func isEnabled(_ provider: MarketProvider, defaults: UserDefaults = .standard) -> Bool {
-        guard defaults.object(forKey: provider.enabledKey) != nil else {
-            switch provider {
-            case .finnhub:
-                return (try? FinnhubCredentialStore.load()) != nil
-            default:
-                break
-            }
-            return true
-        }
+        guard defaults.object(forKey: provider.enabledKey) != nil else { return true }
         return defaults.bool(forKey: provider.enabledKey)
     }
 
@@ -95,20 +84,10 @@ struct MarketProviderPreflightIssue: Identifiable, Sendable {
 struct MarketProviderPreflight: Sendable {
     private let endpointChecker = ProviderEndpointChecker()
 
-    func check(_ provider: MarketProvider, finnhubEndpoint: String? = nil) async -> MarketProviderPreflightIssue? {
+    func check(_ provider: MarketProvider) async -> MarketProviderPreflightIssue? {
         guard MarketProviderAccess.isEnabled(provider) else { return nil }
         do {
             switch provider {
-            case .finnhub:
-                guard let key = try FinnhubCredentialStore.load() else {
-                    throw MarketProviderPreflightError.missingCredential("Finnhub API key")
-                }
-                let endpoint = try finnhubEndpoint.map {
-                    try ProviderEndpointStore.validate($0, for: .finnhubTrades)
-                }
-                try await FinnhubTradeStream().checkConnection(
-                    apiKey: key, symbol: "AAPL", endpointURL: endpoint
-                )
             case .yahoo:
                 try await requireAny([.yahooPrimary, .yahooAlternate])
             case .wallstreetOnline:
@@ -130,7 +109,7 @@ struct MarketProviderPreflight: Sendable {
             return nil
         } catch {
             let reason = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            let message = reason.isEmpty ? "Check the provider URL, account access, or API key." : reason
+            let message = reason.isEmpty ? "Check the provider URL or availability." : reason
             MarketProviderAccess.setHealth("Needs attention", for: provider, detail: message)
             return MarketProviderPreflightIssue(provider: provider, reason: message)
         }
@@ -220,13 +199,11 @@ actor MarketProviderStartupGate {
 }
 
 private enum MarketProviderPreflightError: LocalizedError {
-    case missingCredential(String)
     case unavailable
 
     var errorDescription: String? {
         switch self {
-        case .missingCredential(let name): "\(name) is missing. Add it in provider settings."
-        case .unavailable: "The provider did not return the expected data. Check the URL, account access, or API key."
+        case .unavailable: "The provider did not return the expected data. Check the URL or availability."
         }
     }
 }

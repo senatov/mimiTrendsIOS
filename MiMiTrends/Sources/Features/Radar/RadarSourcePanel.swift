@@ -4,7 +4,6 @@ struct RadarSourcePanel: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(\.colorScheme) private var colorScheme
 
-    let session: RadarSession
     let discoveryStatus: DiscoveryRefreshStatus?
     let lsStatus: LSCandidateStatus?
     let discoveryRequests: Int
@@ -65,12 +64,6 @@ struct RadarSourcePanel: View {
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
                 errorDetails: marketCycle?.yahoo.lastErrorMessage
-            ),
-            RadarTelemetrySource(
-                name: "Finnhub", status: feedStatus, statusColor: feedColor, dotColor: feedColor,
-                received: session.tradeCount, valid: session.completedBarsStored,
-                requests: nil, errors: session.errorCount,
-                errorDetails: session.errorMessage
             ),
             RadarTelemetrySource(
                 name: "Lang & Schwarz",
@@ -150,19 +143,6 @@ struct RadarSourcePanel: View {
 
     private var lsFreshCount: Int {
         lsStatus?.freshCount(atMillis: Int64(Date().timeIntervalSince1970 * 1_000)) ?? 0
-    }
-
-    private var feedStatus: String {
-        if session.isSubscribed { return session.tradeCount > 0 ? "RECEIVING" : "WAITING" }
-        if session.isScanning { return "CONNECTING" }
-        if session.errorMessage != nil { return "ATTENTION" }
-        return "STOPPED"
-    }
-
-    private var feedColor: Color {
-        if session.isSubscribed { return tableColor(.sourceActive) }
-        if session.errorMessage != nil { return tableColor(.sourceAttention) }
-        return tableColor(.sourceInactive)
     }
 
 }

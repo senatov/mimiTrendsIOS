@@ -1,17 +1,15 @@
 # Desktop preferences and native Settings
 
-Reviewed the local desktop files in `~/.mimi/trends/` on 2026-10-28. The iPad app cannot read that Mac directory. Supported values below are native first-run defaults; later changes are stored in the app's own container and are never synchronized back to the Kotlin app. Existing native preferences remain authoritative.
+The native app keeps its own settings and does not import the Kotlin desktop app’s configuration or credentials. Existing native preferences remain authoritative.
 
 | Desktop source | Native handling |
 | --- | --- |
-| `scanner.properties` rapid crash, rise, sustained move, minimum price, and turnover values | Editable in **Settings → Rapid moves**. Native rapid-drop defaults are 1% over 5 minutes or 1.5% over 15 minutes; an existing saved pair of the older 0.35%/0.55% defaults is upgraded once while other preferences are retained. Saving validates bounds, persists locally, and stops an active feed; a new feed takes a stable settings snapshot. |
-| `scanner.properties` maximum results `30` and maximum signal age `2` hours | Editable in **Settings → Scanner**. These controls filter the native saved Radar list immediately and persist on this device. They do not delete historical signals. Target table results and the desktop market universe are not active in the limited native scanner. |
-| `ui-state.properties` selected symbol `ORCL`, chart range `1D` | First-run defaults. Radar owns the selected symbol and chart range, and each change is saved for later launches. |
-| `scanner.properties` `ui.theme=LIGHT` | Native appearance initially uses Light; Settings offers System, Light, and Dark. The choice is saved locally. The existing compact panel layout corresponds to the old compact density without a separate density switch. |
-| `ui-state.properties` divider positions | The native Radar saves wide and stacked divider ratios separately. JavaFX divider coordinates and table columns do not fit both iPad orientations, so they are not copied. |
-| `finnhub.properties` API key and webhook secret | Credentials are never copied into source code. **Settings → Market data providers** edits the active Finnhub API key. iPad stores entered values in Keychain; Mac stores them in local app preferences to avoid repeated Keychain authorization during development. The webhook secret can be saved for later integration but has no native use today. Each field has a reveal button and is masked by default. |
-| `scanner.properties` market region, Yahoo symbols, scan interval, statistical anomaly thresholds, table colours, search URL, provider toggles and request intervals | Shown as unavailable scope in the corresponding native panes, without inactive switches. The native Finnhub feed can request one selected symbol plus up to four saved watchlist symbols. It does not run the desktop's ranking discovery, multi-provider scan cycle, or statistical anomaly scanner. |
-| `provider-urls.properties`, `weekly-universe.properties`, `exchange-rate.properties` | No direct native equivalent yet. The Finnhub adapter owns its endpoint. The weekly universe is not the native watchlist. A saved EUR/USD reference rate is not suitable for live price conversion. |
-| `window-state.properties` and JavaFX window geometry | Not imported. iPad window management and SwiftUI layout differ from JavaFX. |
+| `scanner.properties` movement thresholds | **Settings → Rapid moves** edits drop, rebound, turnover, and volume thresholds used by the automatic Yahoo candle scan. |
+| `scanner.properties` result count and age | **Settings → Scanner** filters saved Radar results without deleting their history. |
+| `ui-state.properties` selected symbol and chart range | Saved in native preferences and restored on relaunch. |
+| `scanner.properties` theme and table colours | **Appearance** and **Color Table** hold native controls. |
+| `provider-urls.properties` | Supported ranking and quote URLs can be edited under **Market data providers**. |
+| `finnhub.properties` | Ignored. The native app no longer uses a Finnhub API key or webhook secret. |
+| JavaFX window geometry | Not imported; SwiftUI saves its own panel ratios. |
 
-Additional named API keys or tokens can be stored locally for future source adapters. Such entries do not enable a provider, and no existing desktop secrets are imported automatically. The Mac app reads local preferences without accessing former Keychain entries; enter a key again in Settings if it exists only in Keychain. The native watchlist and completed minute bars remain in SQLite, panel ratios and UI choices in device preferences, and credentials in Keychain on iPad or local app preferences on Mac. They survive relaunches. Scanner activity itself is deliberately stopped when the app leaves the foreground and is not resumed automatically.
+The watchlist, candle bars, signal history, and imported trades remain in native SQLite stores. Scanning runs only while the app is active.

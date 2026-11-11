@@ -7,7 +7,7 @@ private actor FetchCounter {
 
     func fetch(_ symbol: String) -> [MinuteBar] {
         calls += 1
-        return [MinuteBar(symbol: symbol, minuteEpochSeconds: 60,
+        return [MinuteBar(symbol: symbol, minuteEpochSeconds: (Int64(Date().timeIntervalSince1970) / 60 - 1) * 60,
                           open: 100, high: 101, low: 99, close: 100, volume: 1_000)]
     }
 }
@@ -18,7 +18,7 @@ final class RadarSignalBarBackfillTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let store = try MarketBarStore(url: url)
         _ = try await store.upsert(MinuteBar(
-            symbol: "AAPL", minuteEpochSeconds: 60,
+            symbol: "AAPL", minuteEpochSeconds: (Int64(Date().timeIntervalSince1970) / 60 - 1) * 60,
             open: 100, high: 101, low: 99, close: 100, volume: 1_000
         ))
         let counter = FetchCounter()

@@ -1,18 +1,14 @@
 import SwiftUI
 
 struct RadarView: View {
-    @Environment(RadarSession.self) private var session
     @Environment(\.scenePhase) var scenePhase
     @AppStorage("radar.historyLimit.v1") private var maxResults = 30
     @AppStorage("radar.historyAgeHours.v1") private var maxAgeHours = 2
-    @AppStorage("radar.scanWatchlist.v1") private var scanWatchlist = false
     @AppStorage("display.currency.v1") var displayCurrency = "EUR"
     @AppStorage("provider.configurationRevision.v1") var providerConfigurationRevision = 0
     @Binding var symbol: String
-    let watchlistRevision: Int
     let onManageWatchlist: () -> Void
     let onOpenProviderSettings: () -> Void
-    @State private var setupMessage: String?
     @State var recentSignals: [ScanResult] = []
     @State private var hasLoadedHistory = false
     @State var companyMetadata: [String: RadarCompanyMetadata] = [:]
@@ -20,8 +16,6 @@ struct RadarView: View {
     @State private var selectedSignal: ScanResult?
     @State private var historyError: String?
     @State var chartRefreshID = 0
-    @State var isPreparingFeed = false
-    @State private var watchlistPreview: [WatchlistEntry] = []
     @State var discoveryController = DiscoveryPoolController()
     @State var lsCandidatePool = LSCandidatePool()
     @State var lsStatus: LSCandidateStatus?
@@ -45,7 +39,7 @@ struct RadarView: View {
                     signals: { compact in signalList(compact: compact) },
                     sources: {
                         RadarSourcePanel(
-                            session: session, discoveryStatus: discoveryStatus,
+                            discoveryStatus: discoveryStatus,
                             lsStatus: lsStatus,
                             discoveryRequests: discoveryRequests, discoveryErrors: discoveryErrors,
                             marketCycle: marketCycle
@@ -66,24 +60,8 @@ struct RadarView: View {
                         )
                     },
                     controls: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
-                                        onManageWatchlist: onManageWatchlist)
-                            HStack {
-                                if session.isScanning {
-                                    TrendsActionButton(title: "Stop Finnhub", systemImage: "stop.fill") { session.stop() }
-                                } else {
-                                    TrendsActionButton(title: "Start Finnhub", systemImage: "play.fill") { startFeed() }
-                                        .disabled(isPreparingFeed)
-                                }
-                                Toggle("Include watchlist", isOn: $scanWatchlist)
-                                    .disabled(session.isScanning || isPreparingFeed)
-                                Spacer()
-                            }
-                            if let setupMessage {
-                                Text(setupMessage).font(.footnote).foregroundStyle(.secondary)
-                            }
-                        }
+                        RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
+                                    onManageWatchlist: onManageWatchlist)
                     },
                     showingSources: $showingSources
                 )
@@ -101,27 +79,8 @@ struct RadarView: View {
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await monitorBoerseWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
-            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") {
-                guard scenePhase == .active, MarketProviderAccess.isEnabled(.finnhub),
-                      !session.isScanning, !isPreparingFeed else { return }
-                startFeed()
-            }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDisplayCurrency() }
             .task { await detectInitialCurrency() }
-            .task(id: "\(scenePhase)|\(watchlistRevision)") { await loadWatchlistPreview() }
-            .onChange(of: scanWatchlist) { _, includeWatchlist in
-                AppDiagnostics.shared.record(
-                    .info, "Radar", "feed-scope-changed",
-                    "scope=\(includeWatchlist ? "selected-and-watchlist" : "selected") appliesOnStart=true"
-                )
-                if includeWatchlist { Task { await loadWatchlistPreview() } }
-            }
-            .onChange(of: session.lastSignal) { _, latest in
-                if latest != nil { Task { await refreshSignals(selectNewest: true) } }
-            }
-            .onChange(of: session.completedBarsStored) { _, _ in
-                chartRefreshID += 1
-            }
             .onChange(of: symbol) { _, newValue in
                 if selectedSignal?.symbol != newValue.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() {
                     selectedSignal = nil
@@ -177,10 +136,6 @@ struct RadarView: View {
     }
 
     private var currentActivity: RadarActivity? {
-        if isPreparingFeed { return .preparingFeed }
-        if session.isScanning && !session.isSubscribed {
-            return .connectingFeed(symbolCount: session.targetSymbols.count)
-        }
         if discoveryRefreshID != nil {
             return .loadingRankings(previousCount: discoveryStatus?.snapshot?.candidates.count)
         }
@@ -188,9 +143,7 @@ struct RadarView: View {
     }
 
     private var emptyRadarMessage: String {
-        session.isScanning
-            ? "Watching live Finnhub trades for sharp drops, rebounds and sustained rises."
-            : "Waiting for price movements from boerse.de. Start Finnhub for signals confirmed by live trades."
+        "Waiting for fresh candle movements from Yahoo and price movements from boerse.de."
     }
 
     private func signalList(compact: Bool) -> some View {
@@ -265,107 +218,4 @@ struct RadarView: View {
         }
     }
 
-    private func startFeed() {
-        guard !isPreparingFeed else { return }
-        guard MarketProviderAccess.isEnabled(.finnhub) else {
-            setupMessage = "Enable Finnhub in Settings before starting the feed."
-            return
-        }
-        isPreparingFeed = true
-        AppDiagnostics.shared.record(.info, "Radar", "feed-preparing")
-        Task {
-            if let issue = await MarketProviderPreflight().check(.finnhub) {
-                providerIssue = issue
-                AppDiagnostics.shared.record(.error, "Finnhub", "feed-not-started", "reason=connection-check-failed")
-                isPreparingFeed = false
-                return
-            }
-            await prepareFeed()
-        }
-    }
-
-    private func loadWatchlistPreview() async {
-        do {
-            watchlistPreview = try await Task.detached(priority: .utility) {
-                let store = try WatchlistStore(url: WatchlistStore.defaultURL())
-                return try await store.load()
-            }.value
-        } catch {
-            AppDiagnostics.shared.record(
-                .warning, "Radar", "watchlist-preview-failed",
-                "error=\(String(describing: type(of: error)))"
-            )
-        }
-    }
-
-    @MainActor
-    func prepareFeed() async {
-        defer { isPreparingFeed = false }
-        setupMessage = nil
-        do {
-            let selected = symbol
-            let includeWatchlist = scanWatchlist
-            let watchlist: [WatchlistEntry]
-            if includeWatchlist {
-                watchlist = try await Task.detached(priority: .userInitiated) {
-                    let store = try WatchlistStore(url: WatchlistStore.defaultURL())
-                    return try await store.load()
-                }.value
-            } else {
-                watchlist = []
-            }
-            guard scenePhase == .active else { return }
-            let selection = try FinnhubWatchlistSelection(
-                selectedSymbol: selected,
-                includeWatchlist: includeWatchlist,
-                watchlist: watchlist
-            )
-            watchlistPreview = watchlist
-            AppDiagnostics.shared.record(
-                .info, "Radar", "feed-scope-resolved",
-                "scope=\(includeWatchlist ? "selected-and-watchlist" : "selected") watchlistEntries=\(watchlist.count) symbols=\(selection.symbols.joined(separator: ","))"
-            )
-            guard let key = try FinnhubCredentialStore.load() else {
-                setupMessage = FinnhubStreamError.missingKey.localizedDescription
-                AppDiagnostics.shared.record(.warning, "Radar", "feed-not-started", "reason=missing-api-key")
-                return
-            }
-            guard scenePhase == .active else { return }
-            let scanSettings = RadarScanPreferencesStore.load()
-            session.start(symbols: selection.symbols) { [session, scanSettings] runID in
-                do {
-                    let pipeline = try FinnhubRadarPipeline(settings: scanSettings)
-                    let bidAskSampler = FinnhubBidAskSampler()
-                    try await FinnhubTradeStream().run(apiKey: key, symbols: selection.symbols) {
-                        await session.markSubscribed(runID: runID)
-                    } onTrade: { trade in
-                        let nowEpochSeconds = Int64(Date().timeIntervalSince1970)
-                        let quote = await bidAskSampler.latest(
-                            symbol: trade.symbol, apiKey: key, nowMillis: nowEpochSeconds * 1_000
-                        )
-                        let update = try await pipeline.accept(
-                            trade, nowEpochSeconds: nowEpochSeconds,
-                            quote: quote, marketCurrency: "USD"
-                        )
-                        if update.storedBar {
-                            await session.recordStoredBar(runID: runID)
-                        }
-                        if update.storedSignal, let signal = update.signal {
-                            await session.recordSignal(signal, runID: runID)
-                        }
-                        await session.record(trade, runID: runID)
-                    }
-                } catch is CancellationError {
-                    // The scene lifecycle or Stop button ended the feed.
-                } catch {
-                    AppDiagnostics.shared.record(.error, "Finnhub", "feed-pipeline-failed",
-                        "errorType=\(String(describing: type(of: error)))")
-                    await session.recordFailure(error.localizedDescription, runID: runID)
-                }
-            }
-        } catch {
-            setupMessage = error.localizedDescription
-            AppDiagnostics.shared.record(.error, "Radar", "feed-setup-failed", "error=\(String(describing: type(of: error)))")
-        }
-    }
 }

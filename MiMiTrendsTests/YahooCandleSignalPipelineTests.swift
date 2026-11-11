@@ -5,6 +5,17 @@ import XCTest
 final class YahooCandleSignalPipelineTests: XCTestCase {
     private let now: Int64 = 1_794_331_200 // 2026-11-10 17:20 UTC
 
+    func testChartCompanyNameReplacesTickerOnlyCandidateAndCache() {
+        let name = YahooRadarSource.companyName(in: [
+            "symbol": "CIFR", "longName": "Cipher Digital Inc.", "shortName": "CIFR"
+        ], symbol: "CIFR")
+        XCTAssertEqual(name, "Cipher Digital Inc.")
+        XCTAssertEqual(RadarCompanyMetadataService.preferredName(
+            symbol: "CIFR", candidate: "CIFR", cached: name), "Cipher Digital Inc.")
+        XCTAssertEqual(RadarCompanyMetadataService.preferredName(
+            symbol: "CIFR", candidate: "CIFR", cached: "CIFR"), "CIFR")
+    }
+
     func testLegacyYahooAPIHostsMigrateWithoutReplacingCustomRanking() {
         let suite = "YahooEndpoints-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!

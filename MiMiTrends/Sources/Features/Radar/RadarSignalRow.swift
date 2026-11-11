@@ -93,7 +93,7 @@ struct RadarSignalRow: View {
                 .buttonStyle(TrendsActionButtonStyle(tint: tableColor(.signalActionAccent), compact: true, tiny: true))
                 .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel("Rumors for \(signal.symbol)")
-                .accessibilityHint("Show recent news and Reuters search")
+                .accessibilityHint("Show news for this stock")
                 .help("Rumors for \(signal.symbol)")
             }
             .padding(.leading, 6)

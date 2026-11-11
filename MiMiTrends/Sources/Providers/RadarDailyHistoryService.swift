@@ -9,7 +9,7 @@ actor RadarDailyHistoryService {
     static let shared = RadarDailyHistoryService()
 
     func load(symbol: String) async throws -> RadarDailyHistory {
-        let store = try MarketBarStore(url: MarketBarStore.finnhubURL())
+        let store = try MarketBarStore(url: MarketBarStore.defaultURL())
         var calendar = Calendar(identifier: .gregorian)
         let german = MarketCandidateFilter.isGermanSymbol(symbol)
         calendar.timeZone = TimeZone(identifier: german ? "Europe/Berlin" : "America/New_York") ?? .gmt
@@ -37,6 +37,6 @@ actor RadarDailyHistoryService {
             cursor = last.minuteEpochSeconds + 1
         }
         return RadarDailyHistory(bars: days.values.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds },
-                                 provider: "Saved Finnhub")
+                                 provider: "Saved Yahoo")
     }
 }

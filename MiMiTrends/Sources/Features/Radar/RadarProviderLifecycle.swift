@@ -157,17 +157,6 @@ extension RadarView {
 
     func retryProvider(_ provider: MarketProvider) {
         Task {
-            if provider == .finnhub {
-                guard MarketProviderAccess.isEnabled(.finnhub) else { providerIssue = nil; return }
-                if let issue = await MarketProviderPreflight().check(.finnhub) {
-                    providerIssue = issue
-                    return
-                }
-                providerIssue = nil
-                isPreparingFeed = true
-                await prepareFeed()
-                return
-            }
             await MarketProviderStartupGate.shared.invalidate()
             providerConfigurationRevision += 1
             providerIssue = nil
