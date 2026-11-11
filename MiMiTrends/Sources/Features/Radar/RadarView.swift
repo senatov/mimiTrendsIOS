@@ -62,13 +62,28 @@ struct RadarView: View {
                             refreshID: chartRefreshID,
                             providersReady: providerStartupReady,
                             yahooEnabled: MarketProviderAccess.isOperational(.yahoo),
-                            fmpEnabled: MarketProviderAccess.isOperational(.fmp),
                             providerRevision: providerConfigurationRevision
                         )
                     },
                     controls: {
-                        RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
-                                    onManageWatchlist: onManageWatchlist)
+                        VStack(alignment: .leading, spacing: 6) {
+                            RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
+                                        onManageWatchlist: onManageWatchlist)
+                            HStack {
+                                if session.isScanning {
+                                    TrendsActionButton(title: "Stop Finnhub", systemImage: "stop.fill") { session.stop() }
+                                } else {
+                                    TrendsActionButton(title: "Start Finnhub", systemImage: "play.fill") { startFeed() }
+                                        .disabled(isPreparingFeed)
+                                }
+                                Toggle("Include watchlist", isOn: $scanWatchlist)
+                                    .disabled(session.isScanning || isPreparingFeed)
+                                Spacer()
+                            }
+                            if let setupMessage {
+                                Text(setupMessage).font(.footnote).foregroundStyle(.secondary)
+                            }
+                        }
                     },
                     showingSources: $showingSources
                 )
@@ -198,6 +213,10 @@ struct RadarView: View {
         .overlay {
             if isHistoryLoading {
                 RadarWarmupOverlay()
+            } else if marketCycle == nil {
+                RadarActivityBanner(activity: .loadingRankings(previousCount: nil))
+                    .padding()
+                    .allowsHitTesting(false)
             }
         }
     }
@@ -211,7 +230,7 @@ struct RadarView: View {
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
             let preferences = RadarScanPreferencesStore.load()
-            let allowSavedFallback = !hasLoadedHistory
+            let allowSavedFallback = true
             let (loaded, savedFallback) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let history = try await store.loadRecent(limit: min(limit * 10, 500))

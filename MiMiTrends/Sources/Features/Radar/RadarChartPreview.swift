@@ -9,7 +9,6 @@ struct RadarChartPreview: View {
     let displayCurrency: String
     let refreshID: Int
     let providersReady: Bool
-    let fmpEnabled: Bool
     let providerRevision: Int
 
     @Environment(\.scenePhase) private var scenePhase
@@ -95,7 +94,7 @@ struct RadarChartPreview: View {
                 do { try await Task.sleep(for: .seconds(30)) } catch { return }
             } while !Task.isCancelled
         }
-        .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(fmpEnabled)|\(providerRevision)") {
+        .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(providerRevision)") {
             if providersReady { await loadDailyBarsIfNeeded() }
         }
         .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
@@ -274,9 +273,8 @@ struct RadarChartPreview: View {
         isLoadingDaily = true
         dailyError = nil
         do {
-            guard fmpEnabled else { throw DailyHistoryError.unavailable }
             let loaded = try await RadarDailyHistoryService.shared.load(
-                symbol: requestedSymbol, yahooEnabled: false, fmpEnabled: fmpEnabled
+                symbol: requestedSymbol
             )
             guard !Task.isCancelled else { return }
             dailyBars = loaded.bars

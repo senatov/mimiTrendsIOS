@@ -6,21 +6,17 @@ actor MarketRadarScanner {
     private let dax = BoerseDAXSource()
     private var previousSessions: RadarTradingSessions?
     private let traderFox = TraderFoxRadarSource()
-    private let fmp = FMPCandidateSource()
     private let baselineSource = RadarBaselineSource()
     private var baselineCandidates: [RadarCompanyCandidate] = []
     private var yahooCandidates: [RadarCompanyCandidate] = []
     private var traderFoxCandidates: [RadarCompanyCandidate] = []
     private var germanCandidates: [RadarCompanyCandidate] = []
-    private var fmpCandidates: [RadarCompanyCandidate] = []
     private var discoveryPreferences = RadarDiscoveryPreferences.load()
     private var previousEnabledProviders: Set<MarketProvider>?
-    private var activeFMPKey: String?
     private var nextDiscoveryAt: Date = .distantPast
     private var yahooCooldownUntil: Date?
     private var yahooTotals = RadarSourceTotals()
     private var traderFoxTotals = RadarSourceTotals()
-    private var fmpTotals = RadarSourceTotals()
     private var daxIssue: String?
     private var lastDAXQueueCount: Int?
 
@@ -38,7 +34,6 @@ actor MarketRadarScanner {
                 traderFoxCandidates = []
                 germanCandidates = []
             }
-            if !enabledProviders.contains(.fmp) { fmpCandidates = [] }
             AppDiagnostics.shared.record(.info, "Discovery", "provider-selection-changed",
                 "enabled=\(enabledProviders.map(\.rawValue).sorted().joined(separator: ",")) previous=\(previous?.map(\.rawValue).sorted().joined(separator: ",") ?? "initial") refresh=immediate")
         }
@@ -46,13 +41,6 @@ actor MarketRadarScanner {
         if discovery != discoveryPreferences {
             discoveryPreferences = discovery
             baselineCandidates = []
-            nextDiscoveryAt = .distantPast
-        }
-        let fmpKey = enabledProviders.contains(.fmp)
-            ? try? ProviderCredentialStore.load(FMPCredential.account) : nil
-        if fmpKey != activeFMPKey {
-            activeFMPKey = fmpKey
-            fmpCandidates = []
             nextDiscoveryAt = .distantPast
         }
         let sessions = RadarTradingSessions(at: Date())
@@ -76,38 +64,35 @@ actor MarketRadarScanner {
                 + (baselineDE ? await restoreCandidates(baselineKey + "|DE", fallback: memoryDE, store: store) : [])
             yahooCandidates = sessions.us.isTrading && enabledProviders.contains(.yahoo)
                 ? await restoreCandidates("yahoo", fallback: yahooCandidates, store: store) : []
-            fmpCandidates = sessions.us.isTrading && fmpKey != nil
-                ? await restoreCandidates("fmp", fallback: fmpCandidates, store: store) : []
-            traderFoxCandidates = sessions.us.isTrading && enabledProviders.contains(.traderFox) && fmpKey == nil
+            traderFoxCandidates = sessions.us.isTrading && enabledProviders.contains(.traderFox)
                 ? await restoreCandidates("traderFoxUS", fallback: traderFoxCandidates, store: store) : []
             germanCandidates = sessions.german.isTrading && enabledProviders.contains(.traderFox)
                 ? await restoreCandidates("traderFoxDE", fallback: germanCandidates, store: store) : []
         }
         let refreshedDAX = try await refreshCandidatePool(
-            sessions: sessions, enabledProviders: enabledProviders, fmpKey: fmpKey, baselineKey: baselineKey
+            sessions: sessions, enabledProviders: enabledProviders, baselineKey: baselineKey
         )
-        return candidateCycle(daxCandidates: refreshedDAX.isEmpty ? cachedDAX : refreshedDAX,
-                              usesFMP: fmpKey != nil)
+        return candidateCycle(daxCandidates: refreshedDAX.isEmpty ? cachedDAX : refreshedDAX)
     }
 
     private func refreshCandidatePool(
-        sessions: RadarTradingSessions, enabledProviders: Set<MarketProvider>, fmpKey: String?, baselineKey: String
+        sessions: RadarTradingSessions, enabledProviders: Set<MarketProvider>, baselineKey: String
     ) async throws -> [RadarCompanyCandidate] {
         let daxCandidates = enabledProviders.contains(.boerseDAX)
             ? try await dax.candidates(for: sessions, store: candidateStore) : []
         daxIssue = enabledProviders.contains(.boerseDAX) && sessions.german.isTrading
             ? MarketProviderAccess.lastError(.boerseDAX) : nil
         if Date() >= nextDiscoveryAt || sessions != previousSessions {
-            try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders,
+            try await refreshSources(enabledProviders: enabledProviders,
                                      sessions: sessions, baselineKey: baselineKey)
             previousSessions = sessions
         }
         return daxCandidates
     }
 
-    private func candidateCycle(daxCandidates: [RadarCompanyCandidate], usesFMP: Bool) -> MarketRadarCycle {
+    private func candidateCycle(daxCandidates: [RadarCompanyCandidate]) -> MarketRadarCycle {
         let sessions = RadarTradingSessions(at: Date())
-        let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
+        let secondaryCandidates = traderFoxCandidates
         let activePool = RadarScanPool.symbols(
             baseline: baselineCandidates.map(\.symbol), yahoo: yahooCandidates.map(\.symbol),
             secondary: secondaryCandidates.map(\.symbol), german: (daxCandidates + germanCandidates).map(\.symbol),
@@ -125,7 +110,7 @@ actor MarketRadarScanner {
             uniquingKeysWith: { first, _ in first }
         )
         return MarketRadarCycle(
-            yahoo: yahooTotals, traderFox: traderFoxTotals, fmp: fmpTotals, usesFMP: usesFMP,
+            yahoo: yahooTotals, traderFox: traderFoxTotals,
             yahooCooldownUntil: yahooCooldownUntil, initialScanProcessed: 0, initialScanTotal: 0,
             scannedSymbols: 0, companyNames: names,
             progress: MarketScanProgress(processed: 0, total: 0, successful: 0, skipped: 0,
@@ -136,7 +121,7 @@ actor MarketRadarScanner {
         )
     }
 
-    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>,
+    private func refreshSources(enabledProviders: Set<MarketProvider>,
                                 sessions: RadarTradingSessions, baselineKey: String) async throws {
         nextDiscoveryAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
         var hadFailure = false
@@ -166,7 +151,6 @@ actor MarketRadarScanner {
                                          "error=\(String(describing: error)) retrySeconds=60")
             }
         }
-        var yahooRefreshed = false
         var traderFoxRefreshErrors: [String] = []
         if sessions.us.isTrading && enabledProviders.contains(.yahoo) && Date() >= (yahooCooldownUntil ?? .distantPast) {
           do {
@@ -178,7 +162,6 @@ actor MarketRadarScanner {
                 yahooTotals.received += symbols.count
                 yahooTotals.valid += symbols.count
                 yahooCooldownUntil = nil
-                yahooRefreshed = true
                 yahooTotals.lastErrorMessage = nil
                 AppDiagnostics.shared.record(.info, "Yahoo", "candidate-page-loaded",
                                              "candidates=\(symbols.count) refreshMinutes=25")
@@ -203,44 +186,7 @@ actor MarketRadarScanner {
             )
           }
         } else if !sessions.us.isTrading || !enabledProviders.contains(.yahoo) { yahooCandidates = [] }
-        if let fmpKey, sessions.us.isTrading {
-            do {
-                let symbols = try await fmp.activeCandidates(apiKey: fmpKey, limit: 200)
-                fmpTotals.operations += 3
-                fmpTotals.received += symbols.count
-                fmpTotals.valid += symbols.count
-                fmpTotals.lastErrorMessage = nil
-                fmpCandidates = symbols
-                await saveSnapshot(symbols, key: "fmp")
-                let yahooSet = Set(yahooCandidates.map(\.symbol))
-                let overlap = symbols.filter { yahooSet.contains($0.symbol) }.count
-                AppDiagnostics.shared.record(
-                    .info, "FMP", "candidate-comparison",
-                    "fmp=\(symbols.count) yahoo=\(yahooCandidates.count) yahooFresh=\(yahooRefreshed) overlap=\(overlap) sourceTimestamp=unavailable"
-                )
-            } catch is CancellationError {
-                nextDiscoveryAt = .distantPast
-                throw CancellationError()
-            } catch let failure as FMPCandidateFailure {
-                hadFailure = true
-                fmpTotals.operations += failure.requests
-                fmpTotals.errors += 1
-                fmpTotals.lastErrorMessage = failure.localizedDescription
-                AppDiagnostics.shared.record(
-                    .warning, "FMP", "candidate-refresh-failed",
-                    "requests=\(failure.requests) endpoint=\(failure.endpoint) error=\(failure.reason)"
-                )
-            } catch {
-                if error is CancellationError { nextDiscoveryAt = .distantPast; throw error }
-                hadFailure = true
-                fmpTotals.errors += 1
-                fmpTotals.lastErrorMessage = MarketRadarErrorDescription.message(error, provider: "FMP")
-                AppDiagnostics.shared.record(
-                    .warning, "FMP", "candidate-refresh-failed",
-                    "error=\(String(describing: type(of: error)))"
-                )
-            }
-        } else if sessions.us.isTrading && enabledProviders.contains(.traderFox) {
+        if sessions.us.isTrading && enabledProviders.contains(.traderFox) {
             do {
                 let symbols = try await traderFox.activeCandidates(limit: 200)
                 traderFoxTotals.operations += 1

@@ -29,14 +29,13 @@ struct ProviderSettingsPanel: View {
                         providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
                         providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                       endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
-                        providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                        providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
                         providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
                     }
                     VStack(spacing: 6) {
                         providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
                         providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                       endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
-                        fmpGroup
                     }
                 }
             } else {
@@ -47,9 +46,8 @@ struct ProviderSettingsPanel: View {
                                   endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                     providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
-                    providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                    providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
                     providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
-                    fmpGroup
                 }
             }
             if let savingMessage {
@@ -149,52 +147,6 @@ struct ProviderSettingsPanel: View {
                     compact: true
                 )
             }
-        }
-    }
-
-    private var fmpGroup: some View {
-        SettingsGroup(title: "FMP", compact: true) {
-            HStack(spacing: 6) {
-                Circle().fill(providerIsHealthy(.fmp) ? Color.green : Color.red).frame(width: 8, height: 8)
-                Text(providerStatus(.fmp).uppercased())
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(providerIsHealthy(.fmp) ? Color.primary.opacity(0.78) : Color.red)
-                Spacer()
-                Toggle("Enabled", isOn: enabledBinding(.fmp))
-                    .labelsHidden()
-                    .accessibilityLabel("Enable Financial Modeling Prep")
-            }
-            Text("Optional candidate discovery, company profiles and fallback daily history. Uses FMP's stable API address; charts and the Finnhub feed work without this key.")
-                .font(.callout)
-                .foregroundStyle(.primary.opacity(0.72))
-            if providerStatus(.fmp) == "Needs attention",
-               let reason = MarketProviderAccess.lastError(.fmp) {
-                Label(reason, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            CredentialEditor(
-                title: "Financial Modeling Prep API key",
-                detail: "Optional. FMP plan limits and endpoint access apply.",
-                help: CredentialHelp(
-                    title: "Get an FMP API key",
-                    message: "Create an FMP account, verify your email, then copy the API key from your FMP dashboard. This key is optional and does not enable the Finnhub live feed. Free-plan access and limits depend on FMP's current plan terms.",
-                    linkTitle: "Open FMP dashboard",
-                    url: URL(string: "https://site.financialmodelingprep.com/developer/docs/dashboard")
-                ),
-                load: { try ProviderCredentialStore.load(FMPCredential.account) },
-                save: { try ProviderCredentialStore.save($0, for: FMPCredential.account) },
-                remove: {
-                    try ProviderCredentialStore.delete(FMPCredential.account)
-                    credentialChanged(.fmp)
-                },
-                compact: true,
-                onSave: { credentialChanged(.fmp) }
-            )
-            Text("A missing or rejected key stops requests to this provider. Check your account and plan before enabling it.")
-                .font(.caption)
-                .foregroundStyle(.primary.opacity(0.72))
         }
     }
 

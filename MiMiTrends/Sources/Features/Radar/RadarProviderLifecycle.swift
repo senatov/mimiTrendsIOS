@@ -75,10 +75,9 @@ extension RadarView {
                 let cycle = try await marketScanner.scan(enabledProviders: enabledProviders)
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
-                await refreshSignals()
                 AppDiagnostics.shared.record(
                     .info, "Radar", "candidate-pool-ready",
-                    "candidates=\(cycle.candidates.count) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
+                    "candidates=\(cycle.candidates.count) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return
@@ -103,9 +102,7 @@ extension RadarView {
 
     func ensureAutomaticProvidersReady() async -> Bool {
         let issues = await MarketProviderStartupGate.shared.check(revision: providerConfigurationRevision)
-        // FMP is optional. Keep Radar usable when its plan limit is reached and expose
-        // the failed health state in Settings instead of covering the chart on startup.
-        providerIssue = issues.first { $0.provider != .fmp }
+        providerIssue = issues.first
         providerStartupReady = true
         if !issues.isEmpty {
             AppDiagnostics.shared.record(.warning, "Providers", "preflight-partial",

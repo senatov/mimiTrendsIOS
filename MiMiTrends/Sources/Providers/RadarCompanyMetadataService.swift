@@ -24,10 +24,7 @@ actor RadarCompanyMetadataService {
                     ? incompleteCacheLifetime : cacheLifetime
                 return now - cached.updatedAtMillis > lifetime
             }
-            let fmpKey = MarketProviderAccess.isOperational(.fmp)
-                ? try? ProviderCredentialStore.load(FMPCredential.account) : nil
             let requestSession = session
-            let fmp = FMPCompanyProfileSource(session: requestSession)
             for offset in stride(from: 0, to: stale.count, by: 4) {
                 let batch = Array(stale[offset..<min(offset + 4, stale.count)])
                 await withTaskGroup(of: (String, RadarCompanyMetadata?).self) { group in
@@ -36,13 +33,9 @@ actor RadarCompanyMetadataService {
                         let cached = metadata[symbol]
                         group.addTask {
                             guard !Task.isCancelled else { return (symbol, nil) }
-                            let providerProfile: FMPCompanyProfile?
-                            if let fmpKey { providerProfile = await fmp.profile(symbol: symbol, apiKey: fmpKey) }
-                            else { providerProfile = nil }
-                            let name = providerProfile?.name ?? fallbackName
-                            let country = providerProfile?.countryCode ?? cached?.countryCode
-                            var image = await Self.loadLogo(providerProfile?.logoURL, session: requestSession)
-                            if image == nil { image = cached?.logoData }
+                            let name = fallbackName
+                            let country = cached?.countryCode
+                            var image = cached?.logoData
                             if image == nil { image = await Self.loadCompanyMark(name: name, session: requestSession) }
                             return (symbol, RadarCompanyMetadata(
                                 symbol: symbol, name: name, countryCode: country,

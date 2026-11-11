@@ -56,45 +56,6 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(YahooRadarSource.activeSymbols(in: quotes, limit: 3), ["HIGH", "LOW"])
     }
 
-    func testFMPCandidatesDiscardInvalidRowsAndInterleaveMoverLists() throws {
-        let data = Data("""
-        [
-          {"symbol":"AAPL","name":"Apple Inc.","price":200,"exchange":"NASDAQ"},
-          {"symbol":"PENNY","name":"Penny Corp.","price":0.5,"exchange":"OTC"},
-          {"symbol":"BAD","name":"", "price":10,"exchange":"NYSE"},
-          {"symbol":"MSFT","name":"Microsoft Corp.","price":400,"exchange":"NASDAQ"}
-        ]
-        """.utf8)
-        let active = try FMPCandidateSource.decodeCandidates(data)
-        XCTAssertEqual(active.map(\.symbol), ["AAPL", "MSFT"])
-        let movers = FMPCandidateSource.interleave(
-            [active, [active[0], RadarCompanyCandidate(symbol: "NVDA", name: "Nvidia")]], limit: 3
-        )
-        XCTAssertEqual(movers.map(\.symbol), ["AAPL", "MSFT", "NVDA"])
-        XCTAssertThrowsError(try FMPCandidateSource.decodeCandidates(Data("{}".utf8)))
-    }
-
-    func testCandidateFilterKeepsUSAndGermanCommonStocks() throws {
-        let data = Data("""
-        [
-          {"symbol":"AAPL","name":"Apple Inc.","price":200,"exchange":"NASDAQ"},
-          {"symbol":"SAP.DE","name":"SAP SE","price":250,"exchange":"XETRA","currency":"EUR"},
-          {"symbol":"SHOP.TO","name":"Shopify Inc.","price":120,"exchange":"TSX"},
-          {"symbol":"PENNY","name":"Cheap Inc.","price":2,"exchange":"NASDAQ"},
-          {"symbol":"ADR","name":"Foreign Depositary Receipt","price":80,"exchange":"NASDAQ",
-           "country":"CA","isAdr":true},
-          {"symbol":"ETF","name":"Broad Market ETF","price":120,"exchange":"NYSE"},
-          {"symbol":"MICRO","name":"Micro Inc.","price":10,"exchange":"NYSE","marketCap":100000000},
-          {"symbol":"THIN","name":"Thin Inc.","price":10,"exchange":"NYSE","volume":1000},
-          {"symbol":"FOREIGN","name":"Foreign Inc.","price":100,"exchange":"NASDAQ","country":"CA"}
-        ]
-        """.utf8)
-        XCTAssertEqual(try FMPCandidateSource.decodeCandidates(data).map(\.symbol),
-                       ["AAPL", "SAP.DE", "ADR", "FOREIGN"])
-        XCTAssertTrue(MarketCandidateFilter.supportsYahooBars(symbol: "SAP.DE"))
-        XCTAssertFalse(MarketCandidateFilter.supportsYahooBars(symbol: "SHOP.TO"))
-    }
-
     func testYahooCandidatesRejectOtherMarketsAndIlliquidShares() {
         let quotes: [[String: Any]] = [
             ["symbol": "SAP.DE", "shortName": "SAP SE", "quoteType": "EQUITY",
@@ -147,24 +108,6 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertFalse(GermanMarketSession.isOpen(at: date(5, 8, 59)))
         XCTAssertFalse(GermanMarketSession.isOpen(at: date(5, 17, 30)))
         XCTAssertFalse(GermanMarketSession.isOpen(at: date(7, 12, 0)))
-    }
-
-    func testFMPProfileAcceptsOnlyMatchingCompanyAndProviderImage() {
-        let data = Data("""
-        [{"symbol":"AAPL","companyName":"Apple Inc.","country":"US",
-          "image":"https://images.financialmodelingprep.com/symbol/AAPL.png","defaultImage":false}]
-        """.utf8)
-        let profile = FMPCompanyProfileSource.decode(data, symbol: "AAPL")
-        XCTAssertEqual(profile?.name, "Apple Inc.")
-        XCTAssertEqual(profile?.countryCode, "US")
-        XCTAssertEqual(profile?.logoURL?.host, "images.financialmodelingprep.com")
-        XCTAssertNil(FMPCompanyProfileSource.decode(data, symbol: "MSFT"))
-
-        let placeholder = Data("""
-        [{"symbol":"AAPL","image":"https://images.financialmodelingprep.com/symbol/AAPL.png",
-          "defaultImage":true}]
-        """.utf8)
-        XCTAssertNil(FMPCompanyProfileSource.decode(placeholder, symbol: "AAPL")?.logoURL)
     }
 
     func testYahooBarDecoderSkipsIncompleteCandles() throws {

@@ -11,8 +11,6 @@ struct RadarSourceTotals: Sendable {
 struct MarketRadarCycle: Sendable {
     let yahoo: RadarSourceTotals
     let traderFox: RadarSourceTotals
-    let fmp: RadarSourceTotals
-    let usesFMP: Bool
     let yahooCooldownUntil: Date?
     let initialScanProcessed: Int
     let initialScanTotal: Int
@@ -130,18 +128,9 @@ struct YahooSymbolDiagnosisService: Sendable {
         let yahoo = await YahooRadarSource(session: session).diagnose(symbol: symbol)
         var evidence = ["Yahoo: \(yahoo.detail)"]
         var independentMatches: [String] = []
-        let fmpEnabled = MarketProviderAccess.isEnabled(.fmp)
         let finnhubEnabled = MarketProviderAccess.isEnabled(.finnhub)
-        let fmpKey = fmpEnabled ? try? ProviderCredentialStore.load(FMPCredential.account) : nil
         let finnhubKey = finnhubEnabled ? try? FinnhubCredentialStore.load() : nil
-        async let fmpEvidence = lookupFMP(symbol: symbol, apiKey: fmpKey)
         async let finnhubEvidence = lookupFinnhub(symbol: symbol, apiKey: finnhubKey)
-        if let fmp = await fmpEvidence {
-            evidence.append("FMP: \(fmp.detail)")
-            if fmp.matched { independentMatches.append("FMP") }
-        } else {
-            evidence.append(fmpEnabled ? "FMP: not queried (API key is not configured)." : "FMP: not checked (provider disabled).")
-        }
         if let finnhub = await finnhubEvidence {
             evidence.append("Finnhub: \(finnhub.detail)")
             if finnhub.matched { independentMatches.append("Finnhub") }
@@ -163,44 +152,6 @@ struct YahooSymbolDiagnosisService: Sendable {
         }
         return YahooSymbolResolution(symbol: symbol, summary: summary, providerEvidence: evidence,
                                      checkedAtMillis: checkedAt, retryAfterMillis: checkedAt + retryDelay)
-    }
-
-    private func fmpMatch(symbol: String, apiKey: String) async -> SecondarySymbolEvidence {
-        guard var components = URLComponents(string: "https://financialmodelingprep.com/stable/search-symbol") else {
-            return SecondarySymbolEvidence(matched: false, detail: "lookup URL could not be created.")
-        }
-        components.queryItems = [URLQueryItem(name: "query", value: symbol),
-                                 URLQueryItem(name: "apikey", value: apiKey)]
-        guard let url = components.url else { return SecondarySymbolEvidence(matched: false, detail: "lookup URL could not be created.") }
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 10
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let http = response as? HTTPURLResponse else {
-                return SecondarySymbolEvidence(matched: false, detail: "invalid HTTP response.")
-            }
-            guard http.statusCode == 200 else {
-                return SecondarySymbolEvidence(matched: false, detail: "lookup unavailable (HTTP \(http.statusCode)).")
-            }
-            guard data.count <= 500_000,
-                  let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
-                return SecondarySymbolEvidence(matched: false, detail: "lookup returned unreadable JSON.")
-            }
-            guard let row = rows.first(where: { ($0["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame }) else {
-                return SecondarySymbolEvidence(matched: false, detail: "no exact-symbol match.")
-            }
-            let name = row["name"] as? String ?? "name unavailable"
-            let currency = row["currency"] as? String ?? "currency unavailable"
-            let exchange = row["exchangeFullName"] as? String ?? row["exchange"] as? String ?? "exchange unavailable"
-            return SecondarySymbolEvidence(matched: true, detail: "exact match: \(name), \(exchange), \(currency).")
-        } catch { return SecondarySymbolEvidence(matched: false, detail: "lookup failed: \(error.localizedDescription)") }
-    }
-
-    private func lookupFMP(symbol: String, apiKey: String?) async -> SecondarySymbolEvidence? {
-        guard let apiKey else { return nil }
-        return await fmpMatch(symbol: symbol, apiKey: apiKey)
     }
 
     private func finnhubMatch(symbol: String, apiKey: String) async -> SecondarySymbolEvidence {

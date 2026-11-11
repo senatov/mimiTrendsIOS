@@ -86,7 +86,7 @@ struct RadarSourcePanel: View {
                 requests: discoveryRequests, errors: discoveryErrors
             ),
             RadarTelemetrySource(
-                name: marketCycle?.usesFMP == true ? "FMP" : "TraderFox",
+                name: "TraderFox",
                 status: marketStatus(candidateTotals),
                 statusColor: marketColor(candidateTotals), dotColor: marketColor(candidateTotals),
                 received: candidateTotals?.received, valid: candidateTotals?.valid,
@@ -107,7 +107,7 @@ struct RadarSourcePanel: View {
 
     private var candidateTotals: RadarSourceTotals? {
         guard let marketCycle else { return nil }
-        return marketCycle.usesFMP ? marketCycle.fmp : marketCycle.traderFox
+        return marketCycle.traderFox
     }
 
     private var yahooStatus: String {

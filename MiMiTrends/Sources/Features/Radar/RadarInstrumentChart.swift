@@ -11,7 +11,6 @@ struct RadarInstrumentChart: View {
     let refreshID: Int
     let providersReady: Bool
     let yahooEnabled: Bool
-    let fmpEnabled: Bool
     let providerRevision: Int
     @State private var retryID = 0
     @State private var resolvedSymbol: String?
@@ -77,6 +76,6 @@ struct RadarInstrumentChart: View {
         RadarChartPreview(symbol: symbol, companyName: companyName, companyMetadata: companyMetadata,
             signal: signal, currencyRates: currencyRates, displayCurrency: displayCurrency,
             refreshID: refreshID, providersReady: providersReady,
-            fmpEnabled: fmpEnabled, providerRevision: providerRevision)
+            providerRevision: providerRevision)
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
-    case finnhub, yahoo, wallstreetOnline, langSchwarz, traderFox, fmp, boerseDAX
+    case finnhub, yahoo, wallstreetOnline, langSchwarz, traderFox, boerseDAX
 
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
@@ -15,7 +15,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: "wallstreetONLINE"
         case .langSchwarz: "Lang & Schwarz"
         case .traderFox: "TraderFox"
-        case .fmp: "Financial Modeling Prep"
         case .boerseDAX: "boerse.de DAX"
         }
     }
@@ -27,7 +26,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: URL(string: "https://www.wallstreet-online.de/")
         case .langSchwarz: URL(string: "https://www.ls-tc.de/")
         case .traderFox: URL(string: "https://www.traderfox.com/" )
-        case .fmp: URL(string: "https://site.financialmodelingprep.com/developer/docs/dashboard")
         case .boerseDAX: URL(string: "https://www.boerse.de/realtime-kurse/Dax-Aktien/DE0008469008")
         }
     }
@@ -39,7 +37,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline]
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
-        case .fmp: []
         case .boerseDAX: []
         }
     }
@@ -49,8 +46,6 @@ enum MarketProviderAccess {
     static func isEnabled(_ provider: MarketProvider, defaults: UserDefaults = .standard) -> Bool {
         guard defaults.object(forKey: provider.enabledKey) != nil else {
             switch provider {
-            case .fmp:
-                return (try? ProviderCredentialStore.load(FMPCredential.account)) != nil
             case .finnhub:
                 return (try? FinnhubCredentialStore.load()) != nil
             default:
@@ -128,11 +123,6 @@ struct MarketProviderPreflight: Sendable {
                 }
             case .traderFox:
                 try await requireAll(provider.endpoints)
-            case .fmp:
-                guard let key = try ProviderCredentialStore.load(FMPCredential.account) else {
-                    throw MarketProviderPreflightError.missingCredential("FMP API key")
-                }
-                try await FMPCandidateSource().check(apiKey: key)
             case .boerseDAX:
                 return nil // Checked by the scanner during German trading hours.
             }
@@ -199,7 +189,7 @@ actor MarketProviderStartupGate {
             return await check(revision: revision)
         }
         let task = Task { [preflight = MarketProviderPreflight()] in
-            let providers: [MarketProvider] = [.yahoo, .wallstreetOnline, .langSchwarz, .traderFox, .fmp]
+            let providers: [MarketProvider] = [.yahoo, .wallstreetOnline, .langSchwarz, .traderFox]
             return await withTaskGroup(of: MarketProviderPreflightIssue?.self) { group in
                 for provider in providers {
                     group.addTask { await preflight.check(provider) }
