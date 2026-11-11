@@ -14,7 +14,7 @@ enum RadarCandleScan {
     static func load(symbol: String, yahoo: YahooRadarSource, barStore: MarketBarStore,
                      nowSeconds: Int64, settings: RadarScanPreferences) async -> SymbolOutcome {
         do {
-            let bars = try await yahoo.minuteBars(symbol: symbol)
+            let bars = try await yahoo.minuteBars(symbol: symbol, includeExtendedHours: true)
             try Task.checkCancellation()
             let evaluationTime = RadarMarketDataPolicy.evaluationTime(symbol: symbol, now: nowSeconds)
             guard let last = bars.last, last.minuteEpochSeconds <= nowSeconds + 60,

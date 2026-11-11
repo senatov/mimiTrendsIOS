@@ -98,6 +98,58 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertTrue(mixed.contains("US0"))
     }
 
+    func testDAXRanksBothDirectionsAndSkipsStaleRows() {
+        let html = """
+        <h2>Kursliste Realtime Dax-Aktien</h2>
+        <table>
+        <tr><td><a href="/aktien/SAP-Aktie/DE0007164600">SAP</a></td>
+          <td>177,68</td><td>5,32</td><td>3,09</td><td>09:08:00</td></tr>
+        <tr><td><a href="/aktien/Rheinmetall-Aktie/DE0007030009">Rheinmetall</a></td>
+          <td>1.145,00</td><td>-48,00</td><td>−4,00</td><td>09:09:00</td></tr>
+        <tr><td><a href="/aktien/Siemens-Aktie/DE0007236101">Siemens</a></td>
+          <td>280,20</td><td>7,10</td><td>2,60</td><td>08:30:00</td></tr>
+        </table>
+        """
+        let now = ISO8601DateFormatter().date(from: "2026-11-11T08:10:00Z")!
+        let rows = BoerseDAXSource.rows(in: html, now: now)
+        XCTAssertEqual(rows.map(\.isin), ["DE0007030009", "DE0007164600"])
+        XCTAssertEqual(rows.map(\.change), [-4, 3.09])
+    }
+
+    func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {
+        let formatter = ISO8601DateFormatter()
+        func sessions(_ utc: String) -> RadarTradingSessions {
+            RadarTradingSessions(at: formatter.date(from: utc)!)
+        }
+
+        let beforeGermanOpen = sessions("2026-11-11T07:45:00Z")
+        XCTAssertEqual(beforeGermanOpen.german, .preMarket)
+        XCTAssertTrue(beforeGermanOpen.germanOpeningSoon)
+        XCTAssertEqual(beforeGermanOpen.us, .closed)
+
+        let beforeUSOpen = sessions("2026-10-28T13:15:00Z")
+        XCTAssertEqual(beforeUSOpen.german, .regular)
+        XCTAssertEqual(beforeUSOpen.us, .preMarket)
+        XCTAssertTrue(beforeUSOpen.usOpeningSoon)
+        XCTAssertEqual(sessions("2026-10-28T13:30:00Z").us, .regular)
+
+        let earlyUSClose = sessions("2026-11-27T18:00:00Z")
+        XCTAssertEqual(earlyUSClose.german, .afterHours)
+        XCTAssertEqual(earlyUSClose.us, .afterHours)
+        XCTAssertEqual(sessions("2026-11-27T22:00:00Z").us, .closed)
+        XCTAssertEqual(sessions("2026-11-26T16:00:00Z").us, .closed)
+        XCTAssertEqual(sessions("2026-11-26T16:00:00Z").german, .regular)
+        XCTAssertEqual(sessions("2026-04-06T14:00:00Z").german, .closed)
+        XCTAssertEqual(sessions("2026-12-30T13:00:00Z").german, .closed)
+        XCTAssertEqual(sessions("2026-11-28T15:00:00Z").us, .closed)
+    }
+
+    func testClosedUSMarketLeavesGermanCandidatesInScanPool() {
+        let pool = RadarScanPool.symbols(baseline: ["NVDA", "SAP.DE"], yahoo: ["AAPL"],
+            secondary: ["MSFT"], german: ["SAP.DE", "RHM.DE"], germanOpen: true, usOpen: false)
+        XCTAssertEqual(pool, ["SAP.DE", "RHM.DE"])
+    }
+
     private func history(symbol: String, end: Int64, dropping: Bool) -> [MinuteBar] {
         (0..<31).map { index in
             let close = dropping && index >= 29 ? 100 - Double(index - 28) : 100

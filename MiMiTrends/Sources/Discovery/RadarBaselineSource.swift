@@ -5,9 +5,9 @@ actor RadarBaselineSource {
     private let source = WallstreetDiscoverySource.shared
     private var resolved: [String: RadarCompanyCandidate] = [:]
 
-    func loadCandidates() async throws -> [RadarCompanyCandidate] {
-        var candidates = (try? await source.loadCandidates()) ?? []
-        if GermanMarketSession.isOpen(at: Date()) {
+    func loadCandidates(sessions: RadarTradingSessions) async throws -> [RadarCompanyCandidate] {
+        var candidates = sessions.us.isTrading ? (try? await source.loadCandidates()) ?? [] : []
+        if sessions.german == .regular {
             do {
                 let rows = try await WallstreetRankingPageSource().loadGerman()
                 let now = Int64(Date().timeIntervalSince1970 * 1_000)
@@ -57,7 +57,7 @@ actor RadarBaselineSource {
         return result.filter { seen.insert($0.symbol).inserted }
     }
 
-    private static func searchISIN(_ isin: String) async throws -> String? {
+    static func searchISIN(_ isin: String, germanOnly: Bool = false) async throws -> String? {
         var components = URLComponents(url: YahooAPIEndpoint.primary.appendingPathComponent("v1/finance/search"),
                                        resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "q", value: isin),
@@ -71,7 +71,10 @@ actor RadarBaselineSource {
               let quotes = root["quotes"] as? [[String: Any]] else { return nil }
         return quotes.first(where: {
             $0["quoteType"] as? String == "EQUITY" &&
-            ($0["symbol"] as? String).map(MarketCandidateFilter.supportsYahooBars) == true
+            ($0["symbol"] as? String).map { symbol in
+                MarketCandidateFilter.supportsYahooBars(symbol: symbol) &&
+                    (!germanOnly || MarketCandidateFilter.isGermanSymbol(symbol))
+            } == true
         })?["symbol"] as? String
     }
 

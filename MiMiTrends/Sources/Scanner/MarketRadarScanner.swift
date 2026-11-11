@@ -2,6 +2,8 @@ import Foundation
 
 actor MarketRadarScanner {
     private let yahoo = YahooRadarSource()
+    private let dax = BoerseDAXSource()
+    private var previousSessions: RadarTradingSessions?
     private let traderFox = TraderFoxRadarSource()
     private let fmp = FMPCandidateSource()
     private let baselineSource = RadarBaselineSource()
@@ -77,59 +79,44 @@ actor MarketRadarScanner {
             initialErrors = 0
         }
         let usesFMP = fmpKey != nil
-        if Date() >= nextDiscoveryAt {
-            try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders)
+        let sessions = RadarTradingSessions(at: Date())
+        let daxCandidates = enabledProviders.contains(.yahoo) ? try await dax.candidates(for: sessions) : []
+        if Date() >= nextDiscoveryAt || sessions != previousSessions {
+            try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders, sessions: sessions)
+            previousSessions = sessions
         }
+        try Task.checkCancellation()
+        let currentSessions = RadarTradingSessions(at: Date())
         unreadableSymbols = await YahooSymbolResolutionStore.shared.skippedSymbols()
         let secondaryCandidates = usesFMP ? fmpCandidates : traderFoxCandidates
         let activePool = RadarScanPool.symbols(
             baseline: baselineCandidates.map(\.symbol), yahoo: yahooCandidates.map(\.symbol),
-            secondary: secondaryCandidates.map(\.symbol), german: germanCandidates.map(\.symbol),
-            germanOpen: GermanMarketSession.isOpen(at: Date()),
+            secondary: secondaryCandidates.map(\.symbol), german: (daxCandidates + germanCandidates).map(\.symbol),
+            germanOpen: currentSessions.german.isTrading, usOpen: currentSessions.us.isTrading,
             excluded: unsupportedSymbols.union(unreadableSymbols)
         )
         initialScanSymbols.formIntersection(activePool)
         initialScanTotal = activePool.count
         let names = Dictionary(
-            (baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
+            (daxCandidates + baselineCandidates + yahooCandidates + secondaryCandidates + germanCandidates).map { ($0.symbol, $0.name) },
             uniquingKeysWith: { first, _ in first }
         )
-        if let yahooCooldownUntil, Date() < yahooCooldownUntil {
-            return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
-                                    fmp: fmpTotals, usesFMP: usesFMP,
-                                    yahooCooldownUntil: yahooCooldownUntil,
-                                    initialScanProcessed: initialScanSymbols.count,
-                                    initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, companyNames: names,
-                                    progress: progress(),
-                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
+        func cycle(scanned: Int) -> MarketRadarCycle {
+            MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals, fmp: fmpTotals, usesFMP: usesFMP,
+                yahooCooldownUntil: yahooCooldownUntil, initialScanProcessed: initialScanSymbols.count,
+                initialScanTotal: initialScanTotal, scannedSymbols: scanned, companyNames: names,
+                progress: progress(),
+                candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
         }
+        if let yahooCooldownUntil, Date() < yahooCooldownUntil { return cycle(scanned: 0) }
         yahooCooldownUntil = nil
-        guard enabledProviders.contains(.yahoo) else {
-            return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
-                                    fmp: fmpTotals, usesFMP: usesFMP,
-                                    yahooCooldownUntil: nil,
-                                    initialScanProcessed: initialScanSymbols.count,
-                                    initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, companyNames: names,
-                                    progress: progress(),
-                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
-        }
+        guard enabledProviders.contains(.yahoo) else { return cycle(scanned: 0) }
         let pending = activePool.filter { !initialScanSymbols.contains($0) }
         let symbols = Self.scanBatch(activePool, processed: initialScanSymbols, offset: scanOffset, limit: 16)
         if pending.isEmpty && !activePool.isEmpty {
             scanOffset = (scanOffset + symbols.count) % activePool.count
         }
-        guard !symbols.isEmpty else {
-            return MarketRadarCycle(yahoo: yahooTotals, traderFox: traderFoxTotals,
-                                    fmp: fmpTotals, usesFMP: usesFMP,
-                                    yahooCooldownUntil: nil,
-                                    initialScanProcessed: initialScanSymbols.count,
-                                    initialScanTotal: initialScanTotal,
-                                    scannedSymbols: 0, companyNames: names,
-                                    progress: progress(),
-                                    candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) })
-        }
+        guard !symbols.isEmpty else { return cycle(scanned: 0) }
         let barStore = try MarketBarStore(url: MarketBarStore.defaultURL())
         let nowSeconds = Int64(Date().timeIntervalSince1970)
         var firstYahooFailure: String?
@@ -211,15 +198,7 @@ actor MarketRadarScanner {
             AppDiagnostics.shared.record(.warning, "Yahoo", "unreadable-symbols-paused",
                 "count=\(unreadableSymbolsThisCycle.count) first=\(unreadableSymbolsThisCycle[0]) resumeAfterCandidateRefresh=true")
         }
-        return MarketRadarCycle(
-            yahoo: yahooTotals, traderFox: traderFoxTotals, fmp: fmpTotals, usesFMP: usesFMP,
-            yahooCooldownUntil: yahooCooldownUntil,
-            initialScanProcessed: min(initialScanSymbols.count, initialScanTotal),
-            initialScanTotal: initialScanTotal,
-            scannedSymbols: symbols.count, companyNames: names,
-            progress: progress(),
-            candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) }
-        )
+        return cycle(scanned: symbols.count)
     }
 
     private func progress(completedInBatch: Int = 0, activeSymbols: [String] = []) -> MarketScanProgress {
@@ -232,13 +211,21 @@ actor MarketRadarScanner {
         )
     }
 
-    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>) async throws {
-        nextDiscoveryAt = Date().addingTimeInterval(30 * 60)
+    private func refreshSources(fmpKey: String?, enabledProviders: Set<MarketProvider>,
+                                sessions: RadarTradingSessions) async throws {
+        nextDiscoveryAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
         var hadFailure = false
-        if enabledProviders.contains(.wallstreetOnline) && enabledProviders.contains(.yahoo) {
+        if (sessions.us.isTrading || sessions.german == .regular) &&
+            enabledProviders.contains(.wallstreetOnline) && enabledProviders.contains(.yahoo) {
             do {
-            let loaded = try await baselineSource.loadCandidates()
-            if !loaded.isEmpty { baselineCandidates = loaded }
+            let loaded = try await baselineSource.loadCandidates(sessions: sessions)
+            if !loaded.isEmpty {
+                let inactive = baselineCandidates.filter { candidate in
+                    MarketCandidateFilter.isGermanSymbol(candidate.symbol)
+                        ? sessions.german != .regular : !sessions.us.isTrading
+                }
+                baselineCandidates = loaded + inactive
+            }
             AppDiagnostics.shared.record(.info, "Discovery", "radar-baseline-loaded",
                                          "resolved=\(baselineCandidates.count)")
             } catch {
@@ -247,12 +234,10 @@ actor MarketRadarScanner {
             AppDiagnostics.shared.record(.warning, "Discovery", "radar-baseline-failed",
                                          "error=\(String(describing: error)) retrySeconds=60")
             }
-        } else {
-            baselineCandidates = []
         }
         var yahooRefreshed = false
         var traderFoxRefreshErrors: [String] = []
-        if enabledProviders.contains(.yahoo) {
+        if sessions.us.isTrading && enabledProviders.contains(.yahoo) {
           do {
             let symbols = try await yahoo.mostActiveCandidates(limit: 100)
             yahooTotals.operations += 1
@@ -263,9 +248,8 @@ actor MarketRadarScanner {
                 yahooRefreshed = true
                 yahooTotals.lastErrorMessage = nil
                 unsupportedSymbols.removeAll()
-                scanOffset = 0
                 AppDiagnostics.shared.record(.info, "Yahoo", "candidate-page-loaded",
-                                             "candidates=\(symbols.count) refreshMinutes=30")
+                                             "candidates=\(symbols.count) refreshMinutes=25")
             }
           } catch RadarSourceError.rateLimited {
             hadFailure = true
@@ -287,7 +271,7 @@ actor MarketRadarScanner {
             )
           }
         } else { yahooCandidates = [] }
-        if let fmpKey {
+        if let fmpKey, sessions.us.isTrading {
             do {
                 let symbols = try await fmp.activeCandidates(apiKey: fmpKey, limit: 200)
                 fmpTotals.operations += 3
@@ -323,7 +307,7 @@ actor MarketRadarScanner {
                     "error=\(String(describing: type(of: error)))"
                 )
             }
-        } else if enabledProviders.contains(.traderFox) {
+        } else if sessions.us.isTrading && enabledProviders.contains(.traderFox) {
             do {
                 let symbols = try await traderFox.activeCandidates(limit: 200)
                 traderFoxTotals.operations += 1
@@ -343,7 +327,7 @@ actor MarketRadarScanner {
                 )
             }
         }
-        if enabledProviders.contains(.traderFox) && GermanMarketSession.isOpen(at: Date()) {
+        if enabledProviders.contains(.traderFox) && sessions.german.isTrading {
           do {
             let symbols = try await traderFox.germanCandidates()
             traderFoxTotals.operations += 3

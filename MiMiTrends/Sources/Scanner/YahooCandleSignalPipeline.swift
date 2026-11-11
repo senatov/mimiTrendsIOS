@@ -8,16 +8,16 @@ enum YahooCandleSignalPipeline {
     static func detect(symbol: String, bars: [MinuteBar], nowEpochSeconds: Int64,
                        settings: RadarScanPreferences) -> ScanResult? {
         let german = MarketCandidateFilter.isGermanSymbol(symbol)
-        guard !german || GermanMarketSession.isOpen(at: Date(timeIntervalSince1970: Double(nowEpochSeconds))) else {
-            return nil
-        }
+        let market: RadarTradingMarket = german ? .germany : .unitedStates
+        let observed = Date(timeIntervalSince1970: Double(nowEpochSeconds))
+        guard market.phase(at: observed).isTrading else { return nil }
         let evaluationTime = RadarMarketDataPolicy.evaluationTime(symbol: symbol, now: nowEpochSeconds)
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: german ? "Europe/Berlin" : "America/New_York")!
         let evaluationDate = Date(timeIntervalSince1970: Double(evaluationTime))
+        guard let sessionStart = market.sessionStart(at: evaluationDate) else { return nil }
+        let start = Int64(sessionStart.timeIntervalSince1970)
         let completed = bars.filter {
-            $0.symbol == symbol && $0.isValid && $0.minuteEpochSeconds + 60 <= evaluationTime &&
-                calendar.isDate(Date(timeIntervalSince1970: Double($0.minuteEpochSeconds)), inSameDayAs: evaluationDate)
+            $0.symbol == symbol && $0.isValid && $0.minuteEpochSeconds >= start
+                && $0.minuteEpochSeconds + 60 <= evaluationTime
         }.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
         guard let last = completed.last, last.minuteEpochSeconds >= evaluationTime - 180 else { return nil }
         let status = german ? delayedStatus : currentStatus

@@ -27,13 +27,13 @@ struct YahooRadarSource: Sendable {
         }
     }
 
-    func minuteBars(symbol: String) async throws -> [MinuteBar] {
+    func minuteBars(symbol: String, includeExtendedHours: Bool = false) async throws -> [MinuteBar] {
         guard MarketCandidateFilter.supportsYahooBars(symbol: symbol),
               let encoded = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
               !encoded.isEmpty else {
             throw RadarSourceError.invalidSymbol
         }
-        let path = "/v8/finance/chart/\(encoded)?range=1d&interval=1m&includePrePost=false"
+        let path = "/v8/finance/chart/\(encoded)?range=1d&interval=1m&includePrePost=\(includeExtendedHours)"
         let root = try await loadWithFallback(path: path)
         guard let chart = root["chart"] as? [String: Any],
               let result = (chart["result"] as? [[String: Any]])?.first,
@@ -41,7 +41,7 @@ struct YahooRadarSource: Sendable {
               (meta["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame else {
             throw RadarSourceError.invalidResponse
         }
-        return try Self.decodeBars(root, symbol: symbol)
+        return try Self.decodeBars(root, symbol: symbol, maximumBars: includeExtendedHours ? 1_500 : 600)
     }
 
     func diagnose(symbol: String) async -> YahooSymbolEvidence {
