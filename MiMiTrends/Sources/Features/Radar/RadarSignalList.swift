@@ -8,7 +8,6 @@ struct RadarSignalList: View {
     @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
-    let showingSavedHistory: Bool
     let activity: RadarActivity?
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
@@ -74,7 +73,7 @@ struct RadarSignalList: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .center, spacing: 10) {
-                Label(showingSavedHistory ? "SAVED RADAR" : "CANDLE RADAR", systemImage: "dot.radiowaves.left.and.right")
+                Label("CANDLE RADAR", systemImage: "dot.radiowaves.left.and.right")
                     .font(.system(.subheadline, design: .monospaced).weight(.bold))
                     .tracking(0.7)
                     .foregroundStyle(.primary)
@@ -144,7 +143,6 @@ struct RadarSignalList: View {
                                     currencyRates: currencyRates,
                                     displayCurrency: displayCurrency,
                                     compact: compact,
-                                    isOld: showingSavedHistory,
                                     isSelected: isSelected(item.signal),
                                     widths: widths,
                                     onSelect: { onSelect(item.signal) },

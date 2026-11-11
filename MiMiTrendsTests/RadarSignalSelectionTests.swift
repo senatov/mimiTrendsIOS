@@ -15,17 +15,15 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(selected.first?.signalSource, "Rapid rise")
     }
 
-    func testRestoresOlderSignalsOnlyWhenNoFreshSignalsExist() {
+    func testExcludesOlderSignalsWhenNoFreshSignalsExist() {
         let history = [event("OLD", source: "Rapid rise", at: 100),
                        event("NEW", source: "Rapid crash", at: 300, change: -2.2)]
 
-        let restored = RadarSignalSelection.displayHistory(history, since: 400, limit: 10)
-        XCTAssertTrue(restored.savedFallback)
-        XCTAssertEqual(restored.signals.map(\.symbol), ["NEW", "OLD"])
+        let expired = RadarSignalSelection.displayHistory(history, since: 400, limit: 10)
+        XCTAssertTrue(expired.isEmpty)
 
         let fresh = RadarSignalSelection.displayHistory(history, since: 200, limit: 10)
-        XCTAssertFalse(fresh.savedFallback)
-        XCTAssertEqual(fresh.signals.map(\.symbol), ["NEW"])
+        XCTAssertEqual(fresh.map(\.symbol), ["NEW"])
     }
 
     func testHidesSavedRapidDropsBelowCurrentThresholds() {
@@ -39,7 +37,7 @@ final class RadarSignalSelectionTests: XCTestCase {
 
         let displayed = RadarSignalSelection.displayHistory(history, since: 0, limit: 10)
 
-        XCTAssertEqual(displayed.signals.map(\.symbol), ["AAPL", "MSFT"])
+        XCTAssertEqual(displayed.map(\.symbol), ["AAPL", "MSFT"])
     }
 
     func testHidesLegacyYahooRapidDropsWithoutFinnhubProvenance() {
@@ -48,16 +46,16 @@ final class RadarSignalSelectionTests: XCTestCase {
 
         let displayed = RadarSignalSelection.displayHistory([legacyYahoo], since: 0, limit: 10)
 
-        XCTAssertTrue(displayed.signals.isEmpty)
+        XCTAssertTrue(displayed.isEmpty)
     }
 
     func testQuoteOnlySignalsAreExcludedFromCandleRadar() {
         let quote = event("LS:43763", source: "L&S quote rise", at: 500,
                           dataStatus: "QUOTE_NO_VOLUME")
         let candle = event("NVDA", source: "Rapid crash", at: 500, change: -1.2,
-                           window: "4m", dataStatus: YahooCandleSignalPipeline.currentStatus)
+                           window: "4m", dataStatus: "FINNHUB_LIVE")
         let displayed = RadarSignalSelection.displayHistory([quote, candle], since: 0, limit: 10)
-        XCTAssertEqual(displayed.signals.map(\.symbol), ["NVDA"])
+        XCTAssertEqual(displayed.map(\.symbol), ["NVDA"])
     }
 
     private func event(

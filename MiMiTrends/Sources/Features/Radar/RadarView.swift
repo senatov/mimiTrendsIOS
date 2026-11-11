@@ -14,7 +14,6 @@ struct RadarView: View {
     let onOpenProviderSettings: () -> Void
     @State private var setupMessage: String?
     @State var recentSignals: [ScanResult] = []
-    @State private var showingSavedHistory = false
     @State private var hasLoadedHistory = false
     @State var companyMetadata: [String: RadarCompanyMetadata] = [:]
     @State var companyMetadataService = RadarCompanyMetadataService()
@@ -93,7 +92,7 @@ struct RadarView: View {
             .padding(8)
             .background(TrendsColors.canvas)
             .navigationTitle("Radar")
-            .task(id: "\(maxResults)|\(maxAgeHours)") { await refreshSignals() }
+            .task(id: "\(scenePhase)|\(maxResults)|\(maxAgeHours)") { await refreshSignalHistoryWhileActive() }
             .task(id: "\(companyMetadataRequestKey)|\(providerConfigurationRevision)") {
                 guard await ensureAutomaticProvidersReady() else { return }
                 await refreshCompanyMetadata()
@@ -102,6 +101,11 @@ struct RadarView: View {
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await monitorBoerseWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
+            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") {
+                guard scenePhase == .active, MarketProviderAccess.isEnabled(.finnhub),
+                      !session.isScanning, !isPreparingFeed else { return }
+                startFeed()
+            }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDisplayCurrency() }
             .task { await detectInitialCurrency() }
             .task(id: "\(scenePhase)|\(watchlistRevision)") { await loadWatchlistPreview() }
@@ -192,7 +196,6 @@ struct RadarView: View {
     private func signalList(compact: Bool) -> some View {
         RadarSignalList(
             signals: recentSignals,
-            showingSavedHistory: showingSavedHistory,
             activity: recentSignals.isEmpty ? currentActivity : nil,
             companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
@@ -232,17 +235,14 @@ struct RadarView: View {
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
             let preferences = RadarScanPreferencesStore.load()
-            let allowSavedFallback = true
-            let (loaded, savedFallback) = try await Task.detached(priority: .userInitiated) {
+            let loaded = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let history = try await store.loadRecent(limit: min(limit * 10, 500))
                 return RadarSignalSelection.displayHistory(
-                    history, since: cutoff, limit: limit, preferences: preferences,
-                    allowSavedFallback: allowSavedFallback
+                    history, since: cutoff, limit: limit, preferences: preferences
                 )
             }.value
             recentSignals = loaded
-            showingSavedHistory = savedFallback
             AppDiagnostics.shared.record(.info, "Radar", "history-loaded", "signals=\(loaded.count)")
             historyError = nil
             if let selectedSignal, !loaded.contains(where: {

@@ -61,6 +61,14 @@ extension RadarView {
             guard !Task.isCancelled else { return }
             lsStatus = status
             if chartSymbol.hasPrefix("LS:") { chartRefreshID += 1 }
+            do { try await Task.sleep(for: .seconds(30)) }
+            catch { return }
+        }
+    }
+
+    func refreshSignalHistoryWhileActive() async {
+        guard scenePhase == .active else { return }
+        while !Task.isCancelled {
             await refreshSignals()
             do { try await Task.sleep(for: .seconds(30)) }
             catch { return }

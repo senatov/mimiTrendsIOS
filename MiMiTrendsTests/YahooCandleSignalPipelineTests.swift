@@ -37,7 +37,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertGreaterThan(signal.windowVolume, 0)
         XCTAssertEqual(signal.signalEpochMillis, (now - 60) * 1_000)
         let display = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10)
-        XCTAssertTrue(display.signals.isEmpty)
+        XCTAssertTrue(display.isEmpty)
     }
 
     func testUnfinishedCandleCannotCreateSignal() {

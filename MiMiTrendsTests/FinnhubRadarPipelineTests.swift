@@ -58,10 +58,9 @@ final class FinnhubRadarPipelineTests: XCTestCase {
 
         let displayed = RadarSignalSelection.displayHistory(
             history, since: 12_000_000 - 2 * 60 * 60 * 1_000, limit: 10,
-            preferences: RadarScanPreferences(), allowSavedFallback: false
+            preferences: RadarScanPreferences()
         )
-        XCTAssertFalse(displayed.savedFallback)
-        XCTAssertEqual(displayed.signals, history)
+        XCTAssertEqual(displayed, history)
     }
 
     func testFreshWideQuoteSuppressesSignalBeforePersistence() async throws {
