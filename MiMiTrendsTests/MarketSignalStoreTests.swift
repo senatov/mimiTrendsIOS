@@ -63,6 +63,26 @@ final class MarketSignalStoreTests: XCTestCase {
         XCTAssertEqual(ageFiltered, [recent])
     }
 
+    func testVerifiedYahooSignalDoesNotCollideWithFinnhubEvent() async throws {
+        let url = temporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let store = try MarketSignalStore(url: url)
+        func signal(status: String) -> ScanResult {
+            ScanResult(symbol: "AAPL", price: 100, anomalyScore: 0,
+                priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
+                relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: -2,
+                windowVolume: 1_000, sessionVolume: 1_000, sessionTurnover: 100_000,
+                signalAgeMinutes: 0, signalSource: "Rapid crash", updatedAtMillis: 1_000,
+                dataStatus: status, signalWindowLabel: "4m")
+        }
+        let liveInserted = try await store.record(signal(status: "FINNHUB_LIVE"))
+        let yahooInserted = try await store.record(signal(status: YahooCandleSignalPipeline.verifiedStatus))
+        let loaded = try await store.loadRecent()
+        XCTAssertTrue(liveInserted)
+        XCTAssertTrue(yahooInserted)
+        XCTAssertEqual(loaded.count, 2)
+    }
+
     private func bars(symbol: String = "RISE", start: Int64 = 12_000) -> [MinuteBar] {
         [100.0, 100.1, 100.5, 101.8].enumerated().map { index, close in
             MinuteBar(

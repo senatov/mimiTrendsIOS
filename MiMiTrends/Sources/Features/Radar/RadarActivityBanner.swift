@@ -42,7 +42,7 @@ struct MarketScanProgressPanel: View {
             "Last batch completed \($0.formatted(date: .omitted, time: .shortened)). "
         } ?? ""
         let issues = progress.issues.joined(separator: " ")
-        return "Updating market symbols. \(operation). Checked \(progress.processed) of \(progress.total). Successful \(progress.successful). Skipped \(progress.skipped): no recent minute bars \(progress.noRecentBars), unsupported symbols \(progress.unsupported). Errors \(progress.errors). \(lastBatch)\(issues) Saved signals remain available."
+        return "Updating market symbols. \(operation). Checked \(progress.processed) of \(progress.total). Successful \(progress.successful). Skipped \(progress.skipped): no recent minute bars \(progress.noRecentBars), no reported volume \(progress.noReportedVolume), unsupported symbols \(progress.unsupported). Errors \(progress.errors). \(lastBatch)\(issues) Saved signals remain available."
     }
 
     var body: some View {
@@ -66,7 +66,7 @@ struct MarketScanProgressPanel: View {
                 Text("Checked \(progress.processed) of \(progress.total)  ·  Successful \(progress.successful)  ·  Skipped \(progress.skipped)  ·  Errors \(progress.errors)")
                     .font(.subheadline.weight(.medium))
                 if progress.skipped > 0 {
-                    Text("Skipped: no recent minute bars \(progress.noRecentBars) · unsupported symbols \(progress.unsupported)")
+                    Text("Skipped: no recent minute bars \(progress.noRecentBars) · no reported volume \(progress.noReportedVolume) · unsupported symbols \(progress.unsupported)")
                         .font(.caption)
                         .foregroundStyle(TrendsColors.supportingInk)
                 }

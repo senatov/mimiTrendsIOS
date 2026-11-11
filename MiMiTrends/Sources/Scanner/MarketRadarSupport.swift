@@ -18,6 +18,13 @@ struct MarketRadarCycle: Sendable {
     let companyNames: [String: String]
     let progress: MarketScanProgress
     var candidates: [RadarCompanyCandidate] = []
+
+    func reporting(_ scan: MarketScanProgress, cooldown: Date?) -> Self {
+        Self(yahoo: yahoo, traderFox: traderFox, yahooCooldownUntil: cooldown,
+             initialScanProcessed: scan.processed, initialScanTotal: scan.total,
+             scannedSymbols: scan.successful, companyNames: companyNames,
+             progress: scan, candidates: candidates)
+    }
 }
 
 struct MarketScanProgress: Sendable, Equatable {
@@ -26,6 +33,7 @@ struct MarketScanProgress: Sendable, Equatable {
     let successful: Int
     let skipped: Int
     let noRecentBars: Int
+    let noReportedVolume: Int
     let unsupported: Int
     let errors: Int
     let issues: [String]

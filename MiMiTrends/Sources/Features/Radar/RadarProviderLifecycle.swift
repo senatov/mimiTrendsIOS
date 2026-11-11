@@ -112,12 +112,16 @@ extension RadarView {
         while !Task.isCancelled {
             do {
                 let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
-                let cycle = try await marketScanner.scan(enabledProviders: enabledProviders)
+                let discovered = try await marketScanner.scan(enabledProviders: enabledProviders)
+                guard !Task.isCancelled else { return }
+                if marketCycle == nil { marketCycle = discovered }
+                let cycle = await marketScanner.scanCandles(discovered,
+                    enabled: enabledProviders.contains(.yahoo))
                 guard !Task.isCancelled else { return }
                 marketCycle = cycle
                 AppDiagnostics.shared.record(
                     .info, "Radar", "candidate-pool-ready",
-                    "candidates=\(cycle.candidates.count) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
+                    "candidates=\(cycle.candidates.count) checked=\(cycle.progress.processed) usable=\(cycle.progress.successful) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return

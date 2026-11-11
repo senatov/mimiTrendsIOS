@@ -47,6 +47,7 @@ struct RadarSourcePanel: View {
                 .accessibilityLabel("Resize Sources and Scanner Candidates")
                 RadarScannerDiagnostics(
                     candidates: marketCycle?.candidates ?? [],
+                    progress: marketCycle?.progress,
                     listHeight: CGFloat(candidatesHeight)
                 )
             }

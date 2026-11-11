@@ -160,7 +160,7 @@ struct RadarSignalRow: View {
     }
 
     private var eventLabel: String {
-        let label = RadarSignalPresentation.badge(for: signal.signalSource)
+        let label = RadarSignalPresentation.badge(for: signal)
         return signal.isRetained ? "\(label) · RECENT" : label
     }
 

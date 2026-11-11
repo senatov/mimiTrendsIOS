@@ -49,6 +49,26 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertTrue(displayed.isEmpty)
     }
 
+    func testDisplaysOnlyIndependentlyVerifiedYahooCandles() {
+        let raw = event("DELL", source: "Rapid crash", at: 500, change: -1.2,
+                        window: "4m", dataStatus: YahooCandleSignalPipeline.currentStatus)
+        let verified = event("AAPL", source: "Rapid crash", at: 500, change: -1.2,
+                             window: "4m", dataStatus: YahooCandleSignalPipeline.verifiedStatus)
+        let tooLong = event("NOK", source: "Smooth rise", at: 500, change: 2.1,
+                            window: "71m", dataStatus: YahooCandleSignalPipeline.verifiedStatus)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([raw, verified, tooLong], since: 0, limit: 10)
+            .map(\.symbol), ["AAPL"])
+    }
+
+    func testFinnhubPriceVerificationRejectsOldOrDivergentQuotes() {
+        XCTAssertTrue(FinnhubCandlePriceVerifier.isMatching(
+            price: 100.4, timestamp: 1_000, candlePrice: 100, nowSeconds: 1_030))
+        XCTAssertFalse(FinnhubCandlePriceVerifier.isMatching(
+            price: 100.6, timestamp: 1_000, candlePrice: 100, nowSeconds: 1_030))
+        XCTAssertFalse(FinnhubCandlePriceVerifier.isMatching(
+            price: 100, timestamp: 800, candlePrice: 100, nowSeconds: 1_030))
+    }
+
     func testQuoteOnlySignalsAreExcludedFromCandleRadar() {
         let quote = event("LS:43763", source: "L&S quote rise", at: 500,
                           dataStatus: "QUOTE_NO_VOLUME")

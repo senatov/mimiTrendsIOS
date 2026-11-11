@@ -129,12 +129,17 @@ struct RadarSignalColumnWidths {
     }
 
     private static func eventLabel(_ signal: ScanResult) -> String {
-        let label = RadarSignalPresentation.badge(for: signal.signalSource)
+        let label = RadarSignalPresentation.badge(for: signal)
         return signal.isRetained ? "\(label) · RECENT" : label
     }
 }
 
 enum RadarSignalPresentation {
+    static func badge(for signal: ScanResult) -> String {
+        let label = badge(for: signal.signalSource)
+        return signal.dataStatus == YahooCandleSignalPipeline.verifiedStatus
+            ? "\(label) · Y+F" : label
+    }
     static func title(for source: String) -> String {
         switch source.lowercased() {
         case "rapid crash": "Rapid drop"

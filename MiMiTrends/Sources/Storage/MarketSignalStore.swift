@@ -50,7 +50,9 @@ actor MarketSignalStore {
             """)
         defer { sqlite3_finalize(statement) }
         try bind(symbol, to: 1, in: statement)
-        try bind(signal.signalSource, to: 2, in: statement)
+        let sourceKey = signal.dataStatus == YahooCandleSignalPipeline.verifiedStatus
+            ? "\(signal.signalSource)|YAHOO_FINNHUB_VERIFIED" : signal.signalSource
+        try bind(sourceKey, to: 2, in: statement)
         sqlite3_bind_int64(statement, 3, signal.signalEpochMillis)
         sqlite3_bind_int64(statement, 4, signal.scanEvaluatedAtMillis)
         let result = payload.withUnsafeBytes { bytes in

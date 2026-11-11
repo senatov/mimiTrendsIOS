@@ -19,6 +19,11 @@ actor MarketRadarScanner {
     private var traderFoxTotals = RadarSourceTotals()
     private var daxIssue: String?
     private var lastDAXQueueCount: Int?
+    private var candleStore: MarketBarStore?
+    private var candleOutcomes: [String: SymbolOutcome] = [:]
+    private var candleCooldownUntil: Date?
+    private var candleScanRound = 0
+    private var nextScanRoundAt: Date = .distantPast
 
     func scan(
         enabledProviders: Set<MarketProvider> = Set(MarketProvider.allCases)
@@ -114,7 +119,7 @@ actor MarketRadarScanner {
             yahooCooldownUntil: yahooCooldownUntil, initialScanProcessed: 0, initialScanTotal: 0,
             scannedSymbols: 0, companyNames: names,
             progress: MarketScanProgress(processed: 0, total: 0, successful: 0, skipped: 0,
-                noRecentBars: 0, unsupported: 0, errors: 0,
+                noRecentBars: 0, noReportedVolume: 0, unsupported: 0, errors: 0,
                 issues: [yahooTotals.lastErrorMessage, daxIssue].compactMap { $0 },
                 activeSymbols: [], lastUpdatedAt: nil),
             candidates: activePool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) }
@@ -277,5 +282,74 @@ actor MarketRadarScanner {
         let pending = symbols.filter { !processed.contains($0) }
         return pending.isEmpty ? scanSlice(symbols, offset: offset, limit: limit)
             : Array(pending.prefix(max(0, limit)))
+    }
+
+    func scanCandles(_ cycle: MarketRadarCycle, enabled: Bool) async -> MarketRadarCycle {
+        let symbols = cycle.candidates.map(\.symbol)
+        candleOutcomes = candleOutcomes.filter { symbols.contains($0.key) }
+        guard enabled, !symbols.isEmpty else { return cycle }
+        if candleOutcomes.count == symbols.count && Date() >= nextScanRoundAt {
+            candleOutcomes.removeAll()
+            candleScanRound += 1
+            nextScanRoundAt = .distantPast
+        }
+        if candleStore == nil {
+            do { candleStore = try MarketBarStore(url: MarketBarStore.defaultURL()) }
+            catch {
+                AppDiagnostics.shared.record(.error, "Radar", "candle-store-unavailable",
+                    "error=\(String(describing: error))")
+            }
+        }
+        guard let candleStore else { return cycle }
+        let skipped = await YahooSymbolResolutionStore.shared.skippedSymbols()
+        let batch = Array(symbols.filter { candleOutcomes[$0] == nil }.prefix(16))
+        if let cooldown = candleCooldownUntil, Date() >= cooldown { candleCooldownUntil = nil }
+        if candleCooldownUntil == nil {
+            let nowSeconds = Int64(Date().timeIntervalSince1970)
+            let settings = RadarScanPreferencesStore.load()
+            for start in stride(from: 0, to: batch.count, by: 4) {
+                let chunk = Array(batch[start..<min(start + 4, batch.count)])
+                let yahoo = self.yahoo
+                let results = await withTaskGroup(of: SymbolOutcome.self, returning: [SymbolOutcome].self) { group in
+                    for symbol in chunk {
+                        group.addTask {
+                            if skipped.contains(symbol) {
+                                return SymbolOutcome(symbol: symbol, received: 0, failure: nil, skipped: true)
+                            }
+                            return await RadarCandleScan.load(symbol: symbol, yahoo: yahoo,
+                                barStore: candleStore, nowSeconds: nowSeconds, settings: settings)
+                        }
+                    }
+                    var outcomes: [SymbolOutcome] = []
+                    for await outcome in group { outcomes.append(outcome) }
+                    return outcomes
+                }
+                for outcome in results {
+                    candleOutcomes[outcome.symbol] = outcome
+                    if outcome.rateLimited {
+                        candleCooldownUntil = Date().addingTimeInterval(30 * 60)
+                    }
+                }
+                if candleCooldownUntil != nil { break }
+            }
+        }
+        let values = Array(candleOutcomes.values)
+        if values.count == symbols.count && nextScanRoundAt == .distantPast {
+            nextScanRoundAt = Date().addingTimeInterval(120)
+        }
+        let successful = values.filter(\.usable).count
+        let unsupported = values.filter { $0.rejectedSymbol != nil }.count
+        let noRecent = values.filter { $0.skipped && $0.rejectedSymbol == nil && !$0.missingVolume }.count
+        let noVolume = values.filter(\.missingVolume).count
+        let errors = values.filter { $0.failure != nil }.count
+        let issues = Array(Set(values.compactMap(\.failure))).sorted()
+        let progress = MarketScanProgress(processed: values.count, total: symbols.count,
+            successful: successful, skipped: values.filter(\.skipped).count,
+            noRecentBars: noRecent, noReportedVolume: noVolume,
+            unsupported: unsupported, errors: errors,
+            issues: issues, activeSymbols: [], lastUpdatedAt: Date())
+        AppDiagnostics.shared.record(.info, "Radar", "candle-scan-progress",
+            "round=\(candleScanRound) checked=\(progress.processed)/\(progress.total) usable=\(successful) skipped=\(progress.skipped) errors=\(errors)")
+        return cycle.reporting(progress, cooldown: candleCooldownUntil ?? cycle.yahooCooldownUntil)
     }
 }
