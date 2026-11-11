@@ -39,6 +39,10 @@ actor MarketBarStore {
         sqlite3_close(database)
     }
 
+    static func finnhubURL() throws -> URL {
+        try defaultURL().deletingLastPathComponent().appendingPathComponent("mimitrends-finnhub-bars.db")
+    }
+
     static func defaultURL() throws -> URL {
         try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask,

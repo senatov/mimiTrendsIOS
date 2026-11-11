@@ -72,22 +72,13 @@ extension RadarView {
         while !Task.isCancelled {
             do {
                 let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
-                let progressBinding = $liveScanProgress
-                let cycle = try await marketScanner.scan(
-                    settings: RadarScanPreferencesStore.load(), enabledProviders: enabledProviders
-                ) { progress in
-                    await MainActor.run {
-                        guard !Task.isCancelled else { return }
-                        progressBinding.wrappedValue = progress
-                    }
-                }
+                let cycle = try await marketScanner.scan(enabledProviders: enabledProviders)
                 guard !Task.isCancelled else { return }
-                liveScanProgress = nil
                 marketCycle = cycle
                 await refreshSignals()
                 AppDiagnostics.shared.record(
-                    .info, "Radar", "market-scan-finished",
-                    "symbols=\(cycle.scannedSymbols) initialScan=\(cycle.initialScanProcessed)/\(cycle.initialScanTotal) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
+                    .info, "Radar", "candidate-pool-ready",
+                    "candidates=\(cycle.candidates.count) yahooErrors=\(cycle.yahoo.errors) candidateSource=\(cycle.usesFMP ? "FMP" : "TraderFox") candidateErrors=\(cycle.usesFMP ? cycle.fmp.errors : cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return

@@ -27,8 +27,6 @@ struct RadarView: View {
     @State var lsCandidatePool = LSCandidatePool()
     @State var lsStatus: LSCandidateStatus?
     @State var marketScanner = MarketRadarScanner()
-    @State private var signalBarBackfill = RadarSignalBarBackfill()
-    @State var liveScanProgress: MarketScanProgress?
     @State var marketCycle: MarketRadarCycle?
     @State var currencyRates: DisplayCurrencyRates?
     @State var currencyService = DisplayCurrencyService()
@@ -69,7 +67,7 @@ struct RadarView: View {
                         )
                     },
                     controls: {
-                        RadarHeader(symbol: $symbol, progress: liveScanProgress ?? marketCycle?.progress,
+                        RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
                                     onManageWatchlist: onManageWatchlist)
                     },
                     showingSources: $showingSources
@@ -169,7 +167,9 @@ struct RadarView: View {
     }
 
     private var emptyRadarMessage: String {
-        "Scanning up to 200 shares for sharp drops, rebounds and sustained rises in completed candles with reported volume. Closed German sessions are skipped; German quotes may be delayed."
+        session.isScanning
+            ? "Watching live Finnhub trades for sharp drops, rebounds and sustained rises."
+            : "Start the Finnhub feed to detect sharp drops, rebounds and sustained rises from live trades."
     }
 
     private func signalList(compact: Bool) -> some View {
@@ -177,7 +177,6 @@ struct RadarView: View {
             signals: recentSignals,
             showingSavedHistory: showingSavedHistory,
             activity: recentSignals.isEmpty ? currentActivity : nil,
-            scanProgress: liveScanProgress ?? marketCycle?.progress,
             companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,
@@ -191,12 +190,6 @@ struct RadarView: View {
             onSelect: { signal in
                 selectedSignal = signal
                 symbol = signal.symbol
-            },
-            onVisibleSignal: { visibleSymbol in
-                guard providerStartupReady, MarketProviderAccess.isOperational(.yahoo) else { return }
-                if await signalBarBackfill.fillIfMissing(symbol: visibleSymbol) {
-                    chartRefreshID += 1
-                }
             },
             onRefresh: { Task { await refreshSignals() } }
         )

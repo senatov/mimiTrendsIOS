@@ -14,7 +14,7 @@ struct FinnhubRadarPipeline: Sendable {
     }
 
     init(settings: RadarScanPreferences = RadarScanPreferences()) throws {
-        try self.init(databaseURL: MarketBarStore.defaultURL(), settings: settings)
+        try self.init(databaseURL: MarketBarStore.finnhubURL(), settings: settings)
     }
 
     func accept(

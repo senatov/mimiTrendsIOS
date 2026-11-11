@@ -43,7 +43,7 @@ struct RadarInstrumentChart: View {
                                        set: { rangeRaw = $0.rawValue }),
                         signal: signal, showingSignalFocus: $showingSignalFocus)
                 } else if let resolvedSymbol {
-                    // L&S execution prices belong to another venue; do not plot them as Yahoo trade prices.
+                    // L&S execution prices belong to another venue; do not plot them as primary-listing trade prices.
                     candles(symbol: resolvedSymbol, signal: nil)
                 } else if let resolutionError {
                     VStack {
@@ -76,7 +76,7 @@ struct RadarInstrumentChart: View {
     private func candles(symbol: String, signal: ScanResult?) -> some View {
         RadarChartPreview(symbol: symbol, companyName: companyName, companyMetadata: companyMetadata,
             signal: signal, currencyRates: currencyRates, displayCurrency: displayCurrency,
-            refreshID: refreshID, providersReady: providersReady, yahooEnabled: yahooEnabled,
+            refreshID: refreshID, providersReady: providersReady,
             fmpEnabled: fmpEnabled, providerRevision: providerRevision)
     }
 }

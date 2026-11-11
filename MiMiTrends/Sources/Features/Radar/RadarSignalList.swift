@@ -4,14 +4,12 @@ import AppKit
 #endif
 
 struct RadarSignalList: View {
-    @Environment(\.scenePhase) private var scenePhase
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(RadarTableTypographyStore.self) private var tableTypography
     @Environment(\.colorScheme) private var colorScheme
     let signals: [ScanResult]
     let showingSavedHistory: Bool
     let activity: RadarActivity?
-    let scanProgress: MarketScanProgress?
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
     let currencyRates: DisplayCurrencyRates?
@@ -23,7 +21,6 @@ struct RadarSignalList: View {
     let sourcesOpen: Bool
     let onToggleSources: () -> Void
     let onSelect: (ScanResult) -> Void
-    let onVisibleSignal: (String) async -> Void
     let onRefresh: () -> Void
     @AppStorage("radar.sort.column.v1") private var storedSortColumn = RadarSortColumn.age.rawValue
     @AppStorage("radar.sort.ascending.v1") private var ascending = true
@@ -117,10 +114,6 @@ struct RadarSignalList: View {
                         RadarActivityBanner(activity: activity)
                             .frame(maxWidth: 440)
                     }
-                    if let scanProgress {
-                        MarketScanProgressPanel(progress: scanProgress)
-                            .frame(maxWidth: 620)
-                    }
                     Text("Waiting for a confirmed rise or drop in minute candles")
                         .font(.title2.weight(.light))
                         .foregroundStyle(TrendsColors.ink)
@@ -158,10 +151,6 @@ struct RadarSignalList: View {
                                     onShowCoverage: { coverageRequest = $0 }
                                 )
                                 .accessibilityAddTraits(isSelected(item.signal) ? [.isSelected] : [])
-                                .task(id: "\(item.signal.symbol)|\(scenePhase)") {
-                                    guard scenePhase == .active else { return }
-                                    await onVisibleSignal(item.signal.symbol)
-                                }
                                 tableSeparator
                             }
                         }

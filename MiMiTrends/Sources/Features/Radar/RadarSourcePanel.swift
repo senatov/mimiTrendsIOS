@@ -46,7 +46,7 @@ struct RadarSourcePanel: View {
                 )
                 .accessibilityLabel("Resize Sources and Scanner Candidates")
                 RadarScannerDiagnostics(
-                    candidates: marketCycle?.candidates ?? [], progress: marketCycle?.progress,
+                    candidates: marketCycle?.candidates ?? [],
                     listHeight: CGFloat(candidatesHeight)
                 )
             }
@@ -59,7 +59,7 @@ struct RadarSourcePanel: View {
     private var telemetrySources: [RadarTelemetrySource] {
         [
             RadarTelemetrySource(
-                name: "Yahoo candles", status: yahooStatus,
+                name: "Yahoo candidates", status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
                 received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
                 requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,

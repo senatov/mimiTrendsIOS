@@ -2,7 +2,7 @@ import SwiftUI
 
 struct RadarHeader: View {
     @Binding var symbol: String
-    let progress: MarketScanProgress?
+    let candidateCount: Int?
     let onManageWatchlist: () -> Void
 
     var body: some View {
@@ -25,8 +25,7 @@ struct RadarHeader: View {
     }
 
     private var scanStatus: some View {
-        Text(progress.map { "Candle scan · \($0.processed) / \($0.total) shares checked" }
-             ?? "Preparing candle scan · up to 200 shares")
+        Text(candidateCount.map { "\($0) market candidates" } ?? "Loading market candidates…")
             .font(.callout).foregroundStyle(.secondary)
     }
 

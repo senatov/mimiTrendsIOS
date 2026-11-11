@@ -33,7 +33,7 @@ struct ProviderSettingsPanel: View {
                         providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
                     }
                     VStack(spacing: 6) {
-                        providerGroup("Yahoo Finance", detail: "Most active + trending candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
+                        providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
                         providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                       endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
                         fmpGroup
@@ -42,7 +42,7 @@ struct ProviderSettingsPanel: View {
             } else {
                 VStack(spacing: 6) {
                     providerGroup("Finnhub", detail: "Live US trade feed", provider: .finnhub, endpoints: [.finnhubTrades])
-                    providerGroup("Yahoo Finance", detail: "Most active + trending candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
+                    providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
                     providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                   endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                     providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,

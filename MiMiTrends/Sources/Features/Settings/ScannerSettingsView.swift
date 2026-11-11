@@ -37,8 +37,8 @@ struct ScannerSettingsView: View {
 
     private var scopePanel: some View {
         SettingsGroup(title: "Current scan scope") {
-            SettingsValueRow(title: "Confirmed signals", value: "Completed Yahoo candles with reported volume")
-            SettingsValueRow(title: "Historical data", value: "Yahoo minute and daily candles")
+            SettingsValueRow(title: "Confirmed signals", value: "Candles built from live Finnhub trades")
+            SettingsValueRow(title: "Historical data", value: "Finnhub minute bars · FMP daily history")
             SettingsValueRow(title: "Symbols", value: "Up to 200 US and German shares")
             SettingsValueRow(title: "Activity", value: "Foreground only")
             Text("Radar checks completed candles for rapid drops, rebounds and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")

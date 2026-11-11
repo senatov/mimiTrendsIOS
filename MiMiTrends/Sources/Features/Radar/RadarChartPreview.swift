@@ -9,7 +9,6 @@ struct RadarChartPreview: View {
     let displayCurrency: String
     let refreshID: Int
     let providersReady: Bool
-    let yahooEnabled: Bool
     let fmpEnabled: Bool
     let providerRevision: Int
 
@@ -85,10 +84,10 @@ struct RadarChartPreview: View {
             }
         }
         .trendsPanel()
-        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(providerRevision)|\(scenePhase)") {
+        .task(id: "\(symbol)|\(refreshID)|\(importedTrades.count)|\(range.rawValue)|\(providersReady)|\(providerRevision)|\(scenePhase)") {
             guard scenePhase == .active, !range.usesDailyBars else { return }
             if !providersReady {
-                await loadBars(allowNetwork: false)
+                await loadBars()
                 return
             }
             repeat {
@@ -96,7 +95,7 @@ struct RadarChartPreview: View {
                 do { try await Task.sleep(for: .seconds(30)) } catch { return }
             } while !Task.isCancelled
         }
-        .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(yahooEnabled)|\(fmpEnabled)|\(providerRevision)") {
+        .task(id: "daily|\(symbol)|\(range.rawValue)|\(providersReady)|\(fmpEnabled)|\(providerRevision)") {
             if providersReady { await loadDailyBarsIfNeeded() }
         }
         .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
@@ -232,7 +231,7 @@ struct RadarChartPreview: View {
 
     private var sourceCurrency: String { RadarChartCurrency.source(for: symbol) }
 
-    private func loadBars(allowNetwork: Bool = true) async {
+    private func loadBars() async {
         let requestedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !requestedSymbol.isEmpty else {
             allBars = []
@@ -242,17 +241,9 @@ struct RadarChartPreview: View {
         isLoading = true
         errorMessage = nil
         do {
-            let trades = importedTrades
-            let canFetch = allowNetwork && yahooEnabled
             let historyBounds = range == .trades ? tradeHistoryBounds : nil
             let loaded = try await Task.detached(priority: .userInitiated) {
-                if canFetch { await RadarTradeBarBackfill.shared.fill(symbol: requestedSymbol, trades: trades) }
-                if historyBounds == nil {
-                    return try await RadarSelectedCandleHistory.shared.load(
-                        symbol: requestedSymbol, yahooEnabled: canFetch
-                    )
-                }
-                let store = try MarketBarStore(url: MarketBarStore.defaultURL())
+                let store = try MarketBarStore(url: MarketBarStore.finnhubURL())
                 return try await store.loadRecentMinuteBars(
                     symbol: requestedSymbol,
                     fromEpochSeconds: historyBounds?.lowerBound ?? 0,
@@ -283,9 +274,9 @@ struct RadarChartPreview: View {
         isLoadingDaily = true
         dailyError = nil
         do {
-            guard yahooEnabled || fmpEnabled else { throw DailyHistoryError.unavailable }
+            guard fmpEnabled else { throw DailyHistoryError.unavailable }
             let loaded = try await RadarDailyHistoryService.shared.load(
-                symbol: requestedSymbol, yahooEnabled: yahooEnabled, fmpEnabled: fmpEnabled
+                symbol: requestedSymbol, yahooEnabled: false, fmpEnabled: fmpEnabled
             )
             guard !Task.isCancelled else { return }
             dailyBars = loaded.bars

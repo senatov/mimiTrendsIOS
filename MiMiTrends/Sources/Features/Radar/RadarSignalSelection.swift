@@ -11,8 +11,8 @@ enum RadarSignalSelection {
             guard signal.dataStatus != "QUOTE_NO_VOLUME", !signal.symbol.hasPrefix("LS:") else { return false }
             let source = signal.signalSource.lowercased()
             let requiresLiveTrades = ["rapid crash", "sharp rebound", "smooth rise"].contains(source)
-            let trusted = ["FINNHUB_LIVE", YahooCandleSignalPipeline.currentStatus, YahooCandleSignalPipeline.delayedStatus]
-            if requiresLiveTrades && !trusted.contains(signal.dataStatus) {
+            guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") else { return false }
+            if requiresLiveTrades && signal.dataStatus != "FINNHUB_LIVE" {
                 return false
             }
             guard source == "rapid crash" else { return true }
