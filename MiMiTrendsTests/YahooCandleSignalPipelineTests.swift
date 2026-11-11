@@ -100,20 +100,14 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
 
     func testDAXRanksBothDirectionsAndSkipsStaleRows() throws {
         let json = """
-        {"success":true,"data":{"items":[
-          {"marketstateQuery":"DE0007164600@STU","stale":false,"marketstate":{
-            "last":{"value":177.68,"datetime":"2026-11-11T08:08:00.000+00:00"},
-            "performance":{"changeRelative":0.0309}}},
-          {"marketstateQuery":"DE0007030009@STU","stale":false,"marketstate":{
-            "last":{"value":1145,"datetime":"2026-11-11T08:09:00.000+00:00"},
-            "performance":{"changeRelative":-0.04}}},
-          {"marketstateQuery":"DE0007236101@STU","stale":false,"marketstate":{
-            "last":{"value":280.20,"datetime":"2026-11-11T07:30:00.000+00:00"},
-            "performance":{"changeRelative":0.10}}}
-        ]}}
+        [
+          {"text":["","SAP","A","177,68","177,68","177,68","5,32","3,09","","","","","09:08:00","STU"],"markup":"DE0007164600"},
+          {"text":["","Rheinmetall","A","1145","1145","1145","-48","−4,00","","","","","09:09:00","STU"],"markup":"DE0007030009"},
+          {"text":["","Siemens","A","280,20","280,20","280,20","7,10","2,60","","","","","08:30:00","STU"],"markup":"DE0007236101"}
+        ]
         """
         let now = ISO8601DateFormatter().date(from: "2026-11-11T08:10:00Z")!
-        let candidates = try BoerseDAXSource.decodeCandidates(Data(json.utf8), now: now)
+        let candidates = try BoerseDAXSource.decodePageRows(Data(json.utf8), now: now)
         XCTAssertEqual(candidates.map(\.symbol), ["RHM.DE", "SAP.DE"])
     }
 

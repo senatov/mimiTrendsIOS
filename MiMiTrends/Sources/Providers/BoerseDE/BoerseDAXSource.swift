@@ -1,14 +1,12 @@
 import Foundation
+import WebKit
 
 actor BoerseDAXSource {
-    private static let url = URL(string: "https://realtime-push.boerse.de/marketstates/realtime/")!
-    private let session: URLSession
+    private static let url = URL(string: "https://www.boerse.de/realtime-kurse/Dax-Aktien/DE0008469008")!
 
     private var nextRefreshAt: Date = .distantPast
     private var lastSuccessfulRefresh: Date?
     private var lastCandidates: [RadarCompanyCandidate] = []
-
-    init(session: URLSession = .shared) { self.session = session }
 
     func candidates(for sessions: RadarTradingSessions, store: MarketBarStore?) async throws -> [RadarCompanyCandidate] {
         guard sessions.german.isTrading else { return [] }
@@ -43,76 +41,71 @@ actor BoerseDAXSource {
     }
 
     private func loadCandidates() async throws -> [RadarCompanyCandidate] {
-        var request = URLRequest(url: Self.url)
-        request.timeoutInterval = 15
-        request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.httpMethod = "POST"
-        request.setValue("application/x-www-form-urlencoded; charset=UTF-8", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json, text/javascript, */*; q=0.01", forHTTPHeaderField: "Accept")
-        request.setValue("https://www.boerse.de", forHTTPHeaderField: "Origin")
-        request.setValue("https://www.boerse.de/", forHTTPHeaderField: "Referer")
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15",
-                         forHTTPHeaderField: "User-Agent")
-        request.httpBody = Data(Self.knownSymbols.keys.sorted().map {
-            "marketstateQuery%5B%5D=\($0)%40STU"
-        }.joined(separator: "&").utf8)
-
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else { throw RadarSourceError.invalidResponse }
-        AppDiagnostics.shared.record(.info, "boerse.de", "dax-xhr-response",
-                                     "http=\(http.statusCode) bytes=\(data.count)")
-        guard http.statusCode == 200 else { throw RadarSourceError.httpStatus(http.statusCode) }
-        guard (1...1_000_000).contains(data.count) else { throw RadarSourceError.invalidResponse }
-        return try Self.decodeCandidates(data, now: Date())
+        try await Self.readPage()
     }
 
-    static func decodeCandidates(_ data: Data, now: Date) throws -> [RadarCompanyCandidate] {
-        let envelope = try JSONDecoder().decode(RealtimeResponse.self, from: data)
-        guard envelope.success, let items = envelope.data?.items else { throw RadarSourceError.invalidResponse }
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let wholeSecondsFormatter = ISO8601DateFormatter()
-        var ranked: [(candidate: RadarCompanyCandidate, change: Double)] = []
-        for item in items {
-            let parts = item.marketstateQuery.split(separator: "@")
-            guard parts.count == 2, parts[1] == "STU", item.stale == false,
-                  let company = knownSymbols[String(parts[0])],
-                  let quote = item.marketstate?.last, quote.value > 0,
-                  let change = item.marketstate?.performance?.changeRelative, change.isFinite,
-                  let date = dateFormatter.date(from: quote.datetime)
-                    ?? wholeSecondsFormatter.date(from: quote.datetime),
-                  (-30...600).contains(now.timeIntervalSince(date))
-            else { continue }
-            ranked.append((RadarCompanyCandidate(symbol: company.symbol, name: company.name), abs(change)))
+    @MainActor
+    private static func readPage() async throws -> [RadarCompanyCandidate] {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = .nonPersistent()
+        let page = WKWebView(frame: .zero, configuration: configuration)
+        defer { page.stopLoading() }
+        page.load(URLRequest(url: url))
+        let deadline = ContinuousClock.now + .seconds(20)
+        let script = """
+        (() => {
+            const controls = [...document.querySelectorAll('button, [role="button"], input[type="button"]')];
+            const accept = controls.find(el => {
+                const label = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
+                return /^(alle (cookies )?(akzeptieren|erlauben|zulassen)|accept all( cookies)?|alles akzeptieren)$/i.test(label)
+                    && el.getClientRects().length > 0;
+            });
+            if (accept) accept.click();
+            const rows = document.querySelectorAll('#TableBody_0 table tr');
+            return JSON.stringify([...rows].map(row => ({
+                text: [...row.cells].map(cell => cell.innerText.trim()),
+                markup: row.innerHTML
+            })));
+        })()
+        """
+        while ContinuousClock.now < deadline {
+            try Task.checkCancellation()
+            if page.url?.host == url.host, page.url?.path == url.path, !page.isLoading,
+               let result = try? await page.evaluateJavaScript(script) as? String,
+               let candidates = try? decodePageRows(Data(result.utf8), now: Date()), !candidates.isEmpty {
+                AppDiagnostics.shared.record(.info, "boerse.de", "dax-page-parsed", "rows=\(candidates.count)")
+                return candidates
+            }
+            try await Task.sleep(for: .milliseconds(500))
         }
-        ranked.sort {
-            $0.change == $1.change ? $0.candidate.symbol < $1.candidate.symbol : $0.change > $1.change
-        }
+        throw RadarSourceError.invalidResponse
+    }
+
+    private struct PageRow: Decodable {
+        let text: [String]
+        let markup: String
+    }
+
+    static func decodePageRows(_ data: Data, now: Date) throws -> [RadarCompanyCandidate] {
+        let rows = try JSONDecoder().decode([PageRow].self, from: data)
+        let ranked = rows.compactMap { row -> (RadarCompanyCandidate, Double)? in
+            guard row.text.count == 14,
+                  MarketPageHTML.germanNumber(row.text[5]) != nil,
+                  MarketPageHTML.quoteTime(row.text[12], now: now) != nil
+            else { return nil }
+            let isin = MarketPageHTML.first(#"\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b"#, in: row.markup)
+            guard let company = isin.flatMap({ knownSymbols[$0] })
+                ?? knownSymbols.values.first(where: { $0.name.caseInsensitiveCompare(row.text[1]) == .orderedSame })
+            else { return nil }
+            let changeText = row.text[7].replacingOccurrences(of: "−", with: "-")
+                .replacingOccurrences(of: ",", with: ".")
+                .replacingOccurrences(of: "%", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let change = Double(changeText), change.isFinite else { return nil }
+            return (RadarCompanyCandidate(symbol: company.symbol, name: company.name), abs(change))
+        }.sorted { $0.1 == $1.1 ? $0.0.symbol < $1.0.symbol : $0.1 > $1.1 }
         var seen = Set<String>()
-        let candidates = ranked.map(\.candidate).filter { seen.insert($0.symbol).inserted }
-        guard !candidates.isEmpty else { throw RadarSourceError.invalidResponse }
-        return candidates
-    }
-
-    private struct RealtimeResponse: Decodable {
-        let success: Bool
-        let data: Payload?
-
-        struct Payload: Decodable { let items: [Item] }
-        struct Item: Decodable {
-            let marketstateQuery: String
-            let stale: Bool?
-            let marketstate: MarketState?
-        }
-        struct MarketState: Decodable {
-            let last: Quote?
-            let performance: Performance?
-        }
-        struct Quote: Decodable {
-            let value: Double
-            let datetime: String
-        }
-        struct Performance: Decodable { let changeRelative: Double? }
+        return ranked.map(\.0).filter { seen.insert($0.symbol).inserted }
     }
 
     // Constituents observed in the DAX page's Stuttgart request.
