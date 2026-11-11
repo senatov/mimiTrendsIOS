@@ -75,7 +75,7 @@ struct RadarInstrumentChart: View {
     private func candles(symbol: String, signal: ScanResult?) -> some View {
         RadarChartPreview(symbol: symbol, companyName: companyName, companyMetadata: companyMetadata,
             signal: signal, currencyRates: currencyRates, displayCurrency: displayCurrency,
-            refreshID: refreshID, providersReady: providersReady,
+            refreshID: refreshID, providersReady: providersReady, yahooEnabled: yahooEnabled,
             providerRevision: providerRevision)
     }
 }

@@ -18,40 +18,19 @@ struct RadarChartHeader: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .center, spacing: 12) {
-                    identity
-                    quote
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 16) {
+                    instrumentSummary
                     Divider().frame(height: 20)
-                    TrendsActionButton(title: "Signal focus", systemImage: "scope",
-                                       tint: showingSignalFocus && focusAvailable ? .purple : .blue) {
-                        showingSignalFocus = true
-                    }
-                    .disabled(!focusAvailable)
-                    .accessibilityValue(showingSignalFocus && focusAvailable ? "Selected" : "Not selected")
-                    TrendsActionButton(title: "Full history", systemImage: "chart.xyaxis.line",
-                                       tint: showingSignalFocus && focusAvailable ? .blue : .purple) {
-                        showingSignalFocus = false
-                    }
-                    Picker("Chart period", selection: $range) {
-                        ForEach(RadarChartRange.allCases) { option in Text(option.title).tag(option) }
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-                    .frame(width: 320)
-                    if hasTrades {
-                        TrendsActionButton(title: "Trades", systemImage: "point.topleft.down.curvedto.point.bottomright.up",
-                                           tint: showingTrades ? .orange : .blue) { showingTrades.toggle() }
-                            .accessibilityLabel("Show imported trades on the chart")
-                            .accessibilityValue(showingTrades ? "On" : "Off")
-                    }
-                    TradeImportAction(title: "Import trades", onImport: onImport)
+                    chartControls
+                    Spacer(minLength: 0)
                 }
-                .lineLimit(1)
-                .frame(minHeight: 32)
-                .padding(.vertical, 2)
+                VStack(alignment: .leading, spacing: 6) {
+                    ScrollView(.horizontal, showsIndicators: false) { instrumentSummary }
+                    ScrollView(.horizontal, showsIndicators: false) { chartControls }
+                }
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 4)
             if hasTrades && outsideTradeCount > 0 && range != .trades {
                 HStack(spacing: 10) {
                     Text("\(outsideTradeCount) imported \(outsideTradeCount == 1 ? "trade" : "trades") outside \(range.title)")
@@ -63,6 +42,47 @@ struct RadarChartHeader: View {
                 }
             }
         }
+    }
+
+    private var instrumentSummary: some View {
+        HStack(spacing: 12) {
+            identity
+            quote
+        }
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var chartControls: some View {
+        HStack(spacing: 14) {
+            TrendsActionButton(title: "Signal focus", systemImage: "scope",
+                               tint: showingSignalFocus && focusAvailable ? .purple : .blue) {
+                showingSignalFocus = true
+            }
+            .disabled(!focusAvailable)
+            .accessibilityValue(showingSignalFocus && focusAvailable ? "Selected" : "Not selected")
+            TrendsActionButton(title: "Full history", systemImage: "chart.xyaxis.line",
+                               tint: showingSignalFocus && focusAvailable ? .blue : .purple) {
+                showingSignalFocus = false
+            }
+            Picker("Chart period", selection: $range) {
+                ForEach(RadarChartRange.allCases) { option in Text(option.title).tag(option) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .frame(width: 320)
+            if hasTrades {
+                TrendsActionButton(title: "Trades", systemImage: "point.topleft.down.curvedto.point.bottomright.up",
+                                   tint: showingTrades ? .orange : .blue) { showingTrades.toggle() }
+                    .accessibilityLabel("Show imported trades on the chart")
+                    .accessibilityValue(showingTrades ? "On" : "Off")
+            }
+            TradeImportAction(title: "Import trades", onImport: onImport)
+        }
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .padding(.horizontal, 3)
+        .padding(.vertical, 3)
     }
 
     private var identity: some View {
