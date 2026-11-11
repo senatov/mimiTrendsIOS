@@ -38,7 +38,7 @@ actor BoerseDAXSource {
         return currentCandidates
     }
 
-    private var currentCandidates: [RadarCompanyCandidate] {
+    var currentCandidates: [RadarCompanyCandidate] {
         guard let lastSuccessfulRefresh, Date().timeIntervalSince(lastSuccessfulRefresh) < 86_400 else { return [] }
         return lastCandidates
     }
@@ -91,10 +91,23 @@ actor BoerseDAXSource {
     }
 
     static func rows(in html: String, now: Date) -> [Row] {
-        let heading = #"(?i)Kursliste\s+Realtime\s+Dax-Aktien"#
-        guard let start = html.range(of: heading, options: .regularExpression),
-              let table = MarketPageHTML.first(#"(?i)<table\b[^>]*>(.*?)</table>"#, in: String(html[start.upperBound...]))
+        let bodyPattern = #"(?i)<div\b[^>]*\sid\s*=\s*["']TableBody_0["'][^>]*>"#
+        guard let start = html.range(of: bodyPattern, options: .regularExpression),
+              let divTags = try? NSRegularExpression(pattern: #"(?i)</?div\b[^>]*>"#)
         else { return [] }
+        let remainder = String(html[start.upperBound...])
+        var depth = 1
+        var end = remainder.endIndex
+        divTags.enumerateMatches(in: remainder, range: NSRange(remainder.startIndex..., in: remainder)) { match, _, stop in
+            guard let match, let range = Range(match.range, in: remainder) else { return }
+            depth += remainder[range].hasPrefix("</") ? -1 : 1
+            if depth == 0 {
+                end = range.lowerBound
+                stop.pointee = true
+            }
+        }
+        let tables = MarketPageHTML.matches(#"(?i)<table\b[^>]*>(.*?)</table\s*>"#, in: String(remainder[..<end]))
+        let table = tables.joined(separator: "\n")
         var seen = Set<String>()
         return MarketPageHTML.matches(#"(?i)<tr\b[^>]*>(.*?)</tr>"#, in: table).compactMap { row in
             let cells = MarketPageHTML.matches(#"(?i)<td\b[^>]*>(.*?)</td>"#, in: row)

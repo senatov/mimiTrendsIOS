@@ -65,6 +65,7 @@ actor MarketRadarScanner {
         let discovery = RadarDiscoveryPreferences.load()
         if discovery != discoveryPreferences {
             discoveryPreferences = discovery
+            baselineCandidates = []
             nextDiscoveryAt = .distantPast
         }
         let fmpKey = enabledProviders.contains(.fmp)
@@ -90,18 +91,24 @@ actor MarketRadarScanner {
         let baselineUS = sessions.us.isTrading && enabledProviders.contains(.wallstreetOnline)
         let baselineDE = sessions.german == .regular && enabledProviders.contains(.wallstreetOnline)
         let useDAX = sessions.german.isTrading && enabledProviders.contains(.boerseDAX)
-        let cachedDAX = useDAX ? (try? await store?.candidateSnapshot(source: "boerseDAX")) ?? [] : []
+        var cachedDAX: [RadarCompanyCandidate] = []
+        if useDAX {
+            cachedDAX = (try? await store?.candidateSnapshot(source: "boerseDAX")) ?? []
+            if cachedDAX.isEmpty { cachedDAX = await dax.currentCandidates }
+        }
         if let store {
-            baselineCandidates = (baselineUS ? (try? await store.candidateSnapshot(source: baselineKey + "|US")) ?? [] : [])
-                + (baselineDE ? (try? await store.candidateSnapshot(source: baselineKey + "|DE")) ?? [] : [])
+            let memoryUS = baselineCandidates.filter { !MarketCandidateFilter.isGermanSymbol($0.symbol) }
+            let memoryDE = baselineCandidates.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
+            baselineCandidates = (baselineUS ? await restoreCandidates(baselineKey + "|US", fallback: memoryUS, store: store) : [])
+                + (baselineDE ? await restoreCandidates(baselineKey + "|DE", fallback: memoryDE, store: store) : [])
             yahooCandidates = sessions.us.isTrading && enabledProviders.contains(.yahoo)
-                ? (try? await store.candidateSnapshot(source: "yahoo")) ?? [] : []
+                ? await restoreCandidates("yahoo", fallback: yahooCandidates, store: store) : []
             fmpCandidates = sessions.us.isTrading && fmpKey != nil
-                ? (try? await store.candidateSnapshot(source: "fmp")) ?? [] : []
+                ? await restoreCandidates("fmp", fallback: fmpCandidates, store: store) : []
             traderFoxCandidates = sessions.us.isTrading && enabledProviders.contains(.traderFox) && fmpKey == nil
-                ? (try? await store.candidateSnapshot(source: "traderFoxUS")) ?? [] : []
+                ? await restoreCandidates("traderFoxUS", fallback: traderFoxCandidates, store: store) : []
             germanCandidates = sessions.german.isTrading && enabledProviders.contains(.traderFox)
-                ? (try? await store.candidateSnapshot(source: "traderFoxDE")) ?? [] : []
+                ? await restoreCandidates("traderFoxDE", fallback: germanCandidates, store: store) : []
         }
         let hasCachedPool = !(cachedDAX + baselineCandidates + yahooCandidates + fmpCandidates
             + traderFoxCandidates + germanCandidates).isEmpty
@@ -437,6 +444,18 @@ actor MarketRadarScanner {
         traderFoxTotals.lastErrorMessage = traderFoxRefreshErrors.isEmpty
             ? nil : traderFoxRefreshErrors.joined(separator: "\n")
         if hadFailure { nextDiscoveryAt = Date().addingTimeInterval(60) }
+    }
+
+    private func restoreCandidates(
+        _ key: String, fallback: [RadarCompanyCandidate], store: MarketBarStore
+    ) async -> [RadarCompanyCandidate] {
+        do {
+            let cached = try await store.candidateSnapshot(source: key)
+            return cached.isEmpty ? fallback : cached
+        } catch {
+            AppDiagnostics.shared.record(.warning, "Discovery", "candidate-cache-read-failed", "error=\(String(describing: type(of: error)))")
+            return fallback
+        }
     }
 
     private func saveSnapshot(_ candidates: [RadarCompanyCandidate], key: String) async {

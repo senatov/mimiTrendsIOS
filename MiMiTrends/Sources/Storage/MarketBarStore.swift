@@ -213,8 +213,8 @@ actor MarketBarStore {
     }
 
     private static func configure(_ connection: OpaquePointer) throws {
-        try execute("PRAGMA journal_mode=WAL", on: connection)
         try execute("PRAGMA busy_timeout=10000", on: connection)
+        try execute("PRAGMA journal_mode=WAL", on: connection)
         try execute("PRAGMA foreign_keys=ON", on: connection)
     }
 

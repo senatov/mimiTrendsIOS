@@ -100,7 +100,7 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
 
     func testDAXRanksBothDirectionsAndSkipsStaleRows() {
         let html = """
-        <h2>Kursliste Realtime Dax-Aktien</h2>
+        <div id="TableBody_0" style="position:relative;"><div id="loadingPushList_0"><table><tr><td>Loading</td></tr></table></div>
         <table>
         <tr><td><a href="/aktien/SAP-Aktie/DE0007164600">SAP</a></td>
           <td>177,68</td><td>5,32</td><td>3,09</td><td>09:08:00</td></tr>
@@ -109,6 +109,11 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         <tr><td><a href="/aktien/Siemens-Aktie/DE0007236101">Siemens</a></td>
           <td>280,20</td><td>7,10</td><td>2,60</td><td>08:30:00</td></tr>
         </table>
+        </div>
+        <div id="TableBody_1"><table>
+        <tr><td><a href="/aktien/BMW-Aktie/DE0005190003">BMW</a></td>
+          <td>90,00</td><td>7,00</td><td>8,00</td><td>09:09:00</td></tr>
+        </table></div>
         """
         let now = ISO8601DateFormatter().date(from: "2026-11-11T08:10:00Z")!
         let rows = BoerseDAXSource.rows(in: html, now: now)
