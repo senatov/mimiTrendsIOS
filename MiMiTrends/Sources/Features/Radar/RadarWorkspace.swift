@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>: View {
-    let signals: (Bool) -> Signals
+    let signals: (Bool, CGFloat) -> Signals
     let sources: () -> Sources
     let plot: () -> Plot
     let controls: () -> Controls
@@ -51,8 +51,8 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
         let drawerWidth = RadarPaneLayout.sourceDrawerWidth(totalWidth: width)
         let signalWidth = RadarPaneLayout.signalWidth(totalWidth: width, sourcesOpen: showingSources && inlineDrawer)
         return HStack(alignment: .top, spacing: 6) {
-            signals(signalWidth < 620 || dynamicTypeSize.isAccessibilitySize)
-                .frame(width: signalWidth)
+            signals(signalWidth < 620 || dynamicTypeSize.isAccessibilitySize, signalWidth)
+                .frame(width: signalWidth, alignment: .leading)
                 .frame(maxHeight: .infinity)
             if showingSources && inlineDrawer {
                 ScrollView(.vertical) {

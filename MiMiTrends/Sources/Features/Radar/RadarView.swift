@@ -36,7 +36,7 @@ struct RadarView: View {
         NavigationStack {
             VStack(spacing: 6) {
                 RadarWorkspace(
-                    signals: { compact in signalList(compact: compact) },
+                    signals: { compact, width in signalList(compact: compact, width: width) },
                     sources: {
                         RadarSourcePanel(
                             discoveryStatus: discoveryStatus,
@@ -61,6 +61,9 @@ struct RadarView: View {
                     },
                     controls: {
                         RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
+                                    sourcesOpen: showingSources,
+                                    onToggleSources: { showingSources.toggle() },
+                                    onRefresh: { Task { await refreshSignals() } },
                                     onManageWatchlist: onManageWatchlist)
                     },
                     showingSources: $showingSources
@@ -146,7 +149,7 @@ struct RadarView: View {
         "Waiting for fresh candle movements from Yahoo and price movements from boerse.de."
     }
 
-    private func signalList(compact: Bool) -> some View {
+    private func signalList(compact: Bool, width: CGFloat) -> some View {
         RadarSignalList(
             signals: recentSignals,
             activity: recentSignals.isEmpty ? currentActivity : nil,
@@ -156,15 +159,13 @@ struct RadarView: View {
             displayCurrency: displayCurrency,
             selected: selectedSignal,
             compact: compact,
+            panelWidth: width,
             errorMessage: historyError,
             emptyStateMessage: emptyRadarMessage,
-            sourcesOpen: showingSources,
-            onToggleSources: { showingSources.toggle() },
             onSelect: { signal in
                 selectedSignal = signal
                 symbol = signal.symbol
-            },
-            onRefresh: { Task { await refreshSignals() } }
+            }
         )
         .allowsHitTesting(!isHistoryLoading)
         .accessibilityHidden(isHistoryLoading)

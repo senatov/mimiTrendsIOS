@@ -15,15 +15,12 @@ struct RadarSignalList: View {
     let displayCurrency: String
     let selected: ScanResult?
     let compact: Bool
+    let panelWidth: CGFloat
     let errorMessage: String?
     let emptyStateMessage: String
-    let sourcesOpen: Bool
-    let onToggleSources: () -> Void
     let onSelect: (ScanResult) -> Void
-    let onRefresh: () -> Void
     @AppStorage("radar.sort.column.v1") private var storedSortColumn = RadarSortColumn.age.rawValue
     @AppStorage("radar.sort.ascending.v1") private var ascending = true
-    @State private var availableWidth: CGFloat = 0
     @State private var columnWidthOverrides: [RadarSortColumn: CGFloat] = [:]
     @State private var coverageRequest: RadarCoverageRequest?
     private var sortColumn: RadarSortColumn {
@@ -86,17 +83,6 @@ struct RadarSignalList: View {
                     .padding(.vertical, 4)
                     .background(tableColor(.signalHeaderFill), in: RoundedRectangle(cornerRadius: 5))
                     .help(currencyRates.map { "ECB reference rates dated \($0.date)" } ?? "Waiting for ECB exchange rates")
-                Spacer()
-                TrendsActionButton(
-                    title: "Sources",
-                    systemImage: "sidebar.right",
-                    tint: .blue,
-                    action: onToggleSources
-                )
-                .accessibilityLabel(sourcesOpen ? "Hide sources" : "Show sources")
-                .accessibilityValue(sourcesOpen ? "Open" : "Closed")
-                TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise", action: onRefresh)
-                    .accessibilityLabel("Refresh saved signals")
             }
             Divider()
             Text("Move: price change over the listed window · Signals describe recent movement.")
@@ -130,8 +116,8 @@ struct RadarSignalList: View {
                 if !compact {
                     header
                 }
-                GeometryReader { geometry in
-                    let contentWidth = max(0, geometry.size.width - (compact ? 0 : scrollbarGutter))
+                GeometryReader { _ in
+                    let contentWidth = max(0, panelWidth - 22 - (compact ? 0 : scrollbarGutter))
                     let widths = fittedWidths(availableWidth: contentWidth - 16)
                     ScrollView {
                         LazyVStack(spacing: 0) {
@@ -154,16 +140,11 @@ struct RadarSignalList: View {
                         }
                     }
                     .frame(width: contentWidth + (compact ? 0 : scrollbarGutter), alignment: .leading)
-                    .onAppear { availableWidth = contentWidth }
-                    .onChange(of: contentWidth) { oldValue, newValue in
-                        guard abs(newValue - oldValue) > 1 else { return }
-                        availableWidth = newValue
-                        columnWidthOverrides = [:]
-                    }
                 }
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(width: max(0, panelWidth - 22), alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
         .foregroundStyle(tableColor(.signalBodyText))
         .background(tableColor(.signalTableFill), in: RoundedRectangle(cornerRadius: 10))
         .trendsPanel()
@@ -174,7 +155,7 @@ struct RadarSignalList: View {
     }
 
     private var header: some View {
-        let widths = fittedWidths(availableWidth: max(0, availableWidth - 16))
+        let widths = fittedWidths(availableWidth: max(0, panelWidth - 22 - scrollbarGutter - 16))
         return HStack(spacing: 0) {
             ForEach(RadarSortColumn.allCases, id: \.self) { column in
                 headerCell(column, width: widths.width(for: column))
