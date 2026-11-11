@@ -5,35 +5,41 @@ actor BoerseDAXSource {
     private let session: URLSession
     private var resolved: [String: String] = [:]
 
-    private var previousSessions: RadarTradingSessions?
     private var nextRefreshAt: Date = .distantPast
+    private var lastSuccessfulRefresh: Date?
     private var lastCandidates: [RadarCompanyCandidate] = []
 
     init(session: URLSession = .shared) { self.session = session }
 
-    func candidates(for sessions: RadarTradingSessions) async throws -> [RadarCompanyCandidate] {
-        let changed = previousSessions?.german != sessions.german
-            || previousSessions?.germanOpeningSoon != sessions.germanOpeningSoon
-        guard sessions.german.isTrading else {
-            previousSessions = sessions
-            lastCandidates = []
-            return []
-        }
-        guard changed || Date() >= nextRefreshAt else { return lastCandidates }
+    func candidates(for sessions: RadarTradingSessions, store: MarketBarStore?) async throws -> [RadarCompanyCandidate] {
+        guard sessions.german.isTrading else { return [] }
+        guard Date() >= nextRefreshAt else { return currentCandidates }
+        nextRefreshAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
         do {
             lastCandidates = try await loadCandidates()
-            nextRefreshAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
+            lastSuccessfulRefresh = Date()
+            do { try await store?.saveCandidateSnapshot(lastCandidates, source: "boerseDAX") }
+            catch {
+                AppDiagnostics.shared.record(.warning, "boerse.de", "dax-cache-write-failed",
+                                             "error=\(String(describing: type(of: error)))")
+            }
             MarketProviderAccess.setHealth("Connected", for: .boerseDAX)
             AppDiagnostics.shared.record(.info, "boerse.de", "dax-candidates-loaded",
                                          "candidates=\(lastCandidates.count) phase=\(sessions.german)")
         } catch {
-            try Task.checkCancellation()
-            nextRefreshAt = Date().addingTimeInterval(60)
+            if Task.isCancelled {
+                nextRefreshAt = .distantPast
+                throw CancellationError()
+            }
             let message = MarketRadarErrorDescription.message(error, provider: "boerse.de DAX")
             MarketProviderAccess.setHealth("Needs attention", for: .boerseDAX, detail: message)
             AppDiagnostics.shared.record(.warning, "boerse.de", "dax-candidate-refresh-failed", message)
         }
-        previousSessions = sessions
+        return currentCandidates
+    }
+
+    private var currentCandidates: [RadarCompanyCandidate] {
+        guard let lastSuccessfulRefresh, Date().timeIntervalSince(lastSuccessfulRefresh) < 86_400 else { return [] }
         return lastCandidates
     }
 
@@ -42,12 +48,18 @@ actor BoerseDAXSource {
         request.timeoutInterval = 15
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
-        request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        request.setValue("de-DE,de;q=0.9,en;q=0.8", forHTTPHeaderField: "Accept-Language")
+        let (file, response) = try await session.download(for: request)
+        defer { try? FileManager.default.removeItem(at: file) }
         guard let http = response as? HTTPURLResponse else { throw RadarSourceError.invalidResponse }
+        let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+        AppDiagnostics.shared.record(.info, "boerse.de", "dax-page-downloaded",
+                                     "http=\(http.statusCode) bytes=\(size)")
         guard http.statusCode == 200 else { throw RadarSourceError.httpStatus(http.statusCode) }
-        guard data.count <= 8_000_000 else { throw RadarSourceError.invalidResponse }
-        let rows = Self.rows(in: String(decoding: data, as: UTF8.self), now: Date())
+        guard (1...8_000_000).contains(size) else { throw RadarSourceError.invalidResponse }
+        let html = String(decoding: try Data(contentsOf: file, options: .mappedIfSafe), as: UTF8.self)
+        let rows = Self.rows(in: html, now: Date())
+        AppDiagnostics.shared.record(.info, "boerse.de", "dax-page-parsed", "rows=\(rows.count)")
         guard !rows.isEmpty else { throw RadarSourceError.invalidResponse }
         let missing = rows.map(\.isin).filter { Self.knownSymbols[$0] == nil && resolved[$0] == nil }
         for start in stride(from: 0, to: missing.count, by: 4) {

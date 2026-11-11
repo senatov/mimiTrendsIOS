@@ -69,10 +69,9 @@ extension RadarView {
 
     func scanMarketWhileActive() async {
         guard scenePhase == .active else { return }
-        guard await ensureAutomaticProvidersReady() else { return }
         while !Task.isCancelled {
             do {
-                let enabledProviders = Set(MarketProvider.allCases.filter { ($0 == .boerseDAX ? MarketProviderAccess.isEnabled($0) : MarketProviderAccess.isOperational($0)) })
+                let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
                 let progressBinding = $liveScanProgress
                 let cycle = try await marketScanner.scan(
                     settings: RadarScanPreferencesStore.load(), enabledProviders: enabledProviders

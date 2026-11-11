@@ -209,7 +209,7 @@ struct YahooRadarSource: Sendable {
     }
 }
 
-struct RadarCompanyCandidate: Sendable {
+struct RadarCompanyCandidate: Codable, Sendable {
     let symbol: String
     let name: String
 }

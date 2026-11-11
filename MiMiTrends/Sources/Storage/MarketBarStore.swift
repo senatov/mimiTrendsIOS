@@ -18,6 +18,11 @@ actor MarketBarStore {
         do {
             try Self.configure(connection)
             try Self.migrate(connection)
+            try Self.execute("""
+                CREATE TABLE IF NOT EXISTS radar_candidate_snapshots (
+                    source TEXT PRIMARY KEY NOT NULL, saved_at REAL NOT NULL, payload TEXT NOT NULL
+                )
+                """, on: connection)
             try Self.checkIntegrity(connection)
         } catch {
             AppDiagnostics.shared.record(
@@ -39,6 +44,36 @@ actor MarketBarStore {
             for: .applicationSupportDirectory, in: .userDomainMask,
             appropriateFor: nil, create: true
         ).appendingPathComponent("mimitrends-native.db")
+    }
+
+    func candidateSnapshot(source: String) throws -> [RadarCompanyCandidate] {
+        let cutoff = Date().addingTimeInterval(-24 * 60 * 60).timeIntervalSince1970
+        let statement = try prepare("SELECT payload FROM radar_candidate_snapshots WHERE source = ? AND saved_at >= ?")
+        defer { sqlite3_finalize(statement) }
+        try bind(source, to: 1, in: statement)
+        sqlite3_bind_double(statement, 2, cutoff)
+        switch sqlite3_step(statement) {
+        case SQLITE_DONE: return []
+        case SQLITE_ROW:
+            guard let payload = sqlite3_column_text(statement, 0) else {
+                throw MarketBarStoreError.databaseUnavailable
+            }
+            return try JSONDecoder().decode([RadarCompanyCandidate].self, from: Data(String(cString: payload).utf8))
+        default: throw MarketBarStoreError.databaseUnavailable
+        }
+    }
+
+    func saveCandidateSnapshot(_ candidates: [RadarCompanyCandidate], source: String) throws {
+        guard !candidates.isEmpty else { return }
+        let statement = try prepare("""
+            INSERT INTO radar_candidate_snapshots(source, saved_at, payload) VALUES (?, ?, ?)
+            ON CONFLICT(source) DO UPDATE SET saved_at = excluded.saved_at, payload = excluded.payload
+            """)
+        defer { sqlite3_finalize(statement) }
+        try bind(source, to: 1, in: statement)
+        sqlite3_bind_double(statement, 2, Date().timeIntervalSince1970)
+        try bind(String(decoding: JSONEncoder().encode(candidates), as: UTF8.self), to: 3, in: statement)
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw MarketBarStoreError.databaseUnavailable }
     }
 
     func upsert(_ bar: MinuteBar) throws -> Bool {
