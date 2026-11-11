@@ -98,27 +98,23 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertTrue(mixed.contains("US0"))
     }
 
-    func testDAXRanksBothDirectionsAndSkipsStaleRows() {
-        let html = """
-        <div id="TableBody_0" style="position:relative;"><div id="loadingPushList_0"><table><tr><td>Loading</td></tr></table></div>
-        <table>
-        <tr><td><a href="/aktien/SAP-Aktie/DE0007164600">SAP</a></td>
-          <td>177,68</td><td>5,32</td><td>3,09</td><td>09:08:00</td></tr>
-        <tr><td><a href="/aktien/Rheinmetall-Aktie/DE0007030009">Rheinmetall</a></td>
-          <td>1.145,00</td><td>-48,00</td><td>−4,00</td><td>09:09:00</td></tr>
-        <tr><td><a href="/aktien/Siemens-Aktie/DE0007236101">Siemens</a></td>
-          <td>280,20</td><td>7,10</td><td>2,60</td><td>08:30:00</td></tr>
-        </table>
-        </div>
-        <div id="TableBody_1"><table>
-        <tr><td><a href="/aktien/BMW-Aktie/DE0005190003">BMW</a></td>
-          <td>90,00</td><td>7,00</td><td>8,00</td><td>09:09:00</td></tr>
-        </table></div>
+    func testDAXRanksBothDirectionsAndSkipsStaleRows() throws {
+        let json = """
+        {"success":true,"data":{"items":[
+          {"marketstateQuery":"DE0007164600@STU","stale":false,"marketstate":{
+            "last":{"value":177.68,"datetime":"2026-11-11T08:08:00.000+00:00"},
+            "performance":{"changeRelative":0.0309}}},
+          {"marketstateQuery":"DE0007030009@STU","stale":false,"marketstate":{
+            "last":{"value":1145,"datetime":"2026-11-11T08:09:00.000+00:00"},
+            "performance":{"changeRelative":-0.04}}},
+          {"marketstateQuery":"DE0007236101@STU","stale":false,"marketstate":{
+            "last":{"value":280.20,"datetime":"2026-11-11T07:30:00.000+00:00"},
+            "performance":{"changeRelative":0.10}}}
+        ]}}
         """
         let now = ISO8601DateFormatter().date(from: "2026-11-11T08:10:00Z")!
-        let rows = BoerseDAXSource.rows(in: html, now: now)
-        XCTAssertEqual(rows.map(\.isin), ["DE0007030009", "DE0007164600"])
-        XCTAssertEqual(rows.map(\.change), [-4, 3.09])
+        let candidates = try BoerseDAXSource.decodeCandidates(Data(json.utf8), now: now)
+        XCTAssertEqual(candidates.map(\.symbol), ["RHM.DE", "SAP.DE"])
     }
 
     func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {
