@@ -74,7 +74,7 @@ struct RecentCoverageClient: Sendable {
 
     private func yahooSearch(_ query: String) async throws -> [CoverageItem] {
         guard var components = URLComponents(
-            url: ProviderEndpointStore.url(for: .yahooPrimary).appendingPathComponent("v1/finance/search"),
+            url: YahooAPIEndpoint.primary.appendingPathComponent("v1/finance/search"),
             resolvingAgainstBaseURL: false
         ) else { throw CoverageClientError.invalidURL }
         components.queryItems = [URLQueryItem(name: "q", value: query),

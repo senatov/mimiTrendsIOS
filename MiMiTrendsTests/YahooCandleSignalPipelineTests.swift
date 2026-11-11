@@ -5,6 +5,29 @@ import XCTest
 final class YahooCandleSignalPipelineTests: XCTestCase {
     private let now: Int64 = 1_794_331_200 // 2026-11-10 17:20 UTC
 
+    func testLegacyYahooAPIHostsMigrateWithoutReplacingCustomRanking() {
+        let suite = "YahooEndpoints-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set("https://query1.finance.yahoo.com/", forKey: "provider.endpoint.yahooPrimary.v1")
+        defaults.set("https://finance.yahoo.com/markets/stocks/trending/", forKey: "provider.endpoint.yahooAlternate.v1")
+        XCTAssertEqual(ProviderEndpointStore.url(for: .yahooPrimary, defaults: defaults).absoluteString,
+                       ProviderEndpoint.yahooPrimary.defaultURL)
+        XCTAssertEqual(ProviderEndpointStore.url(for: .yahooAlternate, defaults: defaults).absoluteString,
+                       "https://finance.yahoo.com/markets/stocks/trending/")
+    }
+
+    func testYahooRankingPagesSupplyDeduplicatedSupportedSymbols() {
+        let html = """
+        <table><tr><td><a href="/quote/NVDA/">NVDA</a></td></tr>
+        <tr><td><a href='https://finance.yahoo.com/quote/BRK-B/'>Berkshire Hathaway</a></td></tr>
+        <tr><td><a href="/quote/NVDA/">NVIDIA</a></td></tr>
+        <tr><td><a href="/quote/BTC-USD/">Bitcoin</a></td></tr></table>
+        """
+        let candidates = YahooRankingPageSource.candidates(in: html)
+        XCTAssertEqual(candidates.map(\.symbol), ["NVDA", "BRK-B"])
+    }
+
     func testCompletedDropCreatesVolumeBackedSignalAndIsVisible() throws {
         let bars = history(symbol: "NVDA", end: now - 60, dropping: true)
         let signal = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "NVDA", bars: bars,

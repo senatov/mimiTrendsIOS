@@ -15,8 +15,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzStoxx: "STOXX 50"
         case .langSchwarzEurope: "Europe"
         case .langSchwarzAmerica: "America"
-        case .yahooPrimary: "Primary"
-        case .yahooAlternate: "Alternate"
+        case .yahooPrimary: "Most active"
+        case .yahooAlternate: "Trending fallback"
         case .wallstreetOnline: "Instrument pages"
         case .wallstreetWikifolio: "Wikifolio · today"
         case .wallstreetPerformance: "Trading volume · 24h"
@@ -32,8 +32,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzStoxx: "https://www.ls-tc.de/de/aktien/europa/stoxx50"
         case .langSchwarzEurope: "https://www.ls-tc.de/de/aktien/europa"
         case .langSchwarzAmerica: "https://www.ls-tc.de/de/aktien/amerika"
-        case .yahooPrimary: "https://query1.finance.yahoo.com"
-        case .yahooAlternate: "https://query2.finance.yahoo.com"
+        case .yahooPrimary: "https://finance.yahoo.com/markets/stocks/most-active/"
+        case .yahooAlternate: "https://finance.yahoo.com/markets/stocks/trending/"
         case .wallstreetOnline: "https://www.wallstreet-online.de"
         case .wallstreetWikifolio: "https://www.wallstreet-online.de/statistik/top-aktien-wikifolio"
         case .wallstreetPerformance: "https://www.wallstreet-online.de/statistik/top-aktien-meistgehandelt"
@@ -46,7 +46,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         switch self {
         case .finnhubTrades: ""
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica: ""
-        case .yahooPrimary, .yahooAlternate: "/v1/finance/search?q=ASML&quotesCount=1&newsCount=0"
+        case .yahooPrimary, .yahooAlternate: ""
         case .wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance: ""
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
         case .traderFox: "dax-bestandteile"
@@ -71,6 +71,7 @@ enum ProviderEndpointError: LocalizedError {
 enum ProviderEndpointStore {
     static func url(for endpoint: ProviderEndpoint, defaults: UserDefaults = .standard) -> URL {
         migrateLegacyRankingURL(defaults: defaults)
+        migrateYahooAPIHosts(defaults: defaults)
         let stored = defaults.string(forKey: key(endpoint)) ?? endpoint.defaultURL
         return (try? validate(stored, for: endpoint)) ?? URL(string: endpoint.defaultURL)!
     }
@@ -83,6 +84,17 @@ enum ProviderEndpointStore {
     static func removeUnusedLegacyValues(defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: "provider.endpoint.finnhubProfiles.v1")
         migrateLegacyRankingURL(defaults: defaults)
+        migrateYahooAPIHosts(defaults: defaults)
+    }
+
+    private static func migrateYahooAPIHosts(defaults: UserDefaults) {
+        for (endpoint, oldHost) in [(ProviderEndpoint.yahooPrimary, "https://query1.finance.yahoo.com"),
+                                    (.yahooAlternate, "https://query2.finance.yahoo.com")] {
+            guard let stored = defaults.string(forKey: key(endpoint)),
+                  stored.trimmingCharacters(in: .whitespacesAndNewlines)
+                    .trimmingCharacters(in: CharacterSet(charactersIn: "/")) == oldHost else { continue }
+            defaults.set(endpoint.defaultURL, forKey: key(endpoint))
+        }
     }
 
     private static func migrateLegacyRankingURL(defaults: UserDefaults) {
@@ -118,6 +130,10 @@ struct ProviderEndpointChecker: Sendable {
         let base = try ProviderEndpointStore.validate(value, for: endpoint)
         guard endpoint != .finnhubTrades else {
             throw ProviderEndpointError.checkFailed
+        }
+        if endpoint == .yahooPrimary || endpoint == .yahooAlternate {
+            let candidates = try await YahooRankingPageSource().loadCandidates(from: base)
+            return "Yahoo Finance ranking page OK · \(candidates.count) symbols"
         }
         let url = URL(string: endpoint.probePath, relativeTo: base)?.absoluteURL
         guard let url else { throw ProviderEndpointError.invalidURL }

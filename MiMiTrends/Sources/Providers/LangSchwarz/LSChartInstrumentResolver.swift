@@ -26,7 +26,7 @@ actor LSChartInstrumentResolver {
         }
         let html = String(decoding: try await data(from: url), as: UTF8.self)
         let isin = try Self.isin(in: html)
-        var components = URLComponents(url: ProviderEndpointStore.url(for: .yahooPrimary), resolvingAgainstBaseURL: false)!
+        var components = URLComponents(url: YahooAPIEndpoint.primary, resolvingAgainstBaseURL: false)!
         components.path = "/v1/finance/search"
         components.queryItems = [URLQueryItem(name: "q", value: isin),
                                  URLQueryItem(name: "quotesCount", value: "10"),

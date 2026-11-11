@@ -258,10 +258,14 @@ actor MarketRadarScanner {
             yahooTotals.operations += 1
             if !symbols.isEmpty {
                 yahooCandidates = symbols
+                yahooTotals.received += symbols.count
+                yahooTotals.valid += symbols.count
                 yahooRefreshed = true
                 yahooTotals.lastErrorMessage = nil
                 unsupportedSymbols.removeAll()
                 scanOffset = 0
+                AppDiagnostics.shared.record(.info, "Yahoo", "candidate-page-loaded",
+                                             "candidates=\(symbols.count) refreshMinutes=30")
             }
           } catch RadarSourceError.rateLimited {
             hadFailure = true

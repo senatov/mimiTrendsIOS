@@ -58,7 +58,8 @@ actor RadarBaselineSource {
     }
 
     private static func searchISIN(_ isin: String) async throws -> String? {
-        var components = URLComponents(string: "https://query1.finance.yahoo.com/v1/finance/search")!
+        var components = URLComponents(url: YahooAPIEndpoint.primary.appendingPathComponent("v1/finance/search"),
+                                       resolvingAgainstBaseURL: false)!
         components.queryItems = [URLQueryItem(name: "q", value: isin),
                                  URLQueryItem(name: "quotesCount", value: "10"),
                                  URLQueryItem(name: "newsCount", value: "0")]

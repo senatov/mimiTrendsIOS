@@ -1,5 +1,10 @@
 import Foundation
 
+enum YahooAPIEndpoint {
+    static let primary = URL(string: "https://query1.finance.yahoo.com")!
+    static let alternate = URL(string: "https://query2.finance.yahoo.com")!
+}
+
 struct YahooRadarSource: Sendable {
     private let session: URLSession
 
@@ -8,14 +13,18 @@ struct YahooRadarSource: Sendable {
     }
 
     func mostActiveCandidates(limit: Int = 20) async throws -> [RadarCompanyCandidate] {
-        let path = "/v1/finance/screener/predefined/saved?scrIds=most_actives&count=100&start=0"
-        let root = try await loadWithFallback(path: path)
-        guard let finance = root["finance"] as? [String: Any],
-              let result = finance["result"] as? [[String: Any]],
-              let quotes = result.first?["quotes"] as? [[String: Any]] else {
-            throw RadarSourceError.invalidResponse
+        let primary = ProviderEndpointStore.url(for: .yahooPrimary)
+        do {
+            return try await YahooRankingPageSource(session: session)
+                .loadCandidates(from: primary, limit: limit)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            let alternate = ProviderEndpointStore.url(for: .yahooAlternate)
+            guard alternate != primary else { throw error }
+            return try await YahooRankingPageSource(session: session)
+                .loadCandidates(from: alternate, limit: limit)
         }
-        return Self.activeCandidates(in: quotes, limit: limit)
     }
 
     func minuteBars(symbol: String) async throws -> [MinuteBar] {
@@ -98,7 +107,7 @@ struct YahooRadarSource: Sendable {
     }
 
     private func loadWithFallback(path: String) async throws -> [String: Any] {
-        let primary = URL(string: path, relativeTo: ProviderEndpointStore.url(for: .yahooPrimary))!.absoluteURL
+        let primary = URL(string: path, relativeTo: YahooAPIEndpoint.primary)!.absoluteURL
         do {
             return try await loadJSON(primary)
         } catch is CancellationError {
@@ -110,7 +119,7 @@ struct YahooRadarSource: Sendable {
         } catch let RadarSourceError.httpStatus(status) where status < 500 {
             throw RadarSourceError.httpStatus(status)
         } catch {
-            let alternate = URL(string: path, relativeTo: ProviderEndpointStore.url(for: .yahooAlternate))!.absoluteURL
+            let alternate = URL(string: path, relativeTo: YahooAPIEndpoint.alternate)!.absoluteURL
             return try await loadJSON(alternate)
         }
     }
@@ -205,9 +214,18 @@ struct RadarCompanyCandidate: Sendable {
     let name: String
 }
 
-enum RadarSourceError: Error {
+enum RadarSourceError: LocalizedError {
     case invalidResponse
     case invalidSymbol
     case rateLimited
     case httpStatus(Int)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidResponse: "The provider returned no readable market data."
+        case .invalidSymbol: "The requested symbol was not found."
+        case .rateLimited: "The provider limited requests (HTTP 429). Try again later."
+        case .httpStatus(let status): "The provider returned HTTP \(status)."
+        }
+    }
 }

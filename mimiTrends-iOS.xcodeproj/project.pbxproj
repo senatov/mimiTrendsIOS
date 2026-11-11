@@ -78,6 +78,7 @@
 		5D450505D6D7625389567466 /* FinnhubTradeStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = F80B2E9DCDE37394950FD413 /* FinnhubTradeStream.swift */; };
 		5F44F4381DE6A442C630CB05 /* RadarSourceTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B5C11318DF9D01C1B379601 /* RadarSourceTable.swift */; };
 		5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */; };
+		D4FDD237C75342D88EA65A41 /* YahooRankingPageSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */; };
 		6184C352E9EF0D6AE8168EAC /* MarketRadarScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67B9688545B10D9D3BE1B0CB /* MarketRadarScanner.swift */; };
 		63B9B07BFF4A3AD1D7941D8E /* RadarCandleRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AA95188C0D77DFC263CB6D /* RadarCandleRoutingTests.swift */; };
 		63CCFD98B74866A8A0FFE2AB /* RecentCoverageClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F8FE9A77C93F472DE6630A6 /* RecentCoverageClient.swift */; };
@@ -307,6 +308,7 @@
 		856FE003F7E519B7DA04D26D /* FMPCompanyProfileSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMPCompanyProfileSource.swift; sourceTree = "<group>"; };
 		8663D070C2CC864433FFCE6F /* BrokerTransaction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransaction.swift; sourceTree = "<group>"; };
 		87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRadarSource.swift; sourceTree = "<group>"; };
+		1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YahooRankingPageSource.swift; sourceTree = "<group>"; };
 		887C91981DCF4049CE7C1006 /* RadarTradeCardOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTradeCardOverlay.swift; sourceTree = "<group>"; };
 		8B215D2A814E439DF586FFF1 /* RadarChartDataTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartDataTests.swift; sourceTree = "<group>"; };
 		916C77192FB721C92825AF27 /* RadarCoverageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCoverageView.swift; sourceTree = "<group>"; };
@@ -636,6 +638,7 @@
 			isa = PBXGroup;
 			children = (
 				87D6928F2922A03C2EA57515 /* YahooRadarSource.swift */,
+				1A03876A8B1D42F18D9D5E03 /* YahooRankingPageSource.swift */,
 			);
 			path = Yahoo;
 			sourceTree = "<group>";
@@ -1050,6 +1053,7 @@
 				4671A231FD13F03F8FA3E100 /* WatchlistView.swift in Sources */,
 				54FCCC9F3B518FB14B5151DE /* YahooCandleSignalPipeline.swift in Sources */,
 				5F847B33CA82B7158206D30E /* YahooRadarSource.swift in Sources */,
+				D4FDD237C75342D88EA65A41 /* YahooRankingPageSource.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
