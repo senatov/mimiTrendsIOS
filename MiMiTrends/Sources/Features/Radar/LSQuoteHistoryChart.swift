@@ -217,22 +217,6 @@ struct LSQuoteHistoryChart: View {
                             .background(.teal.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
                     }
             }
-            if let selectedQuote, let selectedPrice {
-                RuleMark(x: .value("Selected time", quoteDateValue(selectedQuote)))
-                    .foregroundStyle(.primary.opacity(0.65))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                RuleMark(y: .value("Selected price", selectedPrice))
-                    .foregroundStyle(.primary.opacity(0.65))
-                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                PointMark(x: .value("Selected bid time", quoteDateValue(selectedQuote)),
-                          y: .value("Selected bid", selectedQuote.bid))
-                    .foregroundStyle(.teal)
-                    .symbolSize(42)
-                PointMark(x: .value("Selected ask time", quoteDateValue(selectedQuote)),
-                          y: .value("Selected ask", selectedQuote.ask))
-                    .foregroundStyle(.orange)
-                    .symbolSize(42)
-            }
         }
         .chartYScale(domain: priceDomain)
         .chartXAxis {
@@ -276,7 +260,6 @@ struct LSQuoteHistoryChart: View {
                 .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.7)
         }
         .animation(.easeInOut(duration: 0.22), value: visibleObservations.map(\.observedAtMillis))
-        .animation(.easeInOut(duration: 0.18), value: selectedQuote?.observedAtMillis)
     }
 
     private var priceDomain: ClosedRange<Double> {

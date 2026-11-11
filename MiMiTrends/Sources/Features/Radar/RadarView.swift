@@ -28,6 +28,7 @@ struct RadarView: View {
     @State var lsStatus: LSCandidateStatus?
     @State var marketScanner = MarketRadarScanner()
     @State private var signalBarBackfill = RadarSignalBarBackfill()
+    @State var liveScanProgress: MarketScanProgress?
     @State var marketCycle: MarketRadarCycle?
     @State var currencyRates: DisplayCurrencyRates?
     @State var currencyService = DisplayCurrencyService()
@@ -68,7 +69,7 @@ struct RadarView: View {
                         )
                     },
                     controls: {
-                        RadarHeader(symbol: $symbol, progress: marketCycle?.progress,
+                        RadarHeader(symbol: $symbol, progress: liveScanProgress ?? marketCycle?.progress,
                                     onManageWatchlist: onManageWatchlist)
                     },
                     showingSources: $showingSources
@@ -176,6 +177,7 @@ struct RadarView: View {
             signals: recentSignals,
             showingSavedHistory: showingSavedHistory,
             activity: recentSignals.isEmpty ? currentActivity : nil,
+            scanProgress: liveScanProgress ?? marketCycle?.progress,
             companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,

@@ -30,6 +30,7 @@ struct ProviderSettingsPanel: View {
                         providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
                                       endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
                         providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                        providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
                     }
                     VStack(spacing: 6) {
                         providerGroup("Yahoo Finance", detail: "Most active + trending candidates · minute + daily history · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
@@ -47,6 +48,7 @@ struct ProviderSettingsPanel: View {
                     providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
                     providerGroup("TraderFox", detail: "Supplemental candidates when FMP is not configured", provider: .traderFox, endpoints: [.traderFox])
+                    providerGroup("boerse.de DAX", detail: "German DAX candidates · realtime page", provider: .boerseDAX, endpoints: [])
                     fmpGroup
                 }
             }
@@ -100,6 +102,12 @@ struct ProviderSettingsPanel: View {
                     status: checks[endpoint] ?? defaultStatus,
                     check: { check(endpoint) }
                 )
+            }
+            if provider == .boerseDAX, let url = provider.accountURL {
+                Link("Open DAX realtime quotes", destination: url).font(.caption)
+                if let issue = MarketProviderAccess.lastError(provider) {
+                    Text(issue).font(.caption).foregroundStyle(.secondary)
+                }
             }
             if includesDiscoverySettings {
                 DiscoverySettingsSection()

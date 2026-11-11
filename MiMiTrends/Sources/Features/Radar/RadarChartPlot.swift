@@ -120,14 +120,6 @@ struct RadarChartPlot: View {
                 ForEach(visibleTrades) { trade in
                     tradeMarks(for: trade)
                 }
-                if let selectedBar, let selectedPrice {
-                    RuleMark(x: .value("Selected time", timeline.position(selectedBar.minuteEpochSeconds)))
-                        .foregroundStyle(.primary.opacity(0.65))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                    RuleMark(y: .value("Selected price", selectedPrice))
-                        .foregroundStyle(.primary.opacity(0.65))
-                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                }
             }
             .accessibilityLabel("\(data.range.usesDailyBars ? "Daily" : "Minute") candle chart with EMA 9 and EMA 21 for \(symbol)")
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { plotWidth = $0 }
@@ -166,7 +158,6 @@ struct RadarChartPlot: View {
             }
             .frame(height: priceHeight)
             .animation(.easeInOut(duration: 0.24), value: data.bars.map(\.minuteEpochSeconds))
-            .animation(.easeInOut(duration: 0.16), value: selectedMinute)
             .padding(.top, RadarTradeCardOverlay.railHeight(count: visibleTrades.count, width: plotWidth))
             .background {
                 RoundedRectangle(cornerRadius: 9, style: .continuous)
@@ -204,11 +195,6 @@ struct RadarChartPlot: View {
                         .alignsMarkStylesWithPlotArea(false)
                         .cornerRadius(1.5)
                         .accessibilityLabel(Text(bar.chartDate.formatted(.dateTime.day().month().hour().minute())))
-                    }
-                    if let selectedBar {
-                        RuleMark(x: .value("Selected time", timeline.position(selectedBar.minuteEpochSeconds)))
-                            .foregroundStyle(.primary.opacity(0.65))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
                     }
                 }
                 .chartXScale(domain: timeline.domain)

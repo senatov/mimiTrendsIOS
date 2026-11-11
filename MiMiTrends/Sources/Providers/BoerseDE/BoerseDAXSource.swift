@@ -23,13 +23,15 @@ actor BoerseDAXSource {
         do {
             lastCandidates = try await loadCandidates()
             nextRefreshAt = Date().addingTimeInterval(RadarTradingSessions.refreshInterval)
+            MarketProviderAccess.setHealth("Connected", for: .boerseDAX)
             AppDiagnostics.shared.record(.info, "boerse.de", "dax-candidates-loaded",
                                          "candidates=\(lastCandidates.count) phase=\(sessions.german)")
         } catch {
             try Task.checkCancellation()
             nextRefreshAt = Date().addingTimeInterval(60)
-            AppDiagnostics.shared.record(.warning, "boerse.de", "dax-candidate-refresh-failed",
-                MarketRadarErrorDescription.message(error, provider: "boerse.de DAX"))
+            let message = MarketRadarErrorDescription.message(error, provider: "boerse.de DAX")
+            MarketProviderAccess.setHealth("Needs attention", for: .boerseDAX, detail: message)
+            AppDiagnostics.shared.record(.warning, "boerse.de", "dax-candidate-refresh-failed", message)
         }
         previousSessions = sessions
         return lastCandidates

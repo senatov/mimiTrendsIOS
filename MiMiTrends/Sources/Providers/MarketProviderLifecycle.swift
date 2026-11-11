@@ -1,7 +1,7 @@
 import Foundation
 
 enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
-    case finnhub, yahoo, wallstreetOnline, langSchwarz, traderFox, fmp
+    case finnhub, yahoo, wallstreetOnline, langSchwarz, traderFox, fmp, boerseDAX
 
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
@@ -16,6 +16,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .langSchwarz: "Lang & Schwarz"
         case .traderFox: "TraderFox"
         case .fmp: "Financial Modeling Prep"
+        case .boerseDAX: "boerse.de DAX"
         }
     }
 
@@ -27,6 +28,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .langSchwarz: URL(string: "https://www.ls-tc.de/")
         case .traderFox: URL(string: "https://www.traderfox.com/" )
         case .fmp: URL(string: "https://site.financialmodelingprep.com/developer/docs/dashboard")
+        case .boerseDAX: URL(string: "https://www.boerse.de/realtime-kurse/Dax-Aktien/DE0008469008")
         }
     }
 
@@ -38,6 +40,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
         case .fmp: []
+        case .boerseDAX: []
         }
     }
 }
@@ -130,6 +133,8 @@ struct MarketProviderPreflight: Sendable {
                     throw MarketProviderPreflightError.missingCredential("FMP API key")
                 }
                 try await FMPCandidateSource().check(apiKey: key)
+            case .boerseDAX:
+                return nil // Checked by the scanner during German trading hours.
             }
             MarketProviderAccess.setHealth("Connected", for: provider)
             return nil

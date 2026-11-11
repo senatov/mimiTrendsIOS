@@ -72,11 +72,18 @@ extension RadarView {
         guard await ensureAutomaticProvidersReady() else { return }
         while !Task.isCancelled {
             do {
-                let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isOperational($0) })
+                let enabledProviders = Set(MarketProvider.allCases.filter { ($0 == .boerseDAX ? MarketProviderAccess.isEnabled($0) : MarketProviderAccess.isOperational($0)) })
+                let progressBinding = $liveScanProgress
                 let cycle = try await marketScanner.scan(
                     settings: RadarScanPreferencesStore.load(), enabledProviders: enabledProviders
-                )
+                ) { progress in
+                    await MainActor.run {
+                        guard !Task.isCancelled else { return }
+                        progressBinding.wrappedValue = progress
+                    }
+                }
                 guard !Task.isCancelled else { return }
+                liveScanProgress = nil
                 marketCycle = cycle
                 await refreshSignals()
                 AppDiagnostics.shared.record(

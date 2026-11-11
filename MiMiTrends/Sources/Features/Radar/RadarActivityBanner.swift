@@ -41,7 +41,8 @@ struct MarketScanProgressPanel: View {
         let lastBatch = progress.lastUpdatedAt.map {
             "Last batch completed \($0.formatted(date: .omitted, time: .shortened)). "
         } ?? ""
-        return "Updating market symbols. \(operation). Checked \(progress.processed) of \(progress.total). Successful \(progress.successful). Skipped \(progress.skipped): no recent minute bars \(progress.noRecentBars), unsupported symbols \(progress.unsupported). Errors \(progress.errors). \(lastBatch)Saved signals remain available."
+        let issues = progress.issues.joined(separator: " ")
+        return "Updating market symbols. \(operation). Checked \(progress.processed) of \(progress.total). Successful \(progress.successful). Skipped \(progress.skipped): no recent minute bars \(progress.noRecentBars), unsupported symbols \(progress.unsupported). Errors \(progress.errors). \(lastBatch)\(issues) Saved signals remain available."
     }
 
     var body: some View {
@@ -68,6 +69,9 @@ struct MarketScanProgressPanel: View {
                     Text("Skipped: no recent minute bars \(progress.noRecentBars) · unsupported symbols \(progress.unsupported)")
                         .font(.caption)
                         .foregroundStyle(TrendsColors.supportingInk)
+                }
+                ForEach(progress.issues, id: \.self) { issue in
+                    Text(issue).font(.caption).foregroundStyle(.secondary)
                 }
                 if let lastUpdatedAt = progress.lastUpdatedAt {
                     Text("Last batch completed \(lastUpdatedAt, format: .dateTime.hour().minute())")

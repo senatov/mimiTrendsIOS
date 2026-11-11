@@ -30,6 +30,7 @@ struct MarketScanProgress: Sendable, Equatable {
     let noRecentBars: Int
     let unsupported: Int
     let errors: Int
+    let issues: [String]
     let activeSymbols: [String]
     let lastUpdatedAt: Date?
 }

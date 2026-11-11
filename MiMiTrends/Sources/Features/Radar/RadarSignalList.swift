@@ -11,6 +11,7 @@ struct RadarSignalList: View {
     let signals: [ScanResult]
     let showingSavedHistory: Bool
     let activity: RadarActivity?
+    let scanProgress: MarketScanProgress?
     let companyNames: [String: String]
     let companyMetadata: [String: RadarCompanyMetadata]
     let currencyRates: DisplayCurrencyRates?
@@ -115,6 +116,10 @@ struct RadarSignalList: View {
                     if let activity {
                         RadarActivityBanner(activity: activity)
                             .frame(maxWidth: 440)
+                    }
+                    if let scanProgress {
+                        MarketScanProgressPanel(progress: scanProgress)
+                            .frame(maxWidth: 620)
                     }
                     Text("Waiting for a confirmed rise or drop in minute candles")
                         .font(.title2.weight(.light))

@@ -50,6 +50,14 @@ struct LSQuoteCursorOverlay: View {
     private func cursorTags(in geometry: GeometryProxy) -> some View {
         if let quote = selectedQuote, let price = selectedPrice, let anchor = proxy.plotFrame {
             let plot = geometry[anchor]
+            ChartCursorLines(
+                plot: plot, x: proxy.position(forX: Date(timeIntervalSince1970: Double(quote.observedAtMillis) / 1_000)),
+                y: (selectedPrice).flatMap { proxy.position(forY: $0) }
+            )
+            if let x = proxy.position(forX: Date(timeIntervalSince1970: Double(quote.observedAtMillis) / 1_000)) {
+                quotePoint(price: quote.bid, color: .teal, x: x, plot: plot)
+                quotePoint(price: quote.ask, color: .orange, x: x, plot: plot)
+            }
             if let y = proxy.position(forY: price) {
                 cursorTag(price.formatted(.currency(code: "EUR").precision(.fractionLength(2))))
                     .position(x: geometry.size.width - 34, y: min(max(plot.minY + y, 16), plot.maxY - 16))
@@ -59,6 +67,17 @@ struct LSQuoteCursorOverlay: View {
                     .formatted(.dateTime.day(.twoDigits).month(.twoDigits).hour().minute().second()))
                     .position(x: min(max(plot.minX + x, 68), geometry.size.width - 68), y: geometry.size.height - 13)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func quotePoint(price: Double, color: Color, x: CGFloat, plot: CGRect) -> some View {
+        if let y = proxy.position(forY: price) {
+            Circle().fill(color)
+                .frame(width: 7, height: 7)
+                .position(x: plot.minX + x, y: plot.minY + y)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
     }
 

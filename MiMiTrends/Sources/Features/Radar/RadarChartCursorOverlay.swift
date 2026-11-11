@@ -57,6 +57,10 @@ struct RadarChartCursorOverlay: View {
     private func axisLabels(in geometry: GeometryProxy) -> some View {
         if let selectedBar, let selectedPrice, let plotFrameAnchor = proxy.plotFrame {
             let plotFrame = geometry[plotFrameAnchor]
+            ChartCursorLines(
+                plot: plotFrame, x: proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)),
+                y: (readsPrice ? selectedPrice : nil).flatMap { proxy.position(forY: $0) }
+            )
             if readsPrice, let y = proxy.position(forY: selectedPrice) {
                 cursorTag(selectedPrice.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
                     .position(
@@ -108,4 +112,26 @@ struct RadarChartCursorOverlay: View {
 
 extension MinuteBar {
     var chartDate: Date { Date(timeIntervalSince1970: TimeInterval(minuteEpochSeconds)) }
+}
+
+struct ChartCursorLines: View {
+    let plot: CGRect
+    let x: CGFloat?
+    let y: CGFloat?
+
+    var body: some View {
+        Path { path in
+            if let x, (0...plot.width).contains(x) {
+                path.move(to: CGPoint(x: plot.minX + x, y: plot.minY))
+                path.addLine(to: CGPoint(x: plot.minX + x, y: plot.maxY))
+            }
+            if let y, (0...plot.height).contains(y) {
+                path.move(to: CGPoint(x: plot.minX, y: plot.minY + y))
+                path.addLine(to: CGPoint(x: plot.maxX, y: plot.minY + y))
+            }
+        }
+        .stroke(.primary.opacity(0.65), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
 }

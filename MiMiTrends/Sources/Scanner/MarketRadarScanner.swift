@@ -31,6 +31,7 @@ actor MarketRadarScanner {
     private var initialUnsupported = 0
     private var initialErrors = 0
     private var lastUpdatedAt: Date?
+    private var daxIssue: String?
 
     func scan(
         settings: RadarScanPreferences,
@@ -80,7 +81,9 @@ actor MarketRadarScanner {
         }
         let usesFMP = fmpKey != nil
         let sessions = RadarTradingSessions(at: Date())
-        let daxCandidates = enabledProviders.contains(.yahoo) ? try await dax.candidates(for: sessions) : []
+        let daxCandidates = enabledProviders.contains(.boerseDAX) ? try await dax.candidates(for: sessions) : []
+        daxIssue = enabledProviders.contains(.boerseDAX) && sessions.german.isTrading
+            ? MarketProviderAccess.lastError(.boerseDAX) : nil
         if Date() >= nextDiscoveryAt || sessions != previousSessions {
             try await refreshSources(fmpKey: fmpKey, enabledProviders: enabledProviders, sessions: sessions)
             previousSessions = sessions
@@ -207,6 +210,7 @@ actor MarketRadarScanner {
             total: initialScanTotal, successful: initialSuccessful,
             skipped: initialSkipped, noRecentBars: initialNoRecentBars,
             unsupported: initialUnsupported, errors: initialErrors,
+            issues: [yahooTotals.lastErrorMessage, daxIssue].compactMap { $0 },
             activeSymbols: activeSymbols, lastUpdatedAt: lastUpdatedAt
         )
     }
