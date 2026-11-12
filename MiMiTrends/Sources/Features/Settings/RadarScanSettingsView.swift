@@ -55,12 +55,12 @@ struct RadarScanSettingsView: View {
     }
 
     private var riseGroup: some View {
-        section("Sharp rebounds") {
-            Text("A rebound must still be rising in the latest available bar after a recent low. This confirms a move already observed; it cannot guarantee what happens next.")
+        section("Confirmed reversals") {
+            Text("After a decline, a recent low must be followed by a higher low and a break above the intervening high. Detection happens after the low, not at the exact bottom, and does not guarantee a future gain.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
-            doubleRow("Minimum rise", value: $draft.risePercent, range: 0.05...20, step: 0.05, unit: "%")
-            intRow("Rise window", value: $draft.riseWindowMinutes, range: 1...15, unit: "min")
+            doubleRow("Minimum decline and rise", value: $draft.risePercent, range: 0.05...20, step: 0.05, unit: "%")
+            intRow("Low-to-breakout window", value: $draft.riseWindowMinutes, range: 3...15, unit: "min")
         }
     }
 

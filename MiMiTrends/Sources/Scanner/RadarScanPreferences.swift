@@ -69,7 +69,7 @@ struct RadarScanPreferences: Codable, Equatable, Sendable {
         result.risePercent = Self.bounded(
             risePercent, 0.05...20, fallback: RadarScanThresholdDefaults.sharpReboundPercent
         )
-        result.riseWindowMinutes = riseWindowMinutes.clamped(to: 1...15)
+        result.riseWindowMinutes = riseWindowMinutes.clamped(to: 3...15)
         result.minimumPrice = Self.bounded(minimumPrice, 0...10_000, fallback: 5)
         result.minimumTurnover = Self.bounded(minimumTurnover, 0...10_000_000, fallback: 250_000)
         result.sustainedMovePercent = Self.bounded(

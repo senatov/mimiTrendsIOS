@@ -155,6 +155,7 @@ enum RadarSignalPresentation {
         switch source.lowercased() {
         case "rapid crash": "Rapid drop"
         case "rapid rise", "sharp rebound": "Sharp rebound"
+        case "confirmed reversal": "Confirmed reversal"
         case "sustained drop": "Sustained drop"
         case "sustained rise", "smooth rise": "Smooth rise"
         case "tradable corridor": "Tradable corridor"
@@ -170,6 +171,7 @@ enum RadarSignalPresentation {
         case "l&s quote drop": "↓ L&S QUOTE · NO VOLUME"
         case "rapid crash": "↓ RAPID DROP"
         case "rapid rise", "sharp rebound": "↑ SHARP REBOUND"
+        case "confirmed reversal": "↑ REVERSAL"
         case "sustained drop": "↓ SUSTAINED DROP"
         case "sustained rise", "smooth rise": "↑ SMOOTH RISE"
         case "tradable corridor": "▰ CORRIDOR"

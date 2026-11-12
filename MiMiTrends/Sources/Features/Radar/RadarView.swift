@@ -192,8 +192,22 @@ struct RadarView: View {
             let loaded = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let history = try await store.loadRecent(limit: min(limit * 10, 500))
+                var latestBars: [String: MinuteBar] = [:]
+                if history.contains(where: { $0.signalSource == "Confirmed reversal" }),
+                   let barStore = try? MarketBarStore(url: MarketBarStore.defaultURL()) {
+                    for signal in history where signal.signalSource == "Confirmed reversal" {
+                        if latestBars[signal.symbol] != nil { continue }
+                        let bars = try? await barStore.loadRecentMinuteBars(
+                            symbol: signal.symbol,
+                            fromEpochSeconds: signal.signalEpochMillis / 1_000,
+                            throughEpochSeconds: Int64(Date().timeIntervalSince1970), limit: 1
+                        )
+                        latestBars[signal.symbol] = bars?.last
+                    }
+                }
                 return RadarSignalSelection.displayHistory(
-                    history, since: cutoff, limit: limit, preferences: preferences
+                    history, since: cutoff, limit: limit, preferences: preferences,
+                    latestBars: latestBars
                 )
             }.value
             recentSignals = loaded

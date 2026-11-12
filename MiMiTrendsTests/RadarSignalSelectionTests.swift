@@ -32,7 +32,7 @@ final class RadarSignalSelectionTests: XCTestCase {
             event("FIS", source: "Rapid crash", at: 295, change: -1.14, window: "10m"),
             event("AMZN", source: "Rapid crash", at: 292, change: -0.78, window: "15m"),
             event("AAPL", source: "Rapid crash", at: 290, change: -2.0, window: "5m"),
-            event("MSFT", source: "Rapid rise", at: 280, change: 0.8, window: "5m")
+            event("MSFT", source: "Confirmed reversal", at: 280, change: 0.8, window: "5m")
         ]
 
         let displayed = RadarSignalSelection.displayHistory(history, since: 0, limit: 10)
@@ -47,6 +47,25 @@ final class RadarSignalSelectionTests: XCTestCase {
         let displayed = RadarSignalSelection.displayHistory([legacyYahoo], since: 0, limit: 10)
 
         XCTAssertTrue(displayed.isEmpty)
+    }
+
+    func testHidesOldUnconfirmedReboundsEvenWithValidatedCandles() {
+        let old = event("MU", source: "Sharp rebound", at: 500, change: 0.81,
+                        window: "3m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let new = event("AAPL", source: "Confirmed reversal", at: 490, change: 1.1,
+                        window: "5m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([old, new], since: 0, limit: 10)
+            .map(\.symbol), ["AAPL"])
+    }
+
+    func testHidesReversalAfterNewCloseLosesFirstLow() {
+        let signal = event("MU", source: "Confirmed reversal", at: 60_000, change: 1,
+                           window: "5m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let failedBar = MinuteBar(symbol: "MU", minuteEpochSeconds: 120,
+                                  open: 100, high: 100, low: 99, close: 99, volume: 1_000)
+        let selected = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            latestBars: ["MU": failedBar])
+        XCTAssertTrue(selected.isEmpty)
     }
 
     func testDisplaysOnlyVolumeValidatedYahooCandles() {
@@ -86,7 +105,7 @@ final class RadarSignalSelectionTests: XCTestCase {
             windowChangePercent: change, windowVolume: 0, sessionVolume: 0,
             sessionTurnover: 0, signalAgeMinutes: 0, signalSource: source,
             updatedAtMillis: epoch,
-            dataStatus: dataStatus ?? (["Rapid crash", "Rapid rise"].contains(source)
+            dataStatus: dataStatus ?? (["Rapid crash", "Rapid rise", "Confirmed reversal"].contains(source)
                 ? YahooCandleSignalPipeline.volumeValidatedStatus : "CACHE"),
             signalWindowLabel: window, signalEpochMillis: epoch
         )

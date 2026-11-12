@@ -3,13 +3,20 @@ import Foundation
 enum RadarSignalSelection {
     static func displayHistory(
         _ history: [ScanResult], since cutoff: Int64, limit: Int,
-        preferences: RadarScanPreferences = RadarScanPreferences()
+        preferences: RadarScanPreferences = RadarScanPreferences(),
+        latestBars: [String: MinuteBar] = [:]
     ) -> [ScanResult] {
         let qualified = history.filter { signal in
             guard signal.dataStatus != "QUOTE_NO_VOLUME", signal.dataStatus != "FINNHUB_LIVE",
                   !signal.symbol.hasPrefix("LS:") else { return false }
             let source = signal.signalSource.lowercased()
-            let requiresLiveTrades = ["rapid crash", "rapid rise", "sharp rebound", "smooth rise"].contains(source)
+            guard source != "rapid rise", source != "sharp rebound" else { return false }
+            if source == "confirmed reversal", let latest = latestBars[signal.symbol],
+               latest.minuteEpochSeconds * 1_000 > signal.signalEpochMillis,
+               latest.close <= signal.signalPrice {
+                return false
+            }
+            let requiresLiveTrades = ["rapid crash", "confirmed reversal", "smooth rise"].contains(source)
             let validatedYahoo = signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
                 signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
             guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return false }

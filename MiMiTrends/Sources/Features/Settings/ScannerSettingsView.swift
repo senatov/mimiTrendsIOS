@@ -40,7 +40,7 @@ struct ScannerSettingsView: View {
             SettingsValueRow(title: "Historical data", value: "Saved Yahoo minute bars and daily summaries")
             SettingsValueRow(title: "Symbols", value: "Up to 200 US and German shares")
             SettingsValueRow(title: "Activity", value: "Foreground only")
-            Text("Radar checks completed candles for rapid drops, rebounds and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")
+            Text("Radar checks completed candles for rapid drops, confirmed reversals and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")
                 .font(.body.weight(.light))
                 .foregroundStyle(TrendsColors.supportingInk)
         }

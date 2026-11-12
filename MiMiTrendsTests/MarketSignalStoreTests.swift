@@ -9,7 +9,7 @@ final class MarketSignalStoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let store = try MarketSignalStore(url: url)
         let signal = try XCTUnwrap(RapidRiseDetector.detect(
-            symbol: "RISE", bars: bars(), nowEpochSeconds: 12_180
+            symbol: "RISE", bars: bars(), nowEpochSeconds: 12_300
         ))
 
         let inserted = try await store.record(signal)
@@ -47,10 +47,10 @@ final class MarketSignalStoreTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let store = try MarketSignalStore(url: url)
         let old = try XCTUnwrap(RapidRiseDetector.detect(
-            symbol: "OLD", bars: bars(symbol: "OLD", start: 12_000), nowEpochSeconds: 12_180
+            symbol: "OLD", bars: bars(symbol: "OLD", start: 12_000), nowEpochSeconds: 12_300
         ))
         let recent = try XCTUnwrap(RapidRiseDetector.detect(
-            symbol: "NEW", bars: bars(symbol: "NEW", start: 24_000), nowEpochSeconds: 24_180
+            symbol: "NEW", bars: bars(symbol: "NEW", start: 24_000), nowEpochSeconds: 24_300
         ))
         _ = try await store.record(old)
         _ = try await store.record(recent)
@@ -84,7 +84,7 @@ final class MarketSignalStoreTests: XCTestCase {
     }
 
     private func bars(symbol: String = "RISE", start: Int64 = 12_000) -> [MinuteBar] {
-        [100.0, 100.1, 100.5, 101.8].enumerated().map { index, close in
+        [102.0, 101, 100, 100.8, 100.4, 101.1].enumerated().map { index, close in
             MinuteBar(
                 symbol: symbol, minuteEpochSeconds: start + Int64(index) * 60,
                 open: close, high: close, low: close, close: close,
