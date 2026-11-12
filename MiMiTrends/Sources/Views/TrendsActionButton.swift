@@ -3,6 +3,7 @@ import SwiftUI
 struct TrendsActionButton: View {
     let title: String
     let systemImage: String
+    var showsTitle = true
     var tint: Color = .blue
     var role: ButtonRole? = nil
     let action: () -> Void
@@ -15,10 +16,12 @@ struct TrendsActionButton: View {
                     .font(.system(size: 17, weight: .light))
                     .foregroundStyle(RadarColorHex.color(iconColor) ?? tint)
                     .frame(width: 18, height: 18)
-                Rectangle()
-                    .fill(Color.primary.opacity(0.18))
-                    .frame(width: 1, height: 17)
-                Text(title)
+                if showsTitle {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.18))
+                        .frame(width: 1, height: 17)
+                    Text(title)
+                }
             }
             .lineLimit(1)
             .truncationMode(.tail)

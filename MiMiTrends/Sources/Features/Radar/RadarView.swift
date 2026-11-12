@@ -59,20 +59,25 @@ struct RadarView: View {
                             providerRevision: providerConfigurationRevision
                         )
                     },
-                    controls: {
-                        RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
-                                    sourcesOpen: showingSources,
-                                    onToggleSources: { showingSources.toggle() },
-                                    onRefresh: { Task { await refreshSignals() } },
-                                    onManageWatchlist: onManageWatchlist)
-                    },
                     showingSources: $showingSources
                 )
                 .frame(maxHeight: .infinity)
             }
             .padding(8)
             .background(TrendsColors.canvas)
+            #if os(iOS)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            #else
             .navigationTitle("Radar")
+            #endif
+            .toolbar {
+                RadarHeader(symbol: $symbol, candidateCount: marketCycle?.candidates.count,
+                            sourcesOpen: showingSources,
+                            onToggleSources: { showingSources.toggle() },
+                            onRefresh: { Task { await refreshSignals() } },
+                            onManageWatchlist: onManageWatchlist)
+            }
             .task(id: "\(scenePhase)|\(maxResults)|\(maxAgeHours)") { await refreshSignalHistoryWhileActive() }
             .task(id: "\(companyMetadataRequestKey)|\(providerConfigurationRevision)") {
                 guard await ensureAutomaticProvidersReady() else { return }

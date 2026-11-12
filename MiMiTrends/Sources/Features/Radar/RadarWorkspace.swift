@@ -1,10 +1,9 @@
 import SwiftUI
 
-struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>: View {
+struct RadarWorkspace<Signals: View, Sources: View, Plot: View>: View {
     let signals: (Bool, CGFloat) -> Signals
     let sources: () -> Sources
     let plot: () -> Plot
-    let controls: () -> Controls
     @Binding var showingSources: Bool
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -15,7 +14,6 @@ struct RadarWorkspace<Signals: View, Sources: View, Plot: View, Controls: View>:
 
     var body: some View {
         VStack(spacing: 6) {
-            controls().fixedSize(horizontal: false, vertical: true).zIndex(1)
             GeometryReader { geometry in
                 if geometry.size.height >= RadarPaneLayout.minimumWideHeight &&
                     !dynamicTypeSize.isAccessibilitySize {
