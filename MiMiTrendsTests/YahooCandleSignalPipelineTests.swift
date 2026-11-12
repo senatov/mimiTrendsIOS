@@ -145,6 +145,41 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertEqual(candidates.map(\.symbol), ["RHM.DE", "SAP.DE", "SIE.DE"])
     }
 
+    func testBoerseQuoteRowsReportWhyRenderedRowsAreNotUsable() {
+        let now = ISO8601DateFormatter().date(from: "2026-11-12T15:30:00Z")!
+        func row(time: String, venue: String) -> BoerseDAXSource.PageRow {
+            BoerseDAXSource.PageRow(
+                text: ["", "SAP", "A", "177,68", "177,68", "177,68", "5,32", "3,09",
+                       "", "", "", "", time, venue], markup: "DE0007164600"
+            )
+        }
+        let stale = BoerseQuoteRows.decode([row(time: "16:25:00", venue: "STU")], now: now, slot: 0)
+        XCTAssertTrue(stale.samples.isEmpty)
+        XCTAssertTrue(stale.diagnostics.contains("time=1 recent=0 accepted=0"))
+        XCTAssertTrue(stale.diagnostics.contains("youngestAgeSeconds=300 timeSample=16:25:00"))
+        XCTAssertNotNil(stale.newestQuoteMillis)
+
+        let fresh = BoerseQuoteRows.decode([row(time: "16:29:30", venue: "STU")], now: now, slot: 0)
+        XCTAssertEqual(fresh.samples.count, 1)
+        XCTAssertEqual(fresh.samples.first?.symbol, "SAP.DE")
+        XCTAssertTrue(fresh.diagnostics.contains("recent=1 accepted=1"))
+        XCTAssertGreaterThan(fresh.newestQuoteMillis ?? 0, stale.newestQuoteMillis ?? 0)
+    }
+
+    func testBoerseRetriesLaggedOrStalledPagesWithoutReloadingEveryGap() {
+        func reload(_ stale: TimeInterval, _ progress: TimeInterval, _ lastReload: TimeInterval,
+                    _ quoteAge: Int?, unavailable: Bool = false) -> Bool {
+            BoerseQuoteRetryPolicy.shouldReload(staleSeconds: stale, progressSeconds: progress,
+                sinceReloadSeconds: lastReload, quoteAgeSeconds: quoteAge, pageUnavailable: unavailable)
+        }
+        XCTAssertFalse(reload(45, 45, 1_000, 360))
+        XCTAssertTrue(reload(90, 15, 1_000, 360))
+        XCTAssertFalse(reload(90, 15, 1_000, 100))
+        XCTAssertTrue(reload(180, 180, 1_000, 100))
+        XCTAssertFalse(reload(180, 180, 30, 360))
+        XCTAssertTrue(reload(90, 90, 1_000, nil, unavailable: true))
+    }
+
     func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {
         let formatter = ISO8601DateFormatter()
         func sessions(_ utc: String) -> RadarTradingSessions {

@@ -81,7 +81,7 @@ actor BoerseDAXSource {
             })));
         })()
         """
-    fileprivate struct PageRow: Decodable {
+    struct PageRow: Decodable {
         let text: [String]
         let markup: String
     }
@@ -109,7 +109,7 @@ actor BoerseDAXSource {
     }
 
     // Constituents observed in the DAX page's Stuttgart request.
-    fileprivate static let knownSymbols: [String: (symbol: String, name: String)] = [
+    static let knownSymbols: [String: (symbol: String, name: String)] = [
         "DE000A1EWWW0": ("ADS.DE", "Adidas"),
         "NL0000235190": ("AIR.DE", "Airbus"),
         "DE0008404005": ("ALV.DE", "Allianz"),
@@ -157,11 +157,17 @@ actor BoerseDAXSource {
 @MainActor
 final class BoerseQuotePages {
     private static let usURL = URL(string: "https://www.boerse.de/realtime-kurse/US-Tech-100-Aktien/US6311011026")!
+    private static let retryInterval = BoerseQuoteRetryPolicy.minimumRetrySeconds
     private let configuration: WKWebViewConfiguration
     private var pages: [Int: WKWebView] = [:]
     private var secondPageBaseline: Set<String>?
     private var secondPageVerified = false
     private var startedAt: [Int: Date] = [:]
+    private var lastReloadAt: [Int: Date] = [:]
+    private var lastStaleReportAt: [Int: Date] = [:]
+    private var lastProgressAt: [Int: Date] = [:]
+    private var latestQuoteMillis: [Int: Int64] = [:]
+    private var staleSlots = Set<Int>()
 
     init() {
         configuration = WKWebViewConfiguration()
@@ -178,17 +184,22 @@ final class BoerseQuotePages {
                 let view = WKWebView(frame: .zero, configuration: configuration)
                 pages[slot] = view
                 startedAt[slot] = Date()
+                lastProgressAt[slot] = Date()
                 view.load(URLRequest(url: url))
                 continue
             }
             guard let view = pages[slot] else { continue }
             if view.isLoading || view.url?.host != url.host {
-                if Date().timeIntervalSince(startedAt[slot] ?? .now) > 45 { reset(slot) }
+                retryIfNeeded(slot: slot, view: view, url: url, now: Date(),
+                              reason: view.isLoading ? "loading" : "wrong-host")
                 continue
             }
             guard let json = try? await view.evaluateJavaScript(BoerseDAXSource.tableScript) as? String,
                   let rows = try? JSONDecoder().decode([BoerseDAXSource.PageRow].self, from: Data(json.utf8))
-            else { continue }
+            else {
+                retryIfNeeded(slot: slot, view: view, url: url, now: Date(), reason: "script-or-decode")
+                continue
+            }
             let identifiers = Set(rows.compactMap { Self.isin(in: $0.markup) })
             if slot == 2 && !secondPageVerified {
                 if let baseline = secondPageBaseline, !identifiers.subtracting(baseline).isEmpty {
@@ -199,38 +210,33 @@ final class BoerseQuotePages {
                           (try? await view.evaluateJavaScript(Self.secondPageScript) as? Bool) == true {
                     secondPageBaseline = identifiers
                     startedAt[slot] = Date()
+                    lastProgressAt[slot] = Date()
                     continue
                 } else {
-                    if Date().timeIntervalSince(startedAt[slot] ?? .now) > 45 {
-                        AppDiagnostics.shared.record(.warning, "boerse.de", "us-tech-second-page-unavailable")
-                        reset(slot)
-                    }
+                    retryIfNeeded(slot: slot, view: view, url: url, now: Date(),
+                                  reason: "second-page-unavailable", details: "identifiers=\(identifiers.count)")
                     continue
                 }
             }
             let now = Date()
-            let fresh = rows.compactMap { row -> BoerseQuoteSample? in
-                guard row.text.count == 14, let isin = Self.isin(in: row.markup),
-                      let price = MarketPageHTML.germanNumber(row.text[5]),
-                      let timestamp = MarketPageHTML.quoteTime(row.text[12], now: now),
-                      Int64(now.timeIntervalSince1970 * 1_000) - timestamp <= 90_000
-                else { return nil }
-                let venue = row.text[13].uppercased()
-                let currency: String
-                if ["STU", "STUTTGART", "TRADEGATE", "XETRA", "FRA"].contains(venue) { currency = "EUR" }
-                else if ["NASDAQ", "NAS", "NYSE", "NYS"].contains(venue) { currency = "USD" }
-                else { return nil }
-                let ticker = slot == 0 ? BoerseDAXSource.knownSymbols[isin]?.symbol : nil
-                return BoerseQuoteSample(isin: isin, symbol: ticker, currency: currency, venue: venue,
-                                         timestamp: timestamp, price: price)
+            let result = BoerseQuoteRows.decode(rows, now: now, slot: slot)
+            if let newest = result.newestQuoteMillis, newest > (latestQuoteMillis[slot] ?? 0) {
+                latestQuoteMillis[slot] = newest
+                lastProgressAt[slot] = now
             }
-            if fresh.isEmpty && now.timeIntervalSince(startedAt[slot] ?? now) > 45 {
-                AppDiagnostics.shared.record(.warning, "boerse.de", "quote-page-no-fresh-rows", "page=\(slot)")
-                reset(slot)
-            } else if !fresh.isEmpty {
+            if result.samples.isEmpty {
+                retryIfNeeded(slot: slot, view: view, url: url, now: now,
+                              reason: "no-fresh-rows", details: result.diagnostics,
+                              youngestAgeSeconds: result.youngestAgeSeconds)
+            } else {
                 startedAt[slot] = now
+                if staleSlots.remove(slot) != nil {
+                    AppDiagnostics.shared.record(.info, "boerse.de", "quote-page-recovered",
+                                                 "page=\(slot) \(result.diagnostics)")
+                    lastStaleReportAt[slot] = nil
+                }
             }
-            samples.append(contentsOf: fresh)
+            samples.append(contentsOf: result.samples)
         }
         return samples
     }
@@ -242,10 +248,43 @@ final class BoerseQuotePages {
     private func reset(_ slot: Int) {
         pages.removeValue(forKey: slot)?.stopLoading()
         startedAt[slot] = nil
+        lastReloadAt[slot] = nil
+        lastStaleReportAt[slot] = nil
+        lastProgressAt[slot] = nil
+        latestQuoteMillis[slot] = nil
+        staleSlots.remove(slot)
         if slot == 2 {
             secondPageBaseline = nil
             secondPageVerified = false
         }
+    }
+
+    private func retryIfNeeded(slot: Int, view: WKWebView, url: URL, now: Date,
+                               reason: String, details: String = "", youngestAgeSeconds: Int? = nil) {
+        guard now.timeIntervalSince(startedAt[slot] ?? now) >= 45 else { return }
+        staleSlots.insert(slot)
+        let progressAge = Int(now.timeIntervalSince(lastProgressAt[slot] ?? startedAt[slot] ?? now))
+        if now.timeIntervalSince(lastStaleReportAt[slot] ?? .distantPast) >= Self.retryInterval {
+            AppDiagnostics.shared.record(.warning, "boerse.de", "quote-page-stale",
+                "page=\(slot) reason=\(reason) progressAgeSeconds=\(progressAge) \(details)")
+            lastStaleReportAt[slot] = now
+        }
+        let staleDuration = now.timeIntervalSince(startedAt[slot] ?? now)
+        guard BoerseQuoteRetryPolicy.shouldReload(
+            staleSeconds: staleDuration, progressSeconds: TimeInterval(progressAge),
+            sinceReloadSeconds: now.timeIntervalSince(lastReloadAt[slot] ?? .distantPast),
+            quoteAgeSeconds: youngestAgeSeconds, pageUnavailable: reason != "no-fresh-rows"
+        ) else { return }
+        AppDiagnostics.shared.record(.warning, "boerse.de", "quote-page-retry",
+                                     "page=\(slot) reason=\(reason) progressAgeSeconds=\(progressAge) youngestAgeSeconds=\(youngestAgeSeconds ?? -1)")
+        lastReloadAt[slot] = now
+        startedAt[slot] = now
+        lastProgressAt[slot] = now
+        if slot == 2 {
+            secondPageBaseline = nil
+            secondPageVerified = false
+        }
+        view.load(URLRequest(url: url))
     }
 
     private static func isin(in markup: String) -> String? {
@@ -273,102 +312,4 @@ final class BoerseQuotePages {
         return true;
     })()
     """#
-}
-
-struct BoerseQuoteSample: Sendable {
-    let isin: String
-    let symbol: String?
-    let currency: String
-    let venue: String
-    let timestamp: Int64
-    let price: Double
-}
-
-actor BoerseQuoteMonitor {
-    private struct Series {
-        var timestamp: Int64
-        var openBar: MinuteBar
-        var completed: [MinuteBar] = []
-    }
-
-    private var series: [String: Series] = [:]
-    private var tickers: [String: String] = [:]
-    private var attempts: [String: Date] = [:]
-    private var signalStore: MarketSignalStore?
-
-    func accept(_ samples: [BoerseQuoteSample], settings: RadarScanPreferences) async throws -> Int {
-        let now = Date()
-        series = series.filter { now.timeIntervalSince1970 - Double($0.value.timestamp) / 1_000 < 3_600 }
-        var stored = 0
-        for sample in samples {
-            try Task.checkCancellation()
-            guard let ticker = sample.symbol ?? tickers[sample.isin] else { continue }
-            if let signal = update(sample, ticker: ticker, settings: settings.validated) {
-                if signalStore == nil { signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL()) }
-                if try await signalStore?.record(signal) == true {
-                    stored += 1
-                    AppDiagnostics.shared.record(.info, "boerse.de", "quote-signal-stored",
-                                                 "symbol=\(ticker) event=\(signal.signalSource) move=\(signal.windowChangePercent)")
-                }
-            }
-        }
-        var pending = Set<String>()
-        for sample in samples where sample.symbol == nil && tickers[sample.isin] == nil {
-            if now.timeIntervalSince(attempts[sample.isin] ?? .distantPast) > 900 { pending.insert(sample.isin) }
-        }
-        let batch = Array(pending.sorted().prefix(8))
-        for isin in batch { attempts[isin] = now }
-        await withTaskGroup(of: (String, String?).self) { tasks in
-            for isin in batch {
-                tasks.addTask { (isin, try? await RadarBaselineSource.searchISIN(isin, usOnly: true)) }
-            }
-            for await (isin, ticker) in tasks { tickers[isin] = ticker }
-        }
-        return stored
-    }
-
-    private func update(_ sample: BoerseQuoteSample, ticker: String, settings: RadarScanPreferences) -> ScanResult? {
-        let minute = sample.timestamp / 60_000 * 60
-        let key = "\(ticker)|\(sample.venue)|\(sample.currency)"
-        let first = MinuteBar(symbol: ticker, minuteEpochSeconds: minute, open: sample.price,
-            high: sample.price, low: sample.price, close: sample.price, volume: 0, volumeStatus: .missing)
-        guard var history = series[key] else {
-            series[key] = Series(timestamp: sample.timestamp, openBar: first)
-            return nil
-        }
-        guard sample.timestamp > history.timestamp else { return nil }
-        history.timestamp = sample.timestamp
-        let previous = history.openBar
-        if previous.minuteEpochSeconds == minute {
-            history.openBar = MinuteBar(symbol: ticker, minuteEpochSeconds: minute, open: previous.open,
-                high: max(previous.high, sample.price), low: min(previous.low, sample.price),
-                close: sample.price, volume: 0, volumeStatus: .missing)
-            series[key] = history
-            return nil
-        }
-        if minute - previous.minuteEpochSeconds != 60 { history.completed.removeAll() }
-        else { history.completed.append(previous) }
-        history.completed = Array(history.completed.suffix(31))
-        history.openBar = first
-        series[key] = history
-        guard let last = history.completed.last, last.close >= settings.minimumPrice else { return nil }
-        let rules = [(settings.crashWindowMinutes, -settings.crashPercent),
-                     (settings.sustainedCrashWindowMinutes, -settings.sustainedCrashPercent),
-                     (settings.riseWindowMinutes, settings.risePercent)]
-        for (minutes, threshold) in rules where history.completed.count > minutes {
-            let start = history.completed[history.completed.count - minutes - 1]
-            let change = (last.close / start.close - 1) * 100
-            guard threshold > 0 ? change >= threshold : change <= threshold else { continue }
-            let closeTime = minute * 1_000
-            return ScanResult(symbol: ticker, price: last.close, priceCurrency: sample.currency,
-                anomalyScore: 0, priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
-                relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: change,
-                windowVolume: 0, sessionVolume: 0, sessionTurnover: 0, signalAgeMinutes: 0,
-                signalSource: change > 0 ? "boerse.de price rise" : "boerse.de price drop",
-                updatedAtMillis: closeTime, dataStatus: "BOERSE_PRICE_NO_VOLUME",
-                signalWindowLabel: "\(minutes)m", signalPrice: start.close, signalEpochMillis: closeTime,
-                entryQualityLabel: "Price observations · volume unavailable")
-        }
-        return nil
-    }
 }

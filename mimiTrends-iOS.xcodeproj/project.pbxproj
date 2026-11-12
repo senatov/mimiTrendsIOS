@@ -117,6 +117,7 @@
 		A149A74A65D897BE5B0B4C0F /* ControlAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */; };
 		A253B573BA93ECDD8FCEA5BB /* RadarTradeCardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C91981DCF4049CE7C1006 /* RadarTradeCardOverlay.swift */; };
 		A433C06CBE9BC6FFE6FC2316 /* BoerseDAXSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */; };
+		A433C06CBE9BC6FFE6FC2317 /* BoerseQuoteMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
 		A9A6DCCEC4127305904D9E6C /* LangSchwarzMarketSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */; };
 		ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */; };
@@ -273,6 +274,7 @@
 		7BBE5399C15441F44ECAED0F /* TableColorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColorSettingsView.swift; sourceTree = "<group>"; };
 		7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableColorStore.swift; sourceTree = "<group>"; };
 		7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoerseDAXSource.swift; sourceTree = "<group>"; };
+		7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoerseQuoteMonitor.swift; sourceTree = "<group>"; };
 		7D1CF3E2B688E1021D7BB466 /* BrokerTransactionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransactionStore.swift; sourceTree = "<group>"; };
 		7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfill.swift; sourceTree = "<group>"; };
 		7EE5E447F15502D8BB7E6BED /* TradableCorridorDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetector.swift; sourceTree = "<group>"; };
@@ -709,6 +711,7 @@
 			isa = PBXGroup;
 			children = (
 				7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */,
+				7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */,
 			);
 			path = BoerseDE;
 			sourceTree = "<group>";
@@ -845,6 +848,7 @@
 				E55CD1974C966F6CEC9BB616 /* AppIdentity.swift in Sources */,
 				52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */,
 				A433C06CBE9BC6FFE6FC2316 /* BoerseDAXSource.swift in Sources */,
+				A433C06CBE9BC6FFE6FC2317 /* BoerseQuoteMonitor.swift in Sources */,
 				312E53F88D4AA95AA6C70189 /* BrokerTradeChartMatcher.swift in Sources */,
 				414A867CE79D5D495F0D8E9E /* BrokerTransaction.swift in Sources */,
 				F3B38685CA3D3039FD72A509 /* BrokerTransactionStore.swift in Sources */,
