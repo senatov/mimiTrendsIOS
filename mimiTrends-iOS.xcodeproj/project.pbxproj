@@ -58,6 +58,7 @@
 		4B1A6D2BF95116348B8361D3 /* MarketSignalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBF387A2BA9D47DD94D78888 /* MarketSignalStore.swift */; };
 		4D4C9E953D5041F62A9DA814 /* RadarCompanyMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BCA18DA9425B007F0D8BE7D /* RadarCompanyMetadata.swift */; };
 		4D5BCAC6F0BDE51649055F86 /* RadarMarketDataPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A5BB722FF8D3343492DD20 /* RadarMarketDataPolicy.swift */; };
+		4E37B9A4F118484558CA7F71 /* BoerseQuoteMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1339E6C47017E918C737541D /* BoerseQuoteMonitor.swift */; };
 		50DB5A83253F590E9F4F82A4 /* RadarCompanyMetadataService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084CB1817144936FD030F078 /* RadarCompanyMetadataService.swift */; };
 		51C913942E20E972D31F6DE9 /* RadarSignalSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */; };
 		52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D43016F584E13231D8B6D972 /* AppearanceSettingsView.swift */; };
@@ -117,7 +118,6 @@
 		A149A74A65D897BE5B0B4C0F /* ControlAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C17D9D72BFFF525C144DA43 /* ControlAppearance.swift */; };
 		A253B573BA93ECDD8FCEA5BB /* RadarTradeCardOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 887C91981DCF4049CE7C1006 /* RadarTradeCardOverlay.swift */; };
 		A433C06CBE9BC6FFE6FC2316 /* BoerseDAXSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */; };
-		A433C06CBE9BC6FFE6FC2317 /* BoerseQuoteMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */; };
 		A930B3725DA2A8CAAC692122 /* SourceCredentialsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */; };
 		A9A6DCCEC4127305904D9E6C /* LangSchwarzMarketSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */; };
 		ABC4CC792F9A771D681D2802 /* RadarChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923F1C69FB01B960C90E4AF7 /* RadarChartData.swift */; };
@@ -204,6 +204,7 @@
 		0ED63570611D9E6D70E1F74D /* RadarCompanyMetadataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMetadataStore.swift; sourceTree = "<group>"; };
 		1021E86157F619AA26C79903 /* TradeImportSettingsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportSettingsSection.swift; sourceTree = "<group>"; };
 		109A934A9372A7CAE8442260 /* RadarPaneLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarPaneLayoutTests.swift; sourceTree = "<group>"; };
+		1339E6C47017E918C737541D /* BoerseQuoteMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoerseQuoteMonitor.swift; sourceTree = "<group>"; };
 		13737AEBC5153080CFC7D336 /* RadarTableColorStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableColorStoreTests.swift; sourceTree = "<group>"; };
 		14AC5179E3180B2FD43113A1 /* MarketRadarScannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketRadarScannerTests.swift; sourceTree = "<group>"; };
 		1514A7D5BFA91403853DE7E1 /* RadarChartTradeCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartTradeCard.swift; sourceTree = "<group>"; };
@@ -274,7 +275,6 @@
 		7BBE5399C15441F44ECAED0F /* TableColorSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableColorSettingsView.swift; sourceTree = "<group>"; };
 		7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarTableColorStore.swift; sourceTree = "<group>"; };
 		7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoerseDAXSource.swift; sourceTree = "<group>"; };
-		7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoerseQuoteMonitor.swift; sourceTree = "<group>"; };
 		7D1CF3E2B688E1021D7BB466 /* BrokerTransactionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrokerTransactionStore.swift; sourceTree = "<group>"; };
 		7D78A167248548C62D5D9C7B /* RadarSignalBarBackfill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalBarBackfill.swift; sourceTree = "<group>"; };
 		7EE5E447F15502D8BB7E6BED /* TradableCorridorDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetector.swift; sourceTree = "<group>"; };
@@ -711,7 +711,7 @@
 			isa = PBXGroup;
 			children = (
 				7C77E6F949BAA916761DEF61 /* BoerseDAXSource.swift */,
-				7C77E6F949BAA916761DEF62 /* BoerseQuoteMonitor.swift */,
+				1339E6C47017E918C737541D /* BoerseQuoteMonitor.swift */,
 			);
 			path = BoerseDE;
 			sourceTree = "<group>";
@@ -848,7 +848,7 @@
 				E55CD1974C966F6CEC9BB616 /* AppIdentity.swift in Sources */,
 				52ECF4E400CFE650649AD8BB /* AppearanceSettingsView.swift in Sources */,
 				A433C06CBE9BC6FFE6FC2316 /* BoerseDAXSource.swift in Sources */,
-				A433C06CBE9BC6FFE6FC2317 /* BoerseQuoteMonitor.swift in Sources */,
+				4E37B9A4F118484558CA7F71 /* BoerseQuoteMonitor.swift in Sources */,
 				312E53F88D4AA95AA6C70189 /* BrokerTradeChartMatcher.swift in Sources */,
 				414A867CE79D5D495F0D8E9E /* BrokerTransaction.swift in Sources */,
 				F3B38685CA3D3039FD72A509 /* BrokerTransactionStore.swift in Sources */,
@@ -1069,7 +1069,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1085,7 +1085,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.4.1;
+				MARKETING_VERSION = 0.0.4.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
@@ -1187,7 +1187,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 41;
+				CURRENT_PROJECT_VERSION = 42;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1209,7 +1209,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MARKETING_VERSION = 0.0.4.1;
+				MARKETING_VERSION = 0.0.4.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
