@@ -8,6 +8,7 @@ struct RadarScannerDiagnostics: View {
     let progress: MarketScanProgress?
     let listHeight: CGFloat
     @State private var search = ""
+    @FocusState private var searchFocused: Bool
 
     private var visible: [RadarCompanyCandidate] {
         candidates.filter {
@@ -28,9 +29,40 @@ struct RadarScannerDiagnostics: View {
                 Text("Candles \(progress.processed)/\(progress.total) · usable \(progress.successful) · skipped \(progress.skipped) · errors \(progress.errors)")
                     .font(.caption.monospacedDigit()).foregroundStyle(color(.sourceMutedText))
             }
-            TextField("Find company or ticker", text: $search)
-                .textFieldStyle(.roundedBorder)
-                .accessibilityLabel("Filter scanner candidates")
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Search candidates")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.primary)
+                HStack(spacing: 9) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    TextField("Company name or ticker", text: $search)
+                        .textFieldStyle(.plain)
+                        .focused($searchFocused)
+                        .foregroundStyle(.primary)
+                        .accessibilityLabel("Search market candidates")
+                    if !search.isEmpty {
+                        Button {
+                            search = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Clear candidate search")
+                    }
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: searchFieldHeight)
+                .background(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.05),
+                            in: RoundedRectangle(cornerRadius: 9))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 9)
+                        .strokeBorder(Color.accentColor.opacity(searchFocused ? 1 : 0.7),
+                                      lineWidth: searchFocused ? 2 : 1.5)
+                }
+            }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(visible, id: \.symbol) { candidate in
@@ -62,5 +94,13 @@ struct RadarScannerDiagnostics: View {
 
     private func color(_ role: RadarTableColorRole) -> Color {
         colors.color(role, dark: colorScheme == .dark)
+    }
+
+    private var searchFieldHeight: CGFloat {
+        #if os(macOS)
+        32
+        #else
+        44
+        #endif
     }
 }
