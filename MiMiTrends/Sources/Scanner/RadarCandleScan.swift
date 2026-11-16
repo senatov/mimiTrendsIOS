@@ -10,6 +10,7 @@ struct SymbolOutcome: Sendable {
     var unreadableSymbol: String?
     var skipped = false
     var missingVolume = false
+    var recordedSignal = false
 }
 
 enum RadarCandleScan {
@@ -32,19 +33,22 @@ enum RadarCandleScan {
             }
             let signal = YahooCandleSignalPipeline.detect(symbol: symbol, bars: bars,
                 nowEpochSeconds: nowSeconds, settings: settings, volumeValidated: true)
+            var recordedSignal = false
             if let signal {
                 if let name = history.companyName {
                     await saveCompanyName(name, symbol: symbol, nowSeconds: nowSeconds)
                 }
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 if try await store.record(signal) {
+                    recordedSignal = true
                     AppDiagnostics.shared.record(.info, "Radar", "candle-signal-recorded",
                         "symbol=\(symbol) event=\(signal.signalSource) window=\(signal.signalWindowLabel) move=\(signal.windowChangePercent) status=\(signal.dataStatus) eventMillis=\(signal.signalEpochMillis)")
                 }
             }
             RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)
             return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil,
-                usable: usable, skipped: !usable, missingVolume: !usable)
+                usable: usable, skipped: !usable, missingVolume: !usable,
+                recordedSignal: recordedSignal)
         } catch RadarSourceError.rateLimited {
             return SymbolOutcome(symbol: symbol, received: 0,
                 failure: "Yahoo temporarily limited requests (HTTP 429). Radar pauses scanning for 30 minutes.", rateLimited: true)

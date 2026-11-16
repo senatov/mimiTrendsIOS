@@ -70,6 +70,49 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
             nowEpochSeconds: now, settings: RadarScanPreferences(), volumeValidated: true))
     }
 
+    func testUSOpeningDropUsesPremarketPriceAndTwoReportedOpeningBars() throws {
+        let opening = Int64(ISO8601DateFormatter().date(
+            from: "2026-11-16T14:30:00Z")!.timeIntervalSince1970)
+        let prices: [(Double, Double)] = [
+            (357.49, 0), (357.5545, 0), (356.73, 0), (357.37, 0), (357.06, 0),
+            (355.81, 4_262_241), (354.085, 253_435), (354.39, 235_918),
+            (355.22, 125_831)
+        ]
+        let bars = prices.enumerated().map { index, value in
+            MinuteBar(symbol: "AAPL", minuteEpochSeconds: opening - 300 + Int64(index) * 60,
+                open: value.0, high: value.0, low: value.0, close: value.0,
+                volume: value.1, volumeStatus: value.1 > 0 ? .reported : .zero)
+        }
+        let first = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "AAPL", bars: bars,
+            nowEpochSeconds: opening + 125, settings: RadarScanPreferences(), volumeValidated: true))
+        XCTAssertEqual(first.signalSource, "Rapid crash")
+        XCTAssertEqual(first.signalEpochMillis, (opening + 60) * 1_000)
+        XCTAssertLessThan(first.windowChangePercent, -0.8)
+        var shorterWindow = RadarScanPreferences()
+        shorterWindow.crashWindowMinutes = 4
+        let configured = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "AAPL", bars: bars,
+            nowEpochSeconds: opening + 125, settings: shorterWindow, volumeValidated: true))
+        XCTAssertLessThanOrEqual(Int(configured.signalWindowLabel.dropLast())!, 4)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([configured], since: 0, limit: 10,
+            preferences: shorterWindow).count, 1)
+        var missingOpeningVolume = bars
+        let openingBar = missingOpeningVolume[5]
+        missingOpeningVolume[5] = MinuteBar(symbol: "AAPL",
+            minuteEpochSeconds: openingBar.minuteEpochSeconds,
+            open: openingBar.open, high: openingBar.high, low: openingBar.low,
+            close: openingBar.close, volume: 0, volumeStatus: .missing)
+        XCTAssertNil(YahooCandleSignalPipeline.detect(symbol: "AAPL", bars: missingOpeningVolume,
+            nowEpochSeconds: opening + 125, settings: shorterWindow, volumeValidated: true))
+
+        let caughtAfterRebound = try XCTUnwrap(YahooCandleSignalPipeline.detect(
+            symbol: "AAPL", bars: bars, nowEpochSeconds: opening + 240,
+            settings: RadarScanPreferences(), volumeValidated: true))
+        XCTAssertEqual(caughtAfterRebound.signalEpochMillis, first.signalEpochMillis)
+        XCTAssertEqual(caughtAfterRebound.signalAgeMinutes, 3)
+        XCTAssertNil(YahooCandleSignalPipeline.detect(symbol: "AAPL", bars: bars,
+            nowEpochSeconds: opening + 301, settings: RadarScanPreferences(), volumeValidated: true))
+    }
+
     func testUnfinishedCandleCannotCreateSignal() {
         var bars = history(symbol: "NVDA", end: now - 60, dropping: false)
         bars.append(MinuteBar(symbol: "NVDA", minuteEpochSeconds: now,

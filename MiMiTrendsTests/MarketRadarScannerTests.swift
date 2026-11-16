@@ -24,6 +24,20 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(batch, ["E", "F", "G", "H"])
     }
 
+    func testSelectedAndTopCandidatesAreRecheckedWithoutStarvingPendingSymbols() {
+        let symbols = (0..<30).map { "S\($0)" } + ["AAPL"]
+        let now = Date(timeIntervalSince1970: 10_000)
+        let processed = Set(symbols.prefix(16))
+        let batch = MarketRadarScanner.candleBatch(symbols, processed: processed,
+            prioritySymbol: " aapl ", lastScannedAt: ["AAPL": now.addingTimeInterval(-61),
+                "S0": now.addingTimeInterval(-61), "S1": now.addingTimeInterval(-20),
+                "S2": now.addingTimeInterval(-61)], now: now)
+        XCTAssertEqual(Array(batch.prefix(3)), ["AAPL", "S0", "S2"])
+        XCTAssertEqual(batch.count, 16)
+        XCTAssertEqual(batch[3], "S16")
+        XCTAssertEqual(Set(batch).count, batch.count)
+    }
+
     func testYahooRateLimitDoesNotRetryAlternateHost() async {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [YahooRateLimitURLProtocol.self]

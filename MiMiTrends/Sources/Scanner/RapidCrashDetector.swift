@@ -103,7 +103,7 @@ enum RapidCrashDetector {
                 $0.minuteEpochSeconds <= end.minuteEpochSeconds &&
                 $0.volumeStatus == .reported && $0.volume > 0
         }
-        return active.count >= 3 &&
+        return active.count >= 2 &&
             active.reduce(0) { $0 + $1.close * $1.volume } >= settings.minimumTurnover
     }
 

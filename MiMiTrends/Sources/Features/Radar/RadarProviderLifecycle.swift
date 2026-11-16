@@ -115,13 +115,14 @@ extension RadarView {
                 let discovered = try await marketScanner.scan(enabledProviders: enabledProviders)
                 guard !Task.isCancelled else { return }
                 if marketCycle == nil { marketCycle = discovered }
-                let cycle = await marketScanner.scanCandles(discovered,
-                    enabled: enabledProviders.contains(.yahoo))
+                let scan = await marketScanner.scanCandles(discovered,
+                    enabled: enabledProviders.contains(.yahoo), prioritySymbol: chartSymbol)
                 guard !Task.isCancelled else { return }
-                marketCycle = cycle
+                marketCycle = scan.cycle
+                if scan.recordedSignal { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "candidate-pool-ready",
-                    "candidates=\(cycle.candidates.count) checked=\(cycle.progress.processed) usable=\(cycle.progress.successful) yahooErrors=\(cycle.yahoo.errors) traderFoxErrors=\(cycle.traderFox.errors)"
+                    "candidates=\(scan.cycle.candidates.count) checked=\(scan.cycle.progress.processed) usable=\(scan.cycle.progress.successful) yahooErrors=\(scan.cycle.yahoo.errors) traderFoxErrors=\(scan.cycle.traderFox.errors)"
                 )
             } catch is CancellationError {
                 return

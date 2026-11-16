@@ -17,28 +17,56 @@ enum YahooCandleSignalPipeline {
         let evaluationDate = Date(timeIntervalSince1970: Double(evaluationTime))
         guard let sessionStart = market.sessionStart(at: evaluationDate) else { return nil }
         let start = Int64(sessionStart.timeIntervalSince1970)
+        let usOpening = !german && market.phase(at: evaluationDate) == .regular &&
+            evaluationTime < start + 600
+        // Keep the last premarket prices as context for an opening drop. The
+        // opening bars themselves still need reported trade volume.
+        let contextStart = usOpening ? start - 300 : start
         let completed = bars.filter {
-            $0.symbol == symbol && $0.isValid && $0.minuteEpochSeconds >= start
+            $0.symbol == symbol && $0.isValid && $0.minuteEpochSeconds >= contextStart
                 && $0.minuteEpochSeconds >= nowEpochSeconds - MarketBarStore.retentionSeconds
                 && $0.minuteEpochSeconds + 60 <= evaluationTime
         }.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
         guard let last = completed.last, last.minuteEpochSeconds >= evaluationTime - 180 else { return nil }
-        if volumeValidated {
-            let recent = Array(completed.suffix(3))
-            guard recent.count == 3,
-                  recent.allSatisfy({ $0.volumeStatus == .reported && $0.volume > 0 }),
-                  !zip(recent, recent.dropFirst()).contains(where: {
-                      $0.1.minuteEpochSeconds - $0.0.minuteEpochSeconds > 120
-                  }) else { return nil }
-        }
         let status = volumeValidated
             ? (german ? delayedVolumeValidatedStatus : volumeValidatedStatus)
             : (german ? delayedStatus : currentStatus)
-        return RapidCrashDetector.detect(symbol: symbol, bars: completed,
-            nowEpochSeconds: evaluationTime, settings: settings.rapidCrash, dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
-            ?? RapidRiseDetector.detect(symbol: symbol, bars: completed,
-                nowEpochSeconds: evaluationTime, settings: settings.rapidRise, dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
+        // A short drop can recover before this symbol's next scan. Inspect the
+        // last few completed endpoints, retaining the original event time.
+        for index in completed.indices.reversed() {
+            let end = completed[index]
+            guard evaluationTime - end.minuteEpochSeconds <= 180 else { break }
+            let candidateBars = Array(completed[...index])
+            guard hasValidatedVolume(candidateBars, regularStart: start, usOpening: usOpening,
+                                     required: volumeValidated) else { continue }
+            if let crash = RapidCrashDetector.detect(symbol: symbol, bars: candidateBars,
+                nowEpochSeconds: evaluationTime, settings: settings.rapidCrash,
+                dataStatus: status, observedAtEpochSeconds: nowEpochSeconds),
+                last.close < crash.signalPrice {
+                return crash
+            }
+        }
+        guard hasValidatedVolume(completed, regularStart: start, usOpening: usOpening,
+                                 required: volumeValidated) else { return nil }
+        return RapidRiseDetector.detect(symbol: symbol, bars: completed,
+            nowEpochSeconds: evaluationTime, settings: settings.rapidRise,
+            dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
             ?? SmoothRiseDetector.detect(symbol: symbol, bars: completed,
-                nowEpochSeconds: evaluationTime, settings: settings.smoothRise, dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
+                nowEpochSeconds: evaluationTime, settings: settings.smoothRise,
+                dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
+    }
+
+    private static func hasValidatedVolume(_ bars: [MinuteBar], regularStart: Int64,
+                                           usOpening: Bool, required: Bool) -> Bool {
+        guard required else { return true }
+        guard let end = bars.last else { return false }
+        let opening = usOpening && end.minuteEpochSeconds == regularStart + 60
+        let recent = Array(bars.suffix(opening ? 2 : 3))
+        return recent.count == (opening ? 2 : 3) &&
+            recent.allSatisfy { $0.minuteEpochSeconds >= regularStart &&
+                $0.volumeStatus == .reported && $0.volume > 0 } &&
+            !zip(recent, recent.dropFirst()).contains { pair in
+                pair.1.minuteEpochSeconds - pair.0.minuteEpochSeconds > 120
+            }
     }
 }

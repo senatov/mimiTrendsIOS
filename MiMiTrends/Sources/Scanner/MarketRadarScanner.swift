@@ -24,6 +24,7 @@ actor MarketRadarScanner {
     private var candleCooldownUntil: Date?
     private var candleScanRound = 0
     private var nextScanRoundAt: Date = .distantPast
+    private var lastCandleScanAt: [String: Date] = [:]
 
     func scan(
         enabledProviders: Set<MarketProvider> = Set(MarketProvider.allCases)
@@ -284,10 +285,25 @@ actor MarketRadarScanner {
             : Array(pending.prefix(max(0, limit)))
     }
 
-    func scanCandles(_ cycle: MarketRadarCycle, enabled: Bool) async -> MarketRadarCycle {
+    static func candleBatch(_ symbols: [String], processed: Set<String>, prioritySymbol: String?,
+                            lastScannedAt: [String: Date], now: Date) -> [String] {
+        let selected = prioritySymbol?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let preferred = ([selected].compactMap { $0 } + Array(symbols.prefix(3)))
+            .filter { symbols.contains($0) }
+        var seen = Set<String>()
+        let due = preferred.filter { seen.insert($0).inserted }
+            .filter { now.timeIntervalSince(lastScannedAt[$0] ?? .distantPast) >= 60 }
+        let priority = Array(due.prefix(4))
+        let pending = symbols.filter { !processed.contains($0) && !priority.contains($0) }
+        return priority + Array(pending.prefix(16 - priority.count))
+    }
+
+    func scanCandles(_ cycle: MarketRadarCycle, enabled: Bool,
+                     prioritySymbol: String? = nil) async -> (cycle: MarketRadarCycle, recordedSignal: Bool) {
         let symbols = cycle.candidates.map(\.symbol)
         candleOutcomes = candleOutcomes.filter { symbols.contains($0.key) }
-        guard enabled, !symbols.isEmpty else { return cycle }
+        lastCandleScanAt = lastCandleScanAt.filter { symbols.contains($0.key) }
+        guard enabled, !symbols.isEmpty else { return (cycle, false) }
         if candleOutcomes.count == symbols.count && Date() >= nextScanRoundAt {
             candleOutcomes.removeAll()
             candleScanRound += 1
@@ -300,9 +316,12 @@ actor MarketRadarScanner {
                     "error=\(String(describing: error))")
             }
         }
-        guard let candleStore else { return cycle }
+        guard let candleStore else { return (cycle, false) }
         let skipped = await YahooSymbolResolutionStore.shared.skippedSymbols()
-        let batch = Array(symbols.filter { candleOutcomes[$0] == nil }.prefix(16))
+        let batch = Self.candleBatch(symbols, processed: Set(candleOutcomes.keys),
+                                     prioritySymbol: prioritySymbol,
+                                     lastScannedAt: lastCandleScanAt, now: Date())
+        var recordedSignal = false
         if let cooldown = candleCooldownUntil, Date() >= cooldown { candleCooldownUntil = nil }
         if candleCooldownUntil == nil {
             let nowSeconds = Int64(Date().timeIntervalSince1970)
@@ -326,6 +345,8 @@ actor MarketRadarScanner {
                 }
                 for outcome in results {
                     candleOutcomes[outcome.symbol] = outcome
+                    lastCandleScanAt[outcome.symbol] = Date()
+                    recordedSignal = recordedSignal || outcome.recordedSignal
                     if outcome.rateLimited {
                         candleCooldownUntil = Date().addingTimeInterval(30 * 60)
                     }
@@ -350,6 +371,7 @@ actor MarketRadarScanner {
             issues: issues, activeSymbols: [], lastUpdatedAt: Date())
         AppDiagnostics.shared.record(.info, "Radar", "candle-scan-progress",
             "round=\(candleScanRound) checked=\(progress.processed)/\(progress.total) usable=\(successful) skipped=\(progress.skipped) errors=\(errors)")
-        return cycle.reporting(progress, cooldown: candleCooldownUntil ?? cycle.yahooCooldownUntil)
+        return (cycle.reporting(progress, cooldown: candleCooldownUntil ?? cycle.yahooCooldownUntil),
+                recordedSignal)
     }
 }
