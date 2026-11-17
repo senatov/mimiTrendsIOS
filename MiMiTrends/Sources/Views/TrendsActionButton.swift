@@ -4,6 +4,7 @@ struct TrendsActionButton: View {
     let title: String
     let systemImage: String
     var showsTitle = true
+    var glass = false
     var tint: Color = .blue
     var role: ButtonRole? = nil
     let action: () -> Void
@@ -11,22 +12,24 @@ struct TrendsActionButton: View {
 
     var body: some View {
         Button(role: role, action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: glass ? 4 : 6) {
                 Image(systemName: systemImage)
-                    .font(.system(size: 17, weight: .light))
+                    .font(.system(size: glass ? 14 : 17, weight: .light))
                     .foregroundStyle(RadarColorHex.color(iconColor) ?? tint)
-                    .frame(width: 18, height: 18)
+                    .frame(width: glass ? 15 : 18, height: glass ? 15 : 18)
                 if showsTitle {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.18))
-                        .frame(width: 1, height: 17)
+                    if !glass {
+                        Rectangle()
+                            .fill(Color.primary.opacity(0.18))
+                            .frame(width: 1, height: 17)
+                    }
                     Text(title)
                 }
             }
             .lineLimit(1)
             .truncationMode(.tail)
         }
-        .buttonStyle(TrendsActionButtonStyle(tint: tint))
+        .buttonStyle(TrendsActionButtonStyle(tint: tint, glass: glass))
         .accessibilityLabel(title)
         .help(title)
     }
@@ -36,9 +39,10 @@ struct TrendsActionButtonStyle: ButtonStyle {
     var tint: Color = .blue
     var compact = true
     var tiny = false
+    var glass = false
 
     func makeBody(configuration: Configuration) -> some View {
-        TrendsActionButtonBody(configuration: configuration, tint: tint, compact: compact, tiny: tiny)
+        TrendsActionButtonBody(configuration: configuration, tint: tint, compact: compact, tiny: tiny, glass: glass)
     }
 }
 
@@ -47,6 +51,7 @@ private struct TrendsActionButtonBody: View {
     let tint: Color
     let compact: Bool
     let tiny: Bool
+    let glass: Bool
 
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -67,7 +72,23 @@ private struct TrendsActionButtonBody: View {
 
     private var radius: CGFloat { CGFloat(cornerRadius) }
 
-    var body: some View {
+    @ViewBuilder var body: some View {
+        if glass {
+            configuration.label
+                .font(buttonFont)
+                .foregroundStyle(RadarColorHex.color(textColor) ?? Color.primary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .glassEffect(.regular.tint(tint.opacity(0.08)).interactive(), in: Capsule())
+                .frame(minWidth: minimumWidth, minHeight: minimumHeight)
+                .contentShape(Rectangle())
+                .opacity(isEnabled ? 1 : 0.5)
+        } else {
+            legacyBody
+        }
+    }
+
+    private var legacyBody: some View {
         configuration.label
             .font(buttonFont)
             .foregroundStyle(RadarColorHex.color(textColor)

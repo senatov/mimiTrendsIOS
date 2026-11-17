@@ -3,6 +3,8 @@ import UniformTypeIdentifiers
 
 struct TradeImportAction: View {
     let title: String
+    var showsTitle = true
+    var glass = false
     var onImport: () -> Void = {}
     @State private var showingImporter = false
     @State private var isImporting = false
@@ -12,7 +14,9 @@ struct TradeImportAction: View {
     var body: some View {
         TrendsActionButton(
             title: isImporting ? "Importing…" : title,
-            systemImage: "square.and.arrow.down"
+            systemImage: "square.and.arrow.down",
+            showsTitle: showsTitle,
+            glass: glass
         ) {
             showingImporter = true
         }

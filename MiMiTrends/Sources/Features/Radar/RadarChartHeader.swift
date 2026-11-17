@@ -20,14 +20,15 @@ struct RadarChartHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 16) {
-                    instrumentSummary
-                    Divider().frame(height: 20)
-                    chartControls
+                    instrumentSummary(compact: false)
+                        .fixedSize(horizontal: true, vertical: false)
+                    chartControls(showTitles: true)
                     Spacer(minLength: 0)
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    ScrollView(.horizontal, showsIndicators: false) { instrumentSummary }
-                    ScrollView(.horizontal, showsIndicators: false) { chartControls }
+                HStack(spacing: 12) {
+                    instrumentSummary(compact: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    chartControls(showTitles: false)
                 }
             }
             .padding(.vertical, 4)
@@ -44,71 +45,96 @@ struct RadarChartHeader: View {
         }
     }
 
-    private var instrumentSummary: some View {
-        HStack(spacing: 12) {
-            identity
-            quote
+    private func instrumentSummary(compact: Bool) -> some View {
+        HStack(spacing: compact ? 8 : 12) {
+            identity(compact: compact)
+            quote(compact: compact)
         }
         .lineLimit(1)
-        .fixedSize(horizontal: true, vertical: false)
     }
 
-    private var chartControls: some View {
-        HStack(spacing: 14) {
+    private func chartControls(showTitles: Bool) -> some View {
+        HStack(spacing: 16) {
             TrendsActionButton(title: "Signal focus", systemImage: "scope",
+                               showsTitle: showTitles, glass: true,
                                tint: showingSignalFocus && focusAvailable ? .purple : .blue) {
                 showingSignalFocus = true
             }
             .disabled(!focusAvailable)
             .accessibilityValue(showingSignalFocus && focusAvailable ? "Selected" : "Not selected")
             TrendsActionButton(title: "Full history", systemImage: "chart.xyaxis.line",
+                               showsTitle: showTitles, glass: true,
                                tint: showingSignalFocus && focusAvailable ? .blue : .purple) {
                 showingSignalFocus = false
             }
-            Picker("Chart period", selection: $range) {
-                ForEach(RadarChartRange.allCases) { option in Text(option.title).tag(option) }
+            Menu {
+                ForEach(RadarChartRange.allCases) { option in
+                    Button {
+                        range = option
+                    } label: {
+                        if range == option {
+                            Label(option.title, systemImage: "checkmark")
+                        } else {
+                            Text(option.title)
+                        }
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(range.title).monospacedDigit()
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.semibold))
+                }
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 4)
+                .glassEffect(.regular, in: Capsule())
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 320)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Chart period")
+            .accessibilityValue(range.title)
             if hasTrades {
                 TrendsActionButton(title: "Trades", systemImage: "point.topleft.down.curvedto.point.bottomright.up",
+                                   showsTitle: showTitles, glass: true,
                                    tint: showingTrades ? .orange : .blue) { showingTrades.toggle() }
                     .accessibilityLabel("Show imported trades on the chart")
                     .accessibilityValue(showingTrades ? "On" : "Off")
             }
-            TradeImportAction(title: "Import trades", onImport: onImport)
+            TradeImportAction(title: "Import trades", showsTitle: showTitles, glass: true, onImport: onImport)
         }
         .lineLimit(1)
         .fixedSize(horizontal: true, vertical: false)
-        .padding(.horizontal, 3)
-        .padding(.vertical, 3)
     }
 
-    private var identity: some View {
-        HStack(spacing: 10) {
+    private func identity(compact: Bool) -> some View {
+        HStack(spacing: compact ? 6 : 10) {
             if !symbol.isEmpty {
                 RadarCompanyMark(metadata: metadata, name: companyName, size: 22, showsPlaceholder: true)
             }
-            HStack(alignment: .center, spacing: 8) {
+            HStack(alignment: .center, spacing: compact ? 5 : 8) {
                 if let flag = RadarCompanyMetadata.flag(for: RadarCompanyMetadata.listingCountry(for: symbol)) {
                     Text(flag).accessibilityLabel("Listing country")
                 }
                 Text(symbol.isEmpty ? "No symbol selected" : companyName)
-                    .font(.headline)
+                    .font(.system(size: 18, weight: .light))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .layoutPriority(1)
                 HStack(spacing: 8) {
                     Text(symbol).font(.system(.caption, design: .monospaced).weight(.medium))
                         .foregroundStyle(.indigo)
-                    Text(currency).font(.caption).foregroundStyle(.secondary)
+                    if !compact { Text(currency).font(.caption).foregroundStyle(.secondary) }
                 }
             }
         }
     }
 
     @ViewBuilder
-    private var quote: some View {
+    private func quote(compact: Bool) -> some View {
         if let signal {
             let price = RadarSignalPrice.display(signal, rates: rates, currency: currency)
             HStack(alignment: .center, spacing: 8) {
@@ -119,17 +145,26 @@ struct RadarChartHeader: View {
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
                 }
-                Text(RadarSignalPresentation.title(for: signal.signalSource))
-                    .font(.caption).foregroundStyle(.indigo)
-                status(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed signal" : "Signal price",
-                       epoch: signal.signalEpochMillis / 1_000)
+                if compact {
+                    compactStatus(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed" : "Signal",
+                                  epoch: signal.signalEpochMillis / 1_000)
+                } else {
+                    Text(RadarSignalPresentation.title(for: signal.signalSource))
+                        .font(.caption).foregroundStyle(.indigo)
+                    status(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed signal" : "Signal price",
+                           epoch: signal.signalEpochMillis / 1_000)
+                }
             }
         } else if let lastBar {
             HStack(alignment: .center, spacing: 8) {
                 Text(lastBar.close, format: .currency(code: currency).precision(.fractionLength(2)))
                     .font(.headline.monospacedDigit())
                     .foregroundStyle(.primary)
-                status("Saved close", epoch: lastBar.minuteEpochSeconds)
+                if compact {
+                    compactStatus("Saved close", epoch: lastBar.minuteEpochSeconds)
+                } else {
+                    status("Saved close", epoch: lastBar.minuteEpochSeconds)
+                }
             }
         }
     }
@@ -143,5 +178,15 @@ struct RadarChartHeader: View {
             Text(Date(timeIntervalSince1970: Double(epoch)), format: .dateTime.day().month().hour().minute())
                 .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
         }
+    }
+
+    private func compactStatus(_ title: String, epoch: Int64) -> some View {
+        Text(title)
+            .font(.caption2)
+            .foregroundStyle(.purple)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.purple.opacity(0.09), in: Capsule())
+            .help("\(title) · \(Date(timeIntervalSince1970: Double(epoch)).formatted(.dateTime.day().month().hour().minute()))")
     }
 }
