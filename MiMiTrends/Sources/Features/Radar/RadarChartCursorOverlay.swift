@@ -61,34 +61,32 @@ struct RadarChartCursorOverlay: View {
                 plot: plotFrame, x: proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)),
                 y: (readsPrice ? selectedPrice : nil).flatMap { proxy.position(forY: $0) }
             )
-            if readsPrice, let y = proxy.position(forY: selectedPrice) {
-                cursorTag(selectedPrice.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
+            if readsPrice,
+               let x = proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)),
+               let y = proxy.position(forY: selectedPrice) {
+                let point = CGPoint(x: plotFrame.minX + x, y: plotFrame.minY + y)
+                cursorBubble(date: selectedBar.chartDate, price: selectedPrice)
                     .position(
-                        x: geometry.size.width - 28,
-                        y: min(max(plotFrame.minY + y, 14), plotFrame.maxY - 14)
+                        x: min(max(point.x, plotFrame.minX + 85), plotFrame.maxX - 85),
+                        y: point.y - 38 >= plotFrame.minY + 24 ? point.y - 38 : point.y + 38
                     )
                     .accessibilityHidden(true)
-            } else if !readsPrice, let x = proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)) {
-                cursorTag(selectedBar.chartDate.formatted(
-                    .dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute()
-                ))
-                .position(
-                    x: min(max(plotFrame.minX + x, 72), geometry.size.width - 72),
-                    y: geometry.size.height - 12
-                )
-                .accessibilityHidden(true)
             }
         }
     }
 
-    private func cursorTag(_ value: String) -> some View {
-        Text(value)
-            .font(.caption2.monospacedDigit())
+    private func cursorBubble(date: Date, price: Double) -> some View {
+        VStack(spacing: 1) {
+            Text(date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute()))
+            Text(price.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
+                .fontWeight(.semibold)
+        }
+            .font(.caption.monospacedDigit())
             .foregroundStyle(TrendsColors.ink)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 2)
-            .background(Color.yellow.opacity(0.2), in: RoundedRectangle(cornerRadius: 3))
-            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.blue.opacity(0.7), lineWidth: 1))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(.blue.opacity(0.7), lineWidth: 1))
             .fixedSize()
             .allowsHitTesting(false)
     }

@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 actor RadarCompanyMetadataService {
     private let session: URLSession
@@ -21,9 +22,11 @@ actor RadarCompanyMetadataService {
             let stale = normalized.filter { symbol in
                 guard let cached = metadata[symbol] else { return true }
                 let preferred = Self.preferredName(symbol: symbol, candidate: names[symbol], cached: cached.name)
-                let lifetime = cached.logoData == nil || cached.countryCode == nil || cached.name == symbol
+                let lifetime = cached.logoData == nil || !Self.isRenderableLogo(cached.logoData) ||
+                    cached.countryCode == nil || cached.name == symbol
                     ? incompleteCacheLifetime : cacheLifetime
-                return cached.name != preferred || now - cached.updatedAtMillis > lifetime
+                return cached.name != preferred || !Self.isRenderableLogo(cached.logoData) ||
+                    now - cached.updatedAtMillis > lifetime
             }
             let requestSession = session
             for offset in stride(from: 0, to: stale.count, by: 4) {
@@ -43,8 +46,10 @@ actor RadarCompanyMetadataService {
                                 }
                             }
                             let country = cached?.countryCode
-                            var image = cached?.logoData
-                            if image == nil { image = await Self.loadCompanyMark(name: name, session: requestSession) }
+                            var image = Self.isRenderableLogo(cached?.logoData) ? cached?.logoData : nil
+                            if image == nil {
+                                image = await Self.loadCompanyMark(symbol: symbol, name: name, session: requestSession)
+                            }
                             return (symbol, RadarCompanyMetadata(
                                 symbol: symbol, name: name, countryCode: country,
                                 logoData: image, updatedAtMillis: now
@@ -88,12 +93,36 @@ actor RadarCompanyMetadataService {
         do {
             let (data, response) = try await session.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
-                  !data.isEmpty, data.count <= 512_000 else { return nil }
+                  !data.isEmpty, data.count <= 512_000,
+                  isRenderableLogo(data) else { return nil }
             return data
         } catch { return nil }
     }
 
-    private static func loadCompanyMark(name: String, session: URLSession) async -> Data? {
+    private static func loadCompanyMark(symbol: String, name: String, session: URLSession) async -> Data? {
+        if !symbol.contains(":"), !symbol.contains("."),
+           let ticker = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+           let metadataURL = URL(string: "https://api.loadlogo.com/ticker/\(ticker)"),
+           let (data, response) = try? await session.data(for: logoRequest(metadataURL)),
+           (response as? HTTPURLResponse)?.statusCode == 200,
+           let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           (result["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame,
+           let resolvedName = result["name"] as? String,
+           name.caseInsensitiveCompare(symbol) == .orderedSame ||
+               !tokens(name).isDisjoint(with: tokens(resolvedName)),
+           let logo = result["logo"] as? String,
+           let logoURL = URL(string: logo), logoURL.host == "img.loadlogo.com",
+           let image = await loadLogo(logoURL, session: session) {
+            return image
+        }
+        if let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+           let nameURL = URL(string: "https://img.loadlogo.com/name/\(encodedName)?size=64&fallback=404"),
+           let image = await loadLogo(nameURL, session: session) {
+            return image
+        }
+        if let image = await loadCatalogMark(symbol: symbol, name: name, session: session) {
+            return image
+        }
         guard var components = URLComponents(string: "https://api.loadlogo.com/search") else { return nil }
         components.queryItems = [URLQueryItem(name: "q", value: name)]
         guard let url = components.url else { return nil }
@@ -124,12 +153,48 @@ actor RadarCompanyMetadataService {
         }.max(by: { $0.1 < $1.1 }).flatMap { $0.1 >= 0.5 ? $0.0 : nil }
     }
 
+    private static func loadCatalogMark(symbol: String, name: String, session: URLSession) async -> Data? {
+        guard var components = URLComponents(string: "https://logoapi.sh/search") else { return nil }
+        components.queryItems = [URLQueryItem(name: "q", value: name)]
+        guard let url = components.url,
+              let (data, response) = try? await session.data(for: logoRequest(url)),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let results = object["results"] as? [[String: Any]] else { return nil }
+        let target = tokens(name)
+        guard let match = results.first(where: { result in
+            guard let resolvedName = result["name"] as? String else { return false }
+            let candidate = tokens(resolvedName)
+            let score = Double(target.intersection(candidate).count) /
+                Double(max(1, target.union(candidate).count))
+            return score >= 0.5 &&
+                ((result["ticker"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame ||
+                 result["ticker"] == nil)
+        }), let domain = match["domain"] as? String,
+           domain.range(of: #"^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}$"#, options: .regularExpression) != nil,
+           let imageURL = URL(string: "https://logoapi.sh/icon/\(domain).png?size=128&fallback=404") else { return nil }
+        return await loadLogo(imageURL, session: session)
+    }
+
     private static func tokens(_ value: String) -> Set<String> {
         Set(value.lowercased().split { !$0.isLetter && !$0.isNumber }
             .map(String.init).filter { $0.count > 1 && !legalSuffixes.contains($0) })
     }
 
     private static let legalSuffixes: Set<String> = ["inc", "incorporated", "corp", "corporation", "company", "co", "ltd", "plc", "ag", "se", "sa", "spa", "gmbh", "group"]
+
+    private static func logoRequest(_ url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        return request
+    }
+
+    private static func isRenderableLogo(_ data: Data?) -> Bool {
+        guard let data,
+              !(String(data: data.prefix(256), encoding: .utf8)?.lowercased().contains("<svg") ?? false),
+              let source = CGImageSourceCreateWithData(data as CFData, nil) else { return false }
+        return CGImageSourceCreateImageAtIndex(source, 0, nil) != nil
+    }
 
 
 }
