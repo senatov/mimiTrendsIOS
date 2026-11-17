@@ -2,6 +2,8 @@
 
 Radar's **Confirmed reversal** signal uses completed Yahoo minute candles with reported volume. It looks for a decline into a local closing low, an intervening high, a pullback that holds a higher closing low, and a fresh close above the intervening high. This is the standard *higher low and higher high* price confirmation described by Charles Schwab. A simple rise from the lowest close is insufficient: a brief bounce during a continuing decline does not establish a reversal.
 
+The price pattern runs only for symbols admitted to the current Radar candidate pool. Radar displays a saved reversal only while its symbol remains in the current TradingView candidate set and its ISIN is observed in the EIX pre-trade file; the EIX check does not change the reversal thresholds or validate broker execution.
+
 ## Rule in the app
 
 1. The first local low must follow a decline of at least the configured percentage within the preceding 15 minutes. It must be below the neighboring closes.

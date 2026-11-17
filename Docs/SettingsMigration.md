@@ -13,3 +13,5 @@ The native app keeps its own settings and does not import the Kotlin desktop app
 | JavaFX window geometry | Not imported; SwiftUI saves its own panel ratios. |
 
 The watchlist, candle bars, signal history, and imported trades remain in native SQLite stores. Scanning runs only while the app is active.
+
+The EIX candidate check is automatic and has no desktop preference to migrate. Radar matches TradingView candidates to observed EIX ISINs before filling its scan pool; the watchlist and selected chart symbol do not override that filter.
