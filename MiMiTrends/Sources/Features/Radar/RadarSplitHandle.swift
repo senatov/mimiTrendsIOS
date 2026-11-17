@@ -38,7 +38,7 @@ struct RadarSplitHandle: View {
         )
         .contentShape(Rectangle())
         .gesture(
-            DragGesture(minimumDistance: 0)
+            DragGesture(minimumDistance: 0, coordinateSpace: .global)
                 .onChanged { movement in
                     onDrag(axis == .columns ? movement.translation.width : movement.translation.height)
                 }

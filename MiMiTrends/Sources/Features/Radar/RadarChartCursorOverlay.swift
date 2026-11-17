@@ -85,8 +85,8 @@ struct RadarChartCursorOverlay: View {
             .foregroundStyle(TrendsColors.ink)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(.blue.opacity(0.7), lineWidth: 1))
+            .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(.blue.opacity(0.35), lineWidth: 0.8))
             .fixedSize()
             .allowsHitTesting(false)
     }
