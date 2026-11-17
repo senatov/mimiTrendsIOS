@@ -227,7 +227,7 @@
 		35C2E8B4DD20C94DB4457374 /* HeaderBadgeSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderBadgeSurface.swift; sourceTree = "<group>"; };
 		3777AAD0702BA7456930185D /* WatchlistEntryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistEntryRow.swift; sourceTree = "<group>"; };
 		37E278BAC8BF8FC5AAC3E0D9 /* LocalAccountInstanceGuard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAccountInstanceGuard.swift; sourceTree = "<group>"; };
-		38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "mimiTrends-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		38CF56457F881AAE5791EED8 /* mimiTrends-iOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "mimiTrends-iOSTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		39E5AF93F5D263904111D4BA /* DiscoveryCandidateSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryCandidateSelectorTests.swift; sourceTree = "<group>"; };
 		3C005831238BCC317F9E97AF /* RadarSignalSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelection.swift; sourceTree = "<group>"; };
 		3E0553290B6A625B69D74DCF /* ProviderSettingsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettingsPanel.swift; sourceTree = "<group>"; };
@@ -328,7 +328,7 @@
 		C3849DCE8EE8922FD0224E79 /* RadarSignalSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalSelectionTests.swift; sourceTree = "<group>"; };
 		C5205E4093E24CFD92C9F019 /* RadarChartHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartHeader.swift; sourceTree = "<group>"; };
 		C8297E436B9CE9006BD4AFA1 /* RadarSignalColumns.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSignalColumns.swift; sourceTree = "<group>"; };
-		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C843429B89E6E4F3610BF61D /* mimiTrends-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "mimiTrends-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA861D47A0E6F330BDC42DBC /* MarketQuoteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketQuoteStore.swift; sourceTree = "<group>"; };
 		CF85703A12A975B5AFDD4926 /* RadarInstrumentChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarInstrumentChart.swift; sourceTree = "<group>"; };
 		D1FFD47FA74106D96F174422 /* TradingViewVolatilitySource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradingViewVolatilitySource.swift; sourceTree = "<group>"; };
@@ -767,7 +767,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2700;
+				LastUpgradeCheck = 2730;
 				TargetAttributes = {
 					4272B0CA94A3C0C778AF8152 = {
 						DevelopmentTeam = G2V9T9AD95;
@@ -1074,10 +1074,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 43;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -1095,6 +1097,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1109,6 +1112,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacDebug.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
 				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
@@ -1137,6 +1141,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1192,10 +1197,12 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 43;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G2V9T9AD95;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -1220,6 +1227,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = org.senatov.mimitrends.apple;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -1234,6 +1242,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = MiMiTrends/Configuration/MacAppStore.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "mimiTrends-iOS";
 				INFOPLIST_KEY_CFBundleName = "mimiTrends-iOS";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright © 2026 Iakov Senatov";
@@ -1262,6 +1271,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
+				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
