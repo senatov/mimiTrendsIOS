@@ -2,7 +2,7 @@ import SwiftUI
 
 extension RadarView {
     func refreshCompanyMetadata() async {
-        let symbols = [chartSymbol] + recentSignals.map(\.symbol)
+        let symbols = [chartSymbol] + visibleSignals.map(\.symbol)
         companyMetadata = await companyMetadataService.cached(symbols: symbols)
         companyMetadata = await companyMetadataService.load(
             symbols: symbols, names: radarCompanyNames
@@ -77,6 +77,8 @@ extension RadarView {
                 let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
                 let discovered = try await marketScanner.scan(enabledProviders: enabledProviders)
                 guard !Task.isCancelled else { return }
+                verifiedEIXSymbols = await marketScanner.verifiedEIXSymbols()
+                clearUnverifiedSelection()
                 if marketCycle == nil { marketCycle = discovered }
                 let scan = await marketScanner.scanCandles(discovered,
                     enabled: enabledProviders.contains(.yahoo), prioritySymbol: chartSymbol)

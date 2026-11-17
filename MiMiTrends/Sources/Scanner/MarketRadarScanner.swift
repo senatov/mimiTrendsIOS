@@ -3,9 +3,12 @@ import Foundation
 actor MarketRadarScanner {
     private let yahoo = YahooRadarSource()
     private let tradingView = TradingViewVolatilitySource()
+    private let eix = EIXInstrumentSource()
     private var candidateStore: RadarCandidateStore?
     private var germanCandidates: [RadarCompanyCandidate] = []
     private var usCandidates: [RadarCompanyCandidate] = []
+    private var eixISINs: Set<String> = []
+    private var nextEIXRefreshAt: Date = .distantPast
     private var previousSessions: RadarTradingSessions?
     private var previousEnabledProviders: Set<MarketProvider>?
     private var endpointSignature = ""
@@ -26,6 +29,20 @@ actor MarketRadarScanner {
             if let candidateStore {
                 germanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewDE")) ?? []
                 usCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewUS")) ?? []
+                eixISINs = (try? await candidateStore.eixSnapshot()) ?? []
+            }
+        }
+        if Date() >= nextEIXRefreshAt {
+            nextEIXRefreshAt = Date().addingTimeInterval(60 * 60)
+            do {
+                eixISINs = try await eix.load()
+                try? await candidateStore?.saveEIXSnapshot(eixISINs)
+                AppDiagnostics.shared.record(.info, "EIX", "instruments-loaded",
+                                             "isins=\(eixISINs.count)")
+            } catch {
+                nextEIXRefreshAt = Date().addingTimeInterval(5 * 60)
+                AppDiagnostics.shared.record(.warning, "EIX", "instrument-refresh-failed",
+                                             "error=\(String(describing: type(of: error)))")
             }
         }
         let urls = ProviderEndpointStore.url(for: .tradingViewGermany).absoluteString + "|" +
@@ -83,9 +100,11 @@ actor MarketRadarScanner {
     private func candidateCycle(sessions: RadarTradingSessions,
                                 enabledProviders: Set<MarketProvider>) -> MarketRadarCycle {
         let enabled = enabledProviders.contains(.tradingView) && enabledProviders.contains(.yahoo)
+        let eligibleUS = Self.eixCandidates(usCandidates, availableISINs: eixISINs)
+        let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
         let pool = enabled ? RadarScanPool.symbols(
-            baseline: [], yahoo: usCandidates.map(\.symbol), secondary: [],
-            german: germanCandidates.map(\.symbol),
+            baseline: [], yahoo: eligibleUS.map(\.symbol), secondary: [],
+            german: eligibleGerman.map(\.symbol),
             germanOpen: sessions.german == .regular, usOpen: sessions.us.isTrading
         ) : []
         let names = Dictionary((usCandidates + germanCandidates).map { ($0.symbol, $0.name) },
@@ -100,6 +119,16 @@ actor MarketRadarScanner {
                 activeSymbols: [], lastUpdatedAt: nil),
             candidates: pool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) }
         )
+    }
+
+    static func eixCandidates(_ candidates: [RadarCompanyCandidate],
+                              availableISINs: Set<String>) -> [RadarCompanyCandidate] {
+        candidates.filter { $0.isin.map(availableISINs.contains) ?? false }
+    }
+
+    func verifiedEIXSymbols() -> Set<String> {
+        Set(Self.eixCandidates(usCandidates + germanCandidates, availableISINs: eixISINs)
+            .map(\.symbol))
     }
 
     static func interleave(_ first: [String], _ second: [String], limit: Int) -> [String] {

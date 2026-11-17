@@ -234,6 +234,13 @@ struct YahooRadarSource: Sendable {
 struct RadarCompanyCandidate: Codable, Sendable {
     let symbol: String
     let name: String
+    let isin: String?
+
+    init(symbol: String, name: String, isin: String? = nil) {
+        self.symbol = symbol
+        self.name = name
+        self.isin = isin
+    }
 }
 
 enum RadarSourceError: LocalizedError {

@@ -9,6 +9,11 @@ actor RadarCandidateStore {
         let candidates: [RadarCompanyCandidate]
     }
 
+    private struct EIXSnapshot: Codable {
+        let savedAt: Date
+        let isins: Set<String>
+    }
+
     private let directory: URL
 
     init(directory: URL) {
@@ -34,6 +39,22 @@ actor RadarCandidateStore {
         let url = try fileURL(source: source)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try JSONEncoder().encode(Snapshot(source: source, savedAt: Date(), candidates: candidates))
+            .write(to: url, options: .atomic)
+    }
+
+    func eixSnapshot() throws -> Set<String> {
+        let url = try fileURL(source: "eix-instruments")
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        let snapshot = try JSONDecoder().decode(EIXSnapshot.self, from: Data(contentsOf: url))
+        guard Date().timeIntervalSince(snapshot.savedAt) < 48 * 3_600 else { return [] }
+        return snapshot.isins
+    }
+
+    func saveEIXSnapshot(_ isins: Set<String>) throws {
+        guard !isins.isEmpty else { return }
+        let url = try fileURL(source: "eix-instruments")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(EIXSnapshot(savedAt: Date(), isins: isins))
             .write(to: url, options: .atomic)
     }
 

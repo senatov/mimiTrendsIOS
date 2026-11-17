@@ -10,6 +10,7 @@ struct RadarView: View {
     let onManageWatchlist: () -> Void
     let onOpenProviderSettings: () -> Void
     @State var recentSignals: [ScanResult] = []
+    @State var verifiedEIXSymbols: Set<String> = []
     @State private var hasLoadedHistory = false
     @State var companyMetadata: [String: RadarCompanyMetadata] = [:]
     @State var companyMetadataService = RadarCompanyMetadataService()
@@ -107,6 +108,16 @@ struct RadarView: View {
         }
     }
 
+    var visibleSignals: [ScanResult] {
+        recentSignals.filter { verifiedEIXSymbols.contains($0.symbol) }
+    }
+
+    func clearUnverifiedSelection() {
+        if let selectedSignal, !verifiedEIXSymbols.contains(selectedSignal.symbol) {
+            self.selectedSignal = nil
+        }
+    }
+
     var radarCompanyNames: [String: String] {
         (marketCycle?.companyNames ?? [:]).merging(Dictionary((lsStatus?.quotes ?? []).map { ("LS:" + $0.identifier, $0.name) }, uniquingKeysWith: { first, _ in first }), uniquingKeysWith: { first, _ in first })
     }
@@ -120,7 +131,7 @@ struct RadarView: View {
     }
 
     var companyMetadataRequestKey: String {
-        let symbols = Set(recentSignals.map(\.symbol))
+        let symbols = Set(visibleSignals.map(\.symbol))
         return chartSymbol.uppercased() + "|" + symbols.sorted().map { "\($0)=\(marketCycle?.companyNames[$0] ?? "")" }.joined(separator: "|")
     }
 
@@ -141,7 +152,7 @@ struct RadarView: View {
 
     private func signalList(compact: Bool, width: CGFloat) -> some View {
         RadarSignalList(
-            signals: recentSignals,
+            signals: visibleSignals,
             activity: nil,
             companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
@@ -201,16 +212,17 @@ struct RadarView: View {
                 )
             }.value
             recentSignals = loaded
-            AppDiagnostics.shared.record(.info, "Radar", "history-loaded", "signals=\(loaded.count)")
+            let visible = visibleSignals
+            AppDiagnostics.shared.record(.info, "Radar", "history-loaded", "signals=\(visible.count)")
             historyError = nil
-            if let selectedSignal, !loaded.contains(where: {
+            if let selectedSignal, !visible.contains(where: {
                 $0.symbol == selectedSignal.symbol &&
                 $0.signalSource == selectedSignal.signalSource &&
                 $0.signalEpochMillis == selectedSignal.signalEpochMillis
             }) {
                 self.selectedSignal = nil
             }
-            if selectNewest, let latest = loaded.first {
+            if selectNewest, let latest = visible.first {
                 selectedSignal = latest
                 symbol = latest.symbol
             } else if selectedSignal == nil {

@@ -5,8 +5,8 @@ final class TradingViewVolatilitySourceTests: XCTestCase {
     func testScreenerKeepsLiquidSupportedSharesAndRanksActivity() throws {
         let data = Data(#"""
         {"data":[
-          {"s":"NASDAQ:FAST","d":["FAST","Fast Inc.","NASDAQ",20,300000,2,500000000,8]},
-          {"s":"NYSE:MOVE","d":["MOVE","Move Corp.","NYSE",30,100000,1,600000000,6]},
+          {"s":"NASDAQ:FAST","d":["FAST","Fast Inc.","NASDAQ",20,300000,2,500000000,8,"US0000000001"]},
+          {"s":"NYSE:MOVE","d":["MOVE","Move Corp.","NYSE",30,100000,1,600000000,6,"US0000000002"]},
           {"s":"OTC:OTCX","d":["OTCX","OTC Inc.","OTC",20,300000,2,500000000,9]},
           {"s":"NASDAQ:THIN","d":["THIN","Thin Inc.","NASDAQ",20,1000,2,500000000,20]},
           {"s":"NASDAQ:CHEAP","d":["CHEAP","Cheap Inc.","NASDAQ",2,3000000,2,500000000,20]}
@@ -14,6 +14,7 @@ final class TradingViewVolatilitySourceTests: XCTestCase {
         """#.utf8)
         let result = try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates)
         XCTAssertEqual(result.map(\.company.symbol), ["FAST", "MOVE"])
+        XCTAssertEqual(result.map(\.company.isin), ["US0000000001", "US0000000002"])
     }
 
     func testHTMLFallbackReadsXetraRowAndRejectsThinShare() {

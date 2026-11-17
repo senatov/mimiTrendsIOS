@@ -133,6 +133,7 @@
 		B7F662EC77C7340B60D527DD /* DiscoverySnapshotStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */; };
 		B9DEC7CD282978431B054494 /* RadarChartPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 517EEB88A6A2636A58C09DFB /* RadarChartPreview.swift */; };
 		B9F7B0D8B207CEEB511A45CD /* RadarBaselineSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D31FE314AC179B0F18CF11 /* RadarBaselineSource.swift */; };
+		BAB88DECC011C2542A89E2F4 /* EIXInstrumentSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8885834FFF54129444423C7 /* EIXInstrumentSource.swift */; };
 		BC856CF072894AEE7AFAD544 /* DisplayCurrencyServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B4E8BB96F3C24749F2B955 /* DisplayCurrencyServiceTests.swift */; };
 		BED09ECD6A1CDA6A842DF997 /* MarketPageQuoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB10998EE6A4521A12B6D6FA /* MarketPageQuoteTests.swift */; };
 		BFCAD7418B5EAF9A668F6315 /* LSQuoteCursorOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0593535ADC56D51110FC38C7 /* LSQuoteCursorOverlay.swift */; };
@@ -174,6 +175,7 @@
 		F4886CBDE079DA5248D9DE4E /* TraderFoxRadarSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = E299093ABF5E3C6E0913488F /* TraderFoxRadarSource.swift */; };
 		F55A87ED5DD6231E28E46817 /* LSQuoteHistoryChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F8D0A1AB4172F7B65194AF8 /* LSQuoteHistoryChart.swift */; };
 		F5CFA707D78337A1E1F43E3F /* RadarHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6552EA3319AF0CE227CE19C9 /* RadarHeader.swift */; };
+		F83C057C3D8DD66FA742C3EB /* EIXInstrumentSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638F648ACD1B376565C68E65 /* EIXInstrumentSourceTests.swift */; };
 		F940CE41E5FA0912F05BE82A /* ProviderInstrument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ABD71D692C066C6F70FD7DA /* ProviderInstrument.swift */; };
 		FBFF440E689DD475C4AEFC0B /* RadarChartDataTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B215D2A814E439DF586FFF1 /* RadarChartDataTests.swift */; };
 		FCE5F1EA038869178B36AD7D /* WatchlistStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A48C8249EED74773A7514750 /* WatchlistStoreTests.swift */; };
@@ -255,6 +257,7 @@
 		5E38BCFD81AAF82949FAA498 /* RadarScanSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarScanSettingsView.swift; sourceTree = "<group>"; };
 		5F0FD8A7571FDBF0B0FB0C02 /* RadarScanPool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarScanPool.swift; sourceTree = "<group>"; };
 		6265626076A4B4A72F517FE1 /* SourceCredentialsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceCredentialsView.swift; sourceTree = "<group>"; };
+		638F648ACD1B376565C68E65 /* EIXInstrumentSourceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EIXInstrumentSourceTests.swift; sourceTree = "<group>"; };
 		64D52D4FFA5D71A9D4D9A856 /* RadarChartCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarChartCurrency.swift; sourceTree = "<group>"; };
 		6552EA3319AF0CE227CE19C9 /* RadarHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarHeader.swift; sourceTree = "<group>"; };
 		66DC3624B5CD9D3D345838C9 /* RadarScannerDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarScannerDiagnostics.swift; sourceTree = "<group>"; };
@@ -315,6 +318,7 @@
 		B1882EF719B85F0E0E950891 /* TradeImportCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeImportCoordinator.swift; sourceTree = "<group>"; };
 		B5EA06841BB186EA38DA5256 /* RadarCompanyMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCompanyMark.swift; sourceTree = "<group>"; };
 		B5F2DA6657E7E7FD9D289382 /* ScalableCSVImporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScalableCSVImporterTests.swift; sourceTree = "<group>"; };
+		B8885834FFF54129444423C7 /* EIXInstrumentSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EIXInstrumentSource.swift; sourceTree = "<group>"; };
 		B8CB46A53EDCFB8BB3D62098 /* WatchlistView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchlistView.swift; sourceTree = "<group>"; };
 		B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverySnapshotStoreTests.swift; sourceTree = "<group>"; };
 		BB10998EE6A4521A12B6D6FA /* MarketPageQuoteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarketPageQuoteTests.swift; sourceTree = "<group>"; };
@@ -414,6 +418,7 @@
 				D5A77B0ED8931A451EB4AA09 /* DiscoveryRankingPage.swift */,
 				6DB748D1A71D77B911C33C02 /* DiscoveryRefreshCache.swift */,
 				1AB1C9B19F9396B5ADD18797 /* DiscoverySnapshotStore.swift */,
+				B8885834FFF54129444423C7 /* EIXInstrumentSource.swift */,
 				23A0E3904F1519340EFA80C9 /* LSCandidatePool.swift */,
 				7416B574904B447322ABC4C5 /* MiminaviInfo1Decoder.swift */,
 				BF6B49C19213CF56F13D6861 /* MiminaviInfo1Source.swift */,
@@ -534,6 +539,7 @@
 				A446076C5E361B54FA3892D7 /* DiscoveryRefreshCacheTests.swift */,
 				B97CAA06109398412C37C4F3 /* DiscoverySnapshotStoreTests.swift */,
 				E3B4E8BB96F3C24749F2B955 /* DisplayCurrencyServiceTests.swift */,
+				638F648ACD1B376565C68E65 /* EIXInstrumentSourceTests.swift */,
 				A9815FE4240C93F814813920 /* LangSchwarzMarketSessionTests.swift */,
 				06C09F5D686489AC861D744F /* LSQuoteMoveDetectorTests.swift */,
 				C03FCFB623D8910CA5B6945B /* MarketBarStoreTests.swift */,
@@ -868,6 +874,7 @@
 				9E9C4B2539001E0C566B76D0 /* DiscoveryRefreshCache.swift in Sources */,
 				860B373FEC5304548C68B511 /* DiscoverySnapshotStore.swift in Sources */,
 				D70AF81D610FA33CCCA6E2EC /* DisplayCurrencyService.swift in Sources */,
+				BAB88DECC011C2542A89E2F4 /* EIXInstrumentSource.swift in Sources */,
 				F3A1A1BA90D3357E9E9E98BB /* HeaderBadgeSurface.swift in Sources */,
 				CEC005ADCE1D13DA8216CFFD /* HeaderBuildBadge.swift in Sources */,
 				C21BD48FA3A9BD875D3D0368 /* HeaderResourceBadges.swift in Sources */,
@@ -992,6 +999,7 @@
 				EE964646B6EC82384A652E27 /* DiscoveryRefreshCacheTests.swift in Sources */,
 				B7F662EC77C7340B60D527DD /* DiscoverySnapshotStoreTests.swift in Sources */,
 				BC856CF072894AEE7AFAD544 /* DisplayCurrencyServiceTests.swift in Sources */,
+				F83C057C3D8DD66FA742C3EB /* EIXInstrumentSourceTests.swift in Sources */,
 				672385B49D7AA5AB27A81B69 /* LSQuoteMoveDetectorTests.swift in Sources */,
 				A9A6DCCEC4127305904D9E6C /* LangSchwarzMarketSessionTests.swift in Sources */,
 				F1846824C6A7B629009B5B58 /* MarketBarStoreTests.swift in Sources */,

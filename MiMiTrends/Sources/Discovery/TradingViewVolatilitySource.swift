@@ -66,7 +66,7 @@ struct TradingViewVolatilitySource: Sendable {
                             "right": market == .germany ? 0.5 : 0.2]],
                 "options": ["lang": "en"],
                 "columns": ["name", "description", "exchange", "close", "volume",
-                            "relative_volume_10d_calc", "market_cap_basic", "Volatility.D"],
+                            "relative_volume_10d_calc", "market_cap_basic", "Volatility.D", "isin"],
                 "sort": ["sortBy": "Volatility.D", "sortOrder": "desc"],
                 "range": [0, 299]
             ] as [String: Any])
@@ -132,8 +132,9 @@ struct TradingViewVolatilitySource: Sendable {
             else { return nil }
             let score = min(volatility, 30) * sqrt(min(relativeVolume, 10))
                 * log10(max(10, price * volume))
+            let isin = row.d.count > 8 ? row.d[8].text : nil
             return TradingViewVolatilityCandidate(
-                company: RadarCompanyCandidate(symbol: symbol, name: name), score: score)
+                company: RadarCompanyCandidate(symbol: symbol, name: name, isin: isin), score: score)
         }.sorted { $0.score == $1.score ? $0.company.symbol < $1.company.symbol : $0.score > $1.score }
     }
 

@@ -20,7 +20,7 @@ struct RadarScannerDiagnostics: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Market candidates").font(.subheadline.weight(.medium))
+                Text("EIX candidates").font(.subheadline.weight(.medium))
                 Spacer(minLength: 4)
                 Text("\(candidates.count) shares").monospacedDigit()
                     .font(.caption).foregroundStyle(color(.sourceMutedText))

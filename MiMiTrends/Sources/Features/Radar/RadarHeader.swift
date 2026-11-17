@@ -33,7 +33,7 @@ struct RadarHeader: ToolbarContent {
                 .accessibilityValue(sourcesOpen ? "Open" : "Closed")
             TrendsActionButton(title: "Refresh", systemImage: "arrow.clockwise", showsTitle: false, action: onRefresh)
                 .accessibilityLabel("Refresh saved signals")
-                .accessibilityValue(candidateCount.map { "\($0) market candidates" } ?? "Loading market candidates")
+                .accessibilityValue(candidateCount.map { "\($0) EIX candidates" } ?? "Loading EIX candidates")
             watchlistButton
         }
     }
