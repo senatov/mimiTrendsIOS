@@ -2,6 +2,24 @@ import Foundation
 
 enum RadarScanPool {
     static let maximumSymbols = 255
+    private static let maximumActiveUS = 96
+    private static let maximumActiveGerman = 64
+
+    static func prioritizedSymbols(activeUS: [String], activeGerman: [String],
+                                   volatileUS: [String], volatileGerman: [String],
+                                   germanOpen: Bool, usOpen: Bool) -> [String] {
+        let us = usOpen ? activeUS.filter(MarketCandidateFilter.supportsYahooBars) : []
+        let german = germanOpen ? activeGerman.filter(MarketCandidateFilter.supportsYahooBars) : []
+        let active = MarketRadarScanner.interleave(Array(us.prefix(maximumActiveUS)),
+                                                    Array(german.prefix(maximumActiveGerman)),
+                                                    limit: maximumSymbols)
+        let volatility = MarketRadarScanner.interleave(
+            usOpen ? volatileUS : [], germanOpen ? volatileGerman : [], limit: maximumSymbols)
+        var seen = Set<String>()
+        return (active + volatility).filter {
+            MarketCandidateFilter.supportsYahooBars(symbol: $0) && seen.insert($0).inserted
+        }.prefix(maximumSymbols).map { $0 }
+    }
 
     static func symbols(baseline: [String], yahoo: [String], secondary: [String], german: [String],
                         germanOpen: Bool, usOpen: Bool = true, excluded: Set<String> = []) -> [String] {

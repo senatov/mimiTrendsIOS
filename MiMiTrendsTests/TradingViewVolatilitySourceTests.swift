@@ -28,4 +28,20 @@ final class TradingViewVolatilitySourceTests: XCTestCase {
         let result = TradingViewVolatilitySource.parse(html, market: .germany)
         XCTAssertEqual(result.map(\.company.symbol), ["SAP.DE"])
     }
+
+    func testActiveScreenerKeepsLargeLiquidSharesWithoutVolatilityThreshold() throws {
+        let data = Data(#"""
+        {"data":[
+          {"s":"NYSE:KO","d":["KO","Coca-Cola Company (The)","NYSE",65,12000000,0.4,280000000000,0.7,"US1912161007"]},
+          {"s":"NASDAQ:INTC","d":["INTC","Intel Corporation","NASDAQ",35,50000000,0.3,150000000000,0.8,"US4581401001"]},
+          {"s":"NASDAQ:THIN","d":["THIN","Thin Inc.","NASDAQ",12,100,0.2,500000000,2,"US0000000001"]},
+          {"s":"OTC:OTHER","d":["OTHER","Other Inc.","OTC",25,1000000,1,500000000,5,"US0000000002"]}
+        ]}
+        """#.utf8)
+        let result = try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates,
+                                                                    ranking: .activity)
+        XCTAssertEqual(result.map(\.company.symbol), ["INTC", "KO"])
+        XCTAssertEqual(result.map(\.company.isin), ["US4581401001", "US1912161007"])
+        XCTAssertTrue(try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates).isEmpty)
+    }
 }

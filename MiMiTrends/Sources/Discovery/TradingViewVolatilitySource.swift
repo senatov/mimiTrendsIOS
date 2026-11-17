@@ -7,6 +7,7 @@ struct TradingViewVolatilityCandidate: Sendable {
 
 struct TradingViewVolatilitySource: Sendable {
     enum Market: Sendable { case germany, unitedStates }
+    enum Ranking: Sendable { case volatility, activity }
 
     private let session: URLSession
 
@@ -14,7 +15,7 @@ struct TradingViewVolatilitySource: Sendable {
 
     func load(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
         do {
-            let candidates = try await scan(market)
+            let candidates = try await scan(market, ranking: .volatility)
             if !candidates.isEmpty { return candidates }
         } catch is CancellationError {
             throw CancellationError()
@@ -23,6 +24,12 @@ struct TradingViewVolatilitySource: Sendable {
                 "market=\(market) error=\(String(describing: type(of: error))) fallback=page")
         }
         return try await loadPage(market)
+    }
+
+    func loadActive(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
+        let candidates = try await scan(market, ranking: .activity)
+        guard !candidates.isEmpty else { throw RadarSourceError.invalidResponse }
+        return candidates
     }
 
     private func loadPage(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
@@ -43,7 +50,7 @@ struct TradingViewVolatilitySource: Sendable {
         return candidates
     }
 
-    private func scan(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
+    private func scan(_ market: Market, ranking: Ranking) async throws -> [TradingViewVolatilityCandidate] {
         let region = market == .germany ? "germany" : "america"
         let exchanges = market == .germany ? ["XETR"] : ["NASDAQ", "NYSE", "AMEX"]
         var candidates: [TradingViewVolatilityCandidate] = []
@@ -54,26 +61,30 @@ struct TradingViewVolatilitySource: Sendable {
             request.timeoutInterval = 20
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-            request.httpBody = try JSONSerialization.data(withJSONObject: [
-                "filter": [["left": "type", "operation": "equal", "right": "stock"],
+            var filters: [[String: Any]] = [["left": "type", "operation": "equal", "right": "stock"],
                            ["left": "exchange", "operation": "equal", "right": exchange],
                            ["left": "close", "operation": "egreater", "right": 5],
                            ["left": "market_cap_basic", "operation": "egreater",
                             "right": 100_000_000],
                            ["left": "Value.Traded", "operation": "egreater",
-                            "right": market == .germany ? 500_000 : 1_000_000],
-                           ["left": "relative_volume_10d_calc", "operation": "egreater",
-                            "right": market == .germany ? 0.5 : 0.2]],
+                            "right": market == .germany ? 500_000 : 1_000_000]]
+            if ranking == .volatility {
+                filters.append(["left": "relative_volume_10d_calc", "operation": "egreater",
+                                "right": market == .germany ? 0.5 : 0.2])
+            }
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "filter": filters,
                 "options": ["lang": "en"],
                 "columns": ["name", "description", "exchange", "close", "volume",
                             "relative_volume_10d_calc", "market_cap_basic", "Volatility.D", "isin"],
-                "sort": ["sortBy": "Volatility.D", "sortOrder": "desc"],
-                "range": [0, 299]
+                "sort": ["sortBy": ranking == .activity ? "Value.Traded" : "Volatility.D",
+                         "sortOrder": "desc"],
+                "range": [0, ranking == .activity ? 149 : 299]
             ] as [String: Any])
             let (data, response) = try await session.data(for: request)
             guard let response = response as? HTTPURLResponse, response.statusCode == 200,
                   data.count <= 3_000_000 else { throw RadarSourceError.invalidResponse }
-            candidates += try Self.parseScanJSON(data, market: market)
+            candidates += try Self.parseScanJSON(data, market: market, ranking: ranking)
         }
         return candidates.sorted {
             $0.score == $1.score ? $0.company.symbol < $1.company.symbol : $0.score > $1.score
@@ -82,9 +93,10 @@ struct TradingViewVolatilitySource: Sendable {
 
     private struct ScanResponse: Decodable { let data: [ScanRow] }
 
-    static func parseScanJSON(_ data: Data, market: Market) throws -> [TradingViewVolatilityCandidate] {
+    static func parseScanJSON(_ data: Data, market: Market,
+                              ranking: Ranking = .volatility) throws -> [TradingViewVolatilityCandidate] {
         let result = try JSONDecoder().decode(ScanResponse.self, from: data)
-        return select(result.data, market: market)
+        return select(result.data, market: market, ranking: ranking)
     }
     private struct ScanRow: Decodable {
         let s: String
@@ -103,16 +115,21 @@ struct TradingViewVolatilitySource: Sendable {
         var number: Double? { if case .number(let value) = self { value } else { nil } }
     }
 
-    private static func select(_ rows: [ScanRow], market: Market) -> [TradingViewVolatilityCandidate] {
+    private static func select(_ rows: [ScanRow], market: Market,
+                               ranking: Ranking) -> [TradingViewVolatilityCandidate] {
         var seen = Set<String>()
         return rows.compactMap { row -> TradingViewVolatilityCandidate? in
-            guard row.d.count >= 8, let name = row.d[1].text, let exchange = row.d[2].text,
+            guard row.d.count >= 9, let name = row.d[1].text, let exchange = row.d[2].text,
                   let price = row.d[3].number, let volume = row.d[4].number,
-                  let relativeVolume = row.d[5].number, let cap = row.d[6].number,
-                  let volatility = row.d[7].number, volatility >= 1,
-                  relativeVolume >= (market == .germany ? 0.5 : 0.2),
+                  let cap = row.d[6].number,
                   cap >= 100_000_000,
                   price * volume >= (market == .germany ? 500_000 : 1_000_000) else { return nil }
+            let relativeVolume = row.d[5].number ?? 0
+            let volatility = row.d[7].number ?? 0
+            if ranking == .volatility {
+                guard volatility >= 1,
+                      relativeVolume >= (market == .germany ? 0.5 : 0.2) else { return nil }
+            }
             let ticker = row.d[0].text?.uppercased() ?? ""
             let symbol: String
             switch market {
@@ -130,9 +147,13 @@ struct TradingViewVolatilitySource: Sendable {
                     exchange: market == .germany ? "XETRA" : exchange,
                     currency: market == .germany ? "EUR" : "USD")
             else { return nil }
-            let score = min(volatility, 30) * sqrt(min(relativeVolume, 10))
-                * log10(max(10, price * volume))
-            let isin = row.d.count > 8 ? row.d[8].text : nil
+            let score: Double
+            if ranking == .activity { score = price * volume }
+            else {
+                score = min(volatility, 30) * sqrt(min(relativeVolume, 10))
+                    * log10(max(10, price * volume))
+            }
+            let isin = row.d[8].text
             return TradingViewVolatilityCandidate(
                 company: RadarCompanyCandidate(symbol: symbol, name: name, isin: isin), score: score)
         }.sorted { $0.score == $1.score ? $0.company.symbol < $1.company.symbol : $0.score > $1.score }

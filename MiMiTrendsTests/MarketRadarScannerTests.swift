@@ -9,6 +9,28 @@ final class MarketRadarScannerTests: XCTestCase {
         )
     }
 
+    func testActiveCandidatesTakePriorityWithin255Slots() {
+        let activeUS = ["INTC", "KO"] + (0..<94).map { "A\($0)" }
+        let activeGerman = (0..<70).map { "G\($0).DE" }
+        let volatility = (0..<300).map { "V\($0)" }
+        let pool = RadarScanPool.prioritizedSymbols(
+            activeUS: activeUS, activeGerman: activeGerman,
+            volatileUS: ["INTC"] + volatility, volatileGerman: ["G0.DE"],
+            germanOpen: true, usOpen: true)
+        XCTAssertEqual(pool.count, 255)
+        XCTAssertEqual(Set(pool).count, 255)
+        XCTAssertEqual(Array(pool.prefix(4)), ["INTC", "G0.DE", "KO", "G1.DE"])
+        XCTAssertEqual(pool[160], "V0")
+        XCTAssertFalse(pool.contains("G64.DE"))
+
+        let usOnly = RadarScanPool.prioritizedSymbols(
+            activeUS: activeUS, activeGerman: activeGerman,
+            volatileUS: volatility, volatileGerman: ["G0.DE"],
+            germanOpen: false, usOpen: true)
+        XCTAssertEqual(usOnly.count, 255)
+        XCTAssertFalse(usOnly.contains { $0.hasSuffix(".DE") })
+    }
+
     func testYahooScanRotatesAcrossBoundedBatches() {
         let symbols = ["A", "B", "C", "D", "E", "F"]
         XCTAssertEqual(MarketRadarScanner.scanSlice(symbols, offset: 0, limit: 4), ["A", "B", "C", "D"])

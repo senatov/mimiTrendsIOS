@@ -7,6 +7,8 @@ actor MarketRadarScanner {
     private var candidateStore: RadarCandidateStore?
     private var germanCandidates: [RadarCompanyCandidate] = []
     private var usCandidates: [RadarCompanyCandidate] = []
+    private var activeGermanCandidates: [RadarCompanyCandidate] = []
+    private var activeUSCandidates: [RadarCompanyCandidate] = []
     private var eixISINs: Set<String> = []
     private var nextEIXRefreshAt: Date = .distantPast
     private var previousSessions: RadarTradingSessions?
@@ -29,6 +31,8 @@ actor MarketRadarScanner {
             if let candidateStore {
                 germanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewDE")) ?? []
                 usCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewUS")) ?? []
+                activeGermanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewActiveDE")) ?? []
+                activeUSCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewActiveUS")) ?? []
                 eixISINs = (try? await candidateStore.eixSnapshot()) ?? []
             }
         }
@@ -66,6 +70,27 @@ actor MarketRadarScanner {
         for market in [TradingViewVolatilitySource.Market.germany, .unitedStates] {
             let active = market == .germany ? sessions.german == .regular : sessions.us.isTrading
             guard active else { continue }
+            let activeKey = market == .germany ? "tradingViewActiveDE" : "tradingViewActiveUS"
+            tradingViewTotals.operations += 1
+            do {
+                let loaded = try await tradingView.loadActive(market)
+                let companies = loaded.map(\.company)
+                if market == .germany { activeGermanCandidates = companies }
+                else { activeUSCandidates = companies }
+                tradingViewTotals.received += loaded.count
+                tradingViewTotals.valid += loaded.count
+                try? await candidateStore?.saveCandidateSnapshot(companies, source: activeKey)
+                AppDiagnostics.shared.record(.info, "TradingView", "active-candidates-loaded",
+                    "market=\(activeKey) selected=\(loaded.count) refreshMinutes=10")
+            } catch {
+                if Task.isCancelled { return }
+                failed = true
+                tradingViewTotals.errors += 1
+                tradingViewTotals.lastErrorMessage =
+                    MarketRadarErrorDescription.message(error, provider: "TradingView")
+                AppDiagnostics.shared.record(.warning, "TradingView", "active-candidate-refresh-failed",
+                    "market=\(market) error=\(String(describing: type(of: error)))")
+            }
             tradingViewTotals.operations += 1
             do {
                 let loaded = try await tradingView.load(market)
@@ -74,9 +99,6 @@ actor MarketRadarScanner {
                 else { usCandidates = companies }
                 tradingViewTotals.received += loaded.count
                 tradingViewTotals.valid += loaded.count
-                if MarketProviderAccess.health(.tradingView) != "Connected" {
-                    MarketProviderAccess.setHealth("Connected", for: .tradingView)
-                }
                 let key = market == .germany ? "tradingViewDE" : "tradingViewUS"
                 try? await candidateStore?.saveCandidateSnapshot(companies, source: key)
                 AppDiagnostics.shared.record(.info, "TradingView", "candidates-loaded",
@@ -87,14 +109,20 @@ actor MarketRadarScanner {
                 tradingViewTotals.errors += 1
                 tradingViewTotals.lastErrorMessage =
                     MarketRadarErrorDescription.message(error, provider: "TradingView")
-                MarketProviderAccess.setHealth("Needs attention", for: .tradingView,
-                    detail: tradingViewTotals.lastErrorMessage)
                 AppDiagnostics.shared.record(.warning, "TradingView", "candidate-refresh-failed",
                     "market=\(market) error=\(String(describing: type(of: error)))")
             }
         }
-        if !failed { tradingViewTotals.lastErrorMessage = nil }
-        else { nextDiscoveryAt = Date().addingTimeInterval(60) }
+        if failed {
+            MarketProviderAccess.setHealth("Needs attention", for: .tradingView,
+                detail: tradingViewTotals.lastErrorMessage)
+            nextDiscoveryAt = Date().addingTimeInterval(60)
+        } else {
+            tradingViewTotals.lastErrorMessage = nil
+            if MarketProviderAccess.health(.tradingView) != "Connected" {
+                MarketProviderAccess.setHealth("Connected", for: .tradingView)
+            }
+        }
     }
 
     private func candidateCycle(sessions: RadarTradingSessions,
@@ -102,12 +130,15 @@ actor MarketRadarScanner {
         let enabled = enabledProviders.contains(.tradingView) && enabledProviders.contains(.yahoo)
         let eligibleUS = Self.eixCandidates(usCandidates, availableISINs: eixISINs)
         let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
-        let pool = enabled ? RadarScanPool.symbols(
-            baseline: [], yahoo: eligibleUS.map(\.symbol), secondary: [],
-            german: eligibleGerman.map(\.symbol),
+        let activeUS = Self.eixCandidates(activeUSCandidates, availableISINs: eixISINs)
+        let activeGerman = Self.eixCandidates(activeGermanCandidates, availableISINs: eixISINs)
+        let pool = enabled ? RadarScanPool.prioritizedSymbols(
+            activeUS: activeUS.map(\.symbol), activeGerman: activeGerman.map(\.symbol),
+            volatileUS: eligibleUS.map(\.symbol), volatileGerman: eligibleGerman.map(\.symbol),
             germanOpen: sessions.german == .regular, usOpen: sessions.us.isTrading
         ) : []
-        let names = Dictionary((usCandidates + germanCandidates).map { ($0.symbol, $0.name) },
+        let allCandidates = activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
+        let names = Dictionary(allCandidates.map { ($0.symbol, $0.name) },
                                uniquingKeysWith: { first, _ in first })
         return MarketRadarCycle(
             yahoo: RadarSourceTotals(), tradingView: tradingViewTotals,
@@ -127,7 +158,8 @@ actor MarketRadarScanner {
     }
 
     func verifiedEIXSymbols() -> Set<String> {
-        Set(Self.eixCandidates(usCandidates + germanCandidates, availableISINs: eixISINs)
+        Set(Self.eixCandidates(activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates,
+                               availableISINs: eixISINs)
             .map(\.symbol))
     }
 

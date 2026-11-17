@@ -5,7 +5,7 @@ The Kotlin/JavaFX MiMiTrends project is an archived behavioral reference. The ac
 | Area | Current native state | Remaining work |
 | --- | --- | --- |
 | Market models | Native instruments, quotes, minute bars, and signal results have tests and local stores. | Recheck desktop parity when adding a new detector or provider. |
-| Candidate discovery | TradingView volatility candidates are matched by ISIN to the public EIX pre-trade file before the 255-symbol Radar pool is filled. The EIX set is cached for up to 48 hours. | Obtain a complete, licensed venue or broker catalogue if exact tradability is required. |
+| Candidate discovery | TradingView activity and volatility candidates are matched by ISIN to the public EIX pre-trade file before the 255-symbol Radar pool is filled. The EIX set is cached for up to 48 hours. | Obtain a complete, licensed venue or broker catalogue if exact tradability is required. |
 | Candle scanning | Yahoo completed minute candles with reported volume drive rapid drops, confirmed reversals, and longer moves while the app is active. | Evaluate provider coverage, rate limits, data rights, and detection quality on real devices. |
 | Radar and charts | Radar shows EIX-observed candidates and filters saved signals to the current verified candidate set. The selected chart uses locally stored or fetched Yahoo candles, volume, and EMA lines. | Finish device and accessibility checks across iPad and Mac layouts. |
 | Portfolio | A device-local watchlist and Scalable transaction CSV importer exist. The app has no live Scalable account connection. | Reconcile imported positions and link trades to signals if needed. |
@@ -13,7 +13,7 @@ The Kotlin/JavaFX MiMiTrends project is an archived behavioral reference. The ac
 
 ## Current Radar data path
 
-`TradingViewVolatilitySource` selects candidate shares and supplies their ISINs. `EIXInstrumentSource` reads the newest day's opening public pre-trade file. `MarketRadarScanner` intersects the two by ISIN, applies the market-session gate, and fills up to 255 slots from the remaining candidates. A rejected candidate is replaced by the next eligible one. The public EIX file is an observation set, not proof of Scalable buy eligibility. See [DynamicScanPool.md](DynamicScanPool.md) for refresh, caching, and failure behavior.
+`TradingViewVolatilitySource` selects activity and volatility candidates and supplies their ISINs. Active candidates receive priority within the 255-symbol pool. `EIXInstrumentSource` reads the newest day's opening public pre-trade file. `MarketRadarScanner` intersects the two by ISIN, applies the market-session gate, and fills up to 255 slots from the remaining candidates. A rejected candidate is replaced by the next eligible one. The public EIX file is an observation set, not proof of Scalable buy eligibility. See [DynamicScanPool.md](DynamicScanPool.md) for refresh, caching, and failure behavior.
 
 `YahooRadarSource` supplies completed minute bars and reported volume for the accepted symbols. Detectors save results in the native signal database. Radar reads bounded history and displays only symbols that still belong to the current EIX-verified TradingView candidate set. A selected symbol or watchlist entry can still open its chart; it does not expand the automatic scan pool. The [confirmed reversal method](ConfirmedReversalMethod.md) documents that detector's price pattern.
 
