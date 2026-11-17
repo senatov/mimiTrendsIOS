@@ -72,5 +72,7 @@ schemes:
         mimiTrends-iOS: all
         mimiTrends-iOSTests: [test]
     test:
+      environmentVariables:
+        MIMITRENDS_TEST_HOST: "1"
       targets:
         - mimiTrends-iOSTests

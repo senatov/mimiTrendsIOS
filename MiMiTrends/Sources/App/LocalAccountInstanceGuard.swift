@@ -8,6 +8,10 @@ enum LocalAccountInstanceGuard {
     private static let instance = InstanceLock()
 
     static func activateExistingInstanceOrExit() {
+        #if DEBUG
+        // Hosted macOS tests need a second process even when the app is already open.
+        if ProcessInfo.processInfo.environment["MIMITRENDS_TEST_HOST"] == "1" { return }
+        #endif
         guard instance.isSecondaryLaunch else { return }
         for _ in 0..<100 {
             if let process = instance.runningOwner,

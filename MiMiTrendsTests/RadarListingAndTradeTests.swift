@@ -36,7 +36,7 @@ final class RadarListingAndTradeTests: XCTestCase {
         XCTAssertEqual(open.first?.entryPrice, 110)
     }
 
-    func testPositionCrossingWindowAnchorsToVisibleCandleNotHistoricalPrice() throws {
+    func testPositionCrossingWindowAnchorsToVisibleCandleNotHistoricalPrice() async throws {
         let bars = [MinuteBar(symbol: "SAMPLE", minuteEpochSeconds: 600,
                               open: 101, high: 103, low: 100, close: 102, volume: 1_000)]
         let trade = BrokerTradePosition(id: "older", symbol: "SAMPLE", quantity: 10,
@@ -45,7 +45,10 @@ final class RadarListingAndTradeTests: XCTestCase {
         let anchor = try XCTUnwrap(RadarTradeVisibleAnchor.point(trade: trade, bars: bars))
         XCTAssertEqual(anchor.epoch, 600)
         XCTAssertEqual(anchor.price, 102)
-        XCTAssertGreaterThan(RadarTradeCardOverlay.railHeight(count: 2, width: 900), 72)
+        let railHeight = await MainActor.run {
+            RadarTradeCardOverlay.railHeight(count: 2, width: 900)
+        }
+        XCTAssertGreaterThan(railHeight, 72)
     }
 
     private func execution(id: Int64, time: Int64, type: String, shares: Double, price: Double) -> BrokerTradeExecution {
