@@ -9,43 +9,6 @@ extension RadarView {
         )
     }
 
-    func refreshDiscoveryWhileActive() async {
-        guard scenePhase == .active else {
-            discoveryRefreshID = nil
-            await discoveryController.stop()
-            return
-        }
-        guard await ensureAutomaticProvidersReady() else { return }
-        guard MarketProviderAccess.isOperational(.wallstreetOnline) else {
-            discoveryRefreshID = nil
-            await discoveryController.stop()
-            return
-        }
-        var firstRefresh = true
-        while !Task.isCancelled {
-            let nowMillis = Int64(Date().timeIntervalSince1970 * 1_000)
-            let isDue = firstRefresh || discoveryStatus.map { nowMillis >= $0.nextAttemptAtMillis } ?? true
-            let refreshID = isDue ? UUID() : nil
-            discoveryRefreshID = refreshID
-            let status = await discoveryController.refresh()
-            if discoveryRefreshID == refreshID { discoveryRefreshID = nil }
-            guard !Task.isCancelled else { return }
-            discoveryStatus = status
-            if isDue {
-                discoveryRequests += 1
-                if !status.lastAttemptSucceeded { discoveryErrors += 1 }
-                AppDiagnostics.shared.record(
-                    status.lastAttemptSucceeded ? .info : .warning,
-                    "Discovery", "refresh-finished",
-                    "candidates=\(status.snapshot?.candidates.count ?? 0) success=\(status.lastAttemptSucceeded) nextAttemptMillis=\(status.nextAttemptAtMillis)"
-                )
-            }
-            firstRefresh = false
-            do { try await Task.sleep(for: .seconds(60)) }
-            catch { return }
-        }
-    }
-
     func refreshLSWhileActive() async {
         guard scenePhase == .active else {
             lsStatus = await lsCandidatePool.stop()
@@ -122,7 +85,7 @@ extension RadarView {
                 if scan.recordedSignal { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "candidate-pool-ready",
-                    "candidates=\(scan.cycle.candidates.count) checked=\(scan.cycle.progress.processed) usable=\(scan.cycle.progress.successful) yahooErrors=\(scan.cycle.yahoo.errors) traderFoxErrors=\(scan.cycle.traderFox.errors)"
+                    "candidates=\(scan.cycle.candidates.count) checked=\(scan.cycle.progress.processed) usable=\(scan.cycle.progress.successful) tradingViewErrors=\(scan.cycle.tradingView.errors)"
                 )
             } catch is CancellationError {
                 return

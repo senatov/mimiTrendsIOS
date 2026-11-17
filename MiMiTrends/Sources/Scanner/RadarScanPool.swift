@@ -1,7 +1,7 @@
 import Foundation
 
 enum RadarScanPool {
-    static let maximumSymbols = 200
+    static let maximumSymbols = 255
 
     static func symbols(baseline: [String], yahoo: [String], secondary: [String], german: [String],
                         germanOpen: Bool, usOpen: Bool = true, excluded: Set<String> = []) -> [String] {

@@ -1,7 +1,7 @@
 import Foundation
 
 enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
-    case yahoo, wallstreetOnline, langSchwarz, traderFox, boerseDAX
+    case yahoo, tradingView, wallstreetOnline, langSchwarz, traderFox, boerseDAX
 
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
@@ -11,6 +11,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .yahoo: "Yahoo Finance"
+        case .tradingView: "TradingView"
         case .wallstreetOnline: "wallstreetONLINE"
         case .langSchwarz: "Lang & Schwarz"
         case .traderFox: "TraderFox"
@@ -21,6 +22,7 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
     var accountURL: URL? {
         switch self {
         case .yahoo: URL(string: "https://finance.yahoo.com/")
+        case .tradingView: URL(string: "https://www.tradingview.com/")
         case .wallstreetOnline: URL(string: "https://www.wallstreet-online.de/")
         case .langSchwarz: URL(string: "https://www.ls-tc.de/")
         case .traderFox: URL(string: "https://www.traderfox.com/" )
@@ -30,7 +32,8 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
 
     var endpoints: [ProviderEndpoint] {
         switch self {
-        case .yahoo: [.yahooPrimary, .yahooAlternate]
+        case .yahoo: []
+        case .tradingView: [.tradingViewGermany, .tradingViewUS]
         case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline]
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
@@ -89,7 +92,9 @@ struct MarketProviderPreflight: Sendable {
         do {
             switch provider {
             case .yahoo:
-                try await requireAny([.yahooPrimary, .yahooAlternate])
+                return nil // Candle requests are checked during scanning.
+            case .tradingView:
+                return nil // The scanner and page fallback report access failures.
             case .wallstreetOnline:
                 try await requireWallstreetOnlineData()
             case .langSchwarz:
@@ -168,7 +173,7 @@ actor MarketProviderStartupGate {
             return await check(revision: revision)
         }
         let task = Task { [preflight = MarketProviderPreflight()] in
-            let providers: [MarketProvider] = [.yahoo, .wallstreetOnline, .langSchwarz, .traderFox]
+            let providers: [MarketProvider] = [.tradingView, .langSchwarz]
             return await withTaskGroup(of: MarketProviderPreflightIssue?.self) { group in
                 for provider in providers {
                     group.addTask { await preflight.check(provider) }

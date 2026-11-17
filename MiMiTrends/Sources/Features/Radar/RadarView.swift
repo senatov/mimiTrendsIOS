@@ -16,7 +16,6 @@ struct RadarView: View {
     @State private var selectedSignal: ScanResult?
     @State private var historyError: String?
     @State var chartRefreshID = 0
-    @State var discoveryController = DiscoveryPoolController()
     @State var lsCandidatePool = LSCandidatePool()
     @State var lsStatus: LSCandidateStatus?
     @State var marketScanner = MarketRadarScanner()
@@ -24,10 +23,6 @@ struct RadarView: View {
     @State var marketCycle: MarketRadarCycle?
     @State var currencyRates: DisplayCurrencyRates?
     @State var currencyService = DisplayCurrencyService()
-    @State var discoveryStatus: DiscoveryRefreshStatus?
-    @State var discoveryRefreshID: UUID?
-    @State var discoveryRequests = 0
-    @State var discoveryErrors = 0
     @State var providerIssue: MarketProviderPreflightIssue?
     @State var providerStartupReady = false
     @AppStorage("radar.sources.open.v1") private var showingSources = false
@@ -39,9 +34,7 @@ struct RadarView: View {
                     signals: { compact, width in signalList(compact: compact, width: width) },
                     sources: {
                         RadarSourcePanel(
-                            discoveryStatus: discoveryStatus,
                             lsStatus: lsStatus,
-                            discoveryRequests: discoveryRequests, discoveryErrors: discoveryErrors,
                             marketCycle: marketCycle
                         )
                     },
@@ -83,7 +76,6 @@ struct RadarView: View {
                 guard await ensureAutomaticProvidersReady() else { return }
                 await refreshCompanyMetadata()
             }
-            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDiscoveryWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await monitorBoerseWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
@@ -143,13 +135,6 @@ struct RadarView: View {
                                      "country=\(detected.country) currency=\(detected.currency)")
     }
 
-    private var currentActivity: RadarActivity? {
-        if discoveryRefreshID != nil {
-            return .loadingRankings(previousCount: discoveryStatus?.snapshot?.candidates.count)
-        }
-        return nil
-    }
-
     private var emptyRadarMessage: String {
         "Waiting for fresh candle movements from Yahoo and price movements from boerse.de."
     }
@@ -157,7 +142,7 @@ struct RadarView: View {
     private func signalList(compact: Bool, width: CGFloat) -> some View {
         RadarSignalList(
             signals: recentSignals,
-            activity: recentSignals.isEmpty ? currentActivity : nil,
+            activity: nil,
             companyNames: radarCompanyNames,
             companyMetadata: companyMetadata,
             currencyRates: currencyRates,

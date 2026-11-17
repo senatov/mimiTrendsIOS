@@ -10,7 +10,7 @@ struct RadarSourceTotals: Sendable {
 
 struct MarketRadarCycle: Sendable {
     let yahoo: RadarSourceTotals
-    let traderFox: RadarSourceTotals
+    let tradingView: RadarSourceTotals
     let yahooCooldownUntil: Date?
     let initialScanProcessed: Int
     let initialScanTotal: Int
@@ -20,7 +20,7 @@ struct MarketRadarCycle: Sendable {
     var candidates: [RadarCompanyCandidate] = []
 
     func reporting(_ scan: MarketScanProgress, cooldown: Date?) -> Self {
-        Self(yahoo: yahoo, traderFox: traderFox, yahooCooldownUntil: cooldown,
+        Self(yahoo: yahoo, tradingView: tradingView, yahooCooldownUntil: cooldown,
              initialScanProcessed: scan.processed, initialScanTotal: scan.total,
              scannedSymbols: scan.successful, companyNames: companyNames,
              progress: scan, candidates: candidates)

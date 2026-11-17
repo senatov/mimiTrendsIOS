@@ -4,10 +4,7 @@ struct RadarSourcePanel: View {
     @Environment(RadarTableColorStore.self) private var tableColors
     @Environment(\.colorScheme) private var colorScheme
 
-    let discoveryStatus: DiscoveryRefreshStatus?
     let lsStatus: LSCandidateStatus?
-    let discoveryRequests: Int
-    let discoveryErrors: Int
     let marketCycle: MarketRadarCycle?
     @AppStorage("radar.scannerCandidatesHeight.v1") private var savedCandidatesHeight = 200.0
     @State private var draggedCandidatesHeight: Double?
@@ -26,7 +23,7 @@ struct RadarSourcePanel: View {
             .foregroundStyle(tableColor(.sourceBodyText))
             .background(tableColor(.sourceTableFill), in: RoundedRectangle(cornerRadius: 10))
             .trendsPanel()
-            if marketCycle != nil || discoveryStatus?.snapshot != nil {
+            if marketCycle != nil {
                 RadarSplitHandle(
                     axis: .rows,
                     value: min(1, max(0, candidatesHeight / 600)),
@@ -59,11 +56,25 @@ struct RadarSourcePanel: View {
     private var telemetrySources: [RadarTelemetrySource] {
         [
             RadarTelemetrySource(
-                name: "Yahoo candidates", status: yahooStatus,
+                name: "TradingView candidates",
+                status: marketStatus(marketCycle?.tradingView),
+                statusColor: marketColor(marketCycle?.tradingView),
+                dotColor: marketColor(marketCycle?.tradingView),
+                received: marketCycle?.tradingView.received,
+                valid: marketCycle?.candidates.count,
+                requests: marketCycle?.tradingView.operations,
+                errors: marketCycle?.tradingView.errors,
+                errorDetails: marketCycle?.tradingView.lastErrorMessage
+            ),
+            RadarTelemetrySource(
+                name: "Yahoo candles",
+                status: yahooStatus,
                 statusColor: yahooColor, dotColor: yahooColor,
-                received: marketCycle?.yahoo.received, valid: marketCycle?.yahoo.valid,
-                requests: marketCycle?.yahoo.operations, errors: marketCycle?.yahoo.errors,
-                errorDetails: marketCycle?.yahoo.lastErrorMessage
+                received: marketCycle?.progress.processed,
+                valid: marketCycle?.progress.successful,
+                requests: marketCycle?.progress.processed,
+                errors: marketCycle?.progress.errors,
+                errorDetails: marketCycle?.progress.issues.joined(separator: "\n")
             ),
             RadarTelemetrySource(
                 name: "Lang & Schwarz",
@@ -72,57 +83,23 @@ struct RadarSourcePanel: View {
                 dotColor: lsFreshCount > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive),
                 received: lsStatus?.quotes.count, valid: lsStatus.map { _ in lsFreshCount },
                 requests: lsStatus?.requestCount, errors: lsStatus?.errorCount
-            ),
-            RadarTelemetrySource(
-                name: "wallstreetONLINE", status: discoveryLabel,
-                statusColor: discoveryColor, dotColor: discoveryColor,
-                received: discoveryStatus?.snapshot?.candidates.count, valid: nil,
-                requests: discoveryRequests, errors: discoveryErrors
-            ),
-            RadarTelemetrySource(
-                name: "TraderFox",
-                status: marketStatus(candidateTotals),
-                statusColor: marketColor(candidateTotals), dotColor: marketColor(candidateTotals),
-                received: candidateTotals?.received, valid: candidateTotals?.valid,
-                requests: candidateTotals?.operations, errors: candidateTotals?.errors,
-                errorDetails: candidateTotals?.lastErrorMessage
             )
-        ] + (discoveryStatus?.rankingSources ?? []).map { source in
-            let color = tableColor(source.failed ? .sourceAttention : source.enabled ? .sourceActive : .sourceInactive)
-            return RadarTelemetrySource(
-                name: source.kind == .wikifolio ? "wO Wikifolio" : "wO Performance",
-                status: !source.enabled ? "DISABLED" : source.failed ? "REFRESH FAILED" : source.lastSuccess == nil ? "CONNECTING" : "TODAY · RANKING",
-                statusColor: color, dotColor: color,
-                received: source.count, valid: source.enabled && !source.failed ? source.count : nil,
-                requests: nil, errors: source.failed ? 1 : 0
-            )
-        }
-    }
-
-    private var candidateTotals: RadarSourceTotals? {
-        guard let marketCycle else { return nil }
-        return marketCycle.traderFox
+        ]
     }
 
     private var yahooStatus: String {
         if let until = marketCycle?.yahooCooldownUntil, Date() < until { return "RATE LIMITED" }
-        return marketStatus(marketCycle?.yahoo)
+        guard let marketCycle else { return "CONNECTING" }
+        return marketCycle.progress.successful > 0 ? "ONLINE" : "WAITING"
     }
 
     private var yahooColor: Color {
-        yahooStatus == "RATE LIMITED" ? tableColor(.sourceAttention) : marketColor(marketCycle?.yahoo)
+        yahooStatus == "RATE LIMITED" ? tableColor(.sourceAttention) :
+            (yahooStatus == "ONLINE" ? tableColor(.sourceActive) : tableColor(.sourceInactive))
     }
 
     private func tableColor(_ role: RadarTableColorRole) -> Color {
         tableColors.color(role, dark: colorScheme == .dark)
-    }
-
-    private var discoveryLabel: String {
-        guard let discoveryStatus else { return "CONNECTING" }
-        if discoveryStatus.hasFreshSnapshot(atMillis: Int64(Date().timeIntervalSince1970 * 1_000)) {
-            return "SHARED SCAN POOL"
-        }
-        return discoveryStatus.isAvailable ? "SAVED" : "UNAVAILABLE"
     }
 
     private func marketStatus(_ totals: RadarSourceTotals?) -> String {
@@ -135,10 +112,6 @@ struct RadarSourcePanel: View {
         guard let totals else { return tableColor(.sourceInactive) }
         if totals.errors > 0, totals.valid == 0 { return tableColor(.sourceAttention) }
         return totals.valid > 0 ? tableColor(.sourceActive) : tableColor(.sourceInactive)
-    }
-
-    private var discoveryColor: Color {
-        discoveryLabel == "SHARED SCAN POOL" ? tableColor(.sourceActive) : tableColor(.sourceInactive)
     }
 
     private var lsFreshCount: Int {

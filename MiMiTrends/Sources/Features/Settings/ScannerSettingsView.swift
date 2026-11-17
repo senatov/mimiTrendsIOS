@@ -38,7 +38,7 @@ struct ScannerSettingsView: View {
         SettingsGroup(title: "Current scan scope") {
             SettingsValueRow(title: "Candle signals", value: "Fresh Yahoo minute bars with reported volume")
             SettingsValueRow(title: "Historical data", value: "Saved Yahoo minute bars and daily summaries")
-            SettingsValueRow(title: "Symbols", value: "Up to 200 US and German shares")
+            SettingsValueRow(title: "Symbols", value: "Up to 255 liquid US and German shares")
             SettingsValueRow(title: "Activity", value: "Foreground only")
             Text("Radar checks completed candles for rapid drops, confirmed reversals and sustained rises. German data is delayed and the German scan stops when Xetra is closed. L&S quotes are available separately on the chart.")
                 .font(.body.weight(.light))

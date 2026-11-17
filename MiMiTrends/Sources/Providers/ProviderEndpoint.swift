@@ -3,6 +3,7 @@ import Foundation
 enum ProviderEndpoint: String, CaseIterable, Identifiable {
     case langSchwarzGermany, langSchwarzStoxx, langSchwarzEurope, langSchwarzAmerica
     case yahooPrimary, yahooAlternate
+    case tradingViewGermany, tradingViewUS
     case wallstreetOnline, wallstreetWikifolio, wallstreetPerformance, wallstreetGermanPerformance, traderFox
 
     var id: String { rawValue }
@@ -15,6 +16,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzAmerica: "America"
         case .yahooPrimary: "Most active"
         case .yahooAlternate: "Trending fallback"
+        case .tradingViewGermany: "Germany · most volatile"
+        case .tradingViewUS: "USA · most volatile"
         case .wallstreetOnline: "Instrument pages"
         case .wallstreetWikifolio: "Wikifolio · today"
         case .wallstreetPerformance: "Trading volume · 24h"
@@ -31,6 +34,8 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
         case .langSchwarzAmerica: "https://www.ls-tc.de/de/aktien/amerika"
         case .yahooPrimary: "https://finance.yahoo.com/markets/stocks/most-active/"
         case .yahooAlternate: "https://finance.yahoo.com/markets/stocks/trending/"
+        case .tradingViewGermany: "https://www.tradingview.com/markets/stocks-germany/market-movers-most-volatile/"
+        case .tradingViewUS: "https://www.tradingview.com/markets/stocks-usa/market-movers-most-volatile/"
         case .wallstreetOnline: "https://www.wallstreet-online.de"
         case .wallstreetWikifolio: "https://www.wallstreet-online.de/statistik/top-aktien-wikifolio"
         case .wallstreetPerformance: "https://www.wallstreet-online.de/statistik/top-aktien-meistgehandelt"
@@ -42,7 +47,7 @@ enum ProviderEndpoint: String, CaseIterable, Identifiable {
     var probePath: String {
         switch self {
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica: ""
-        case .yahooPrimary, .yahooAlternate: ""
+        case .yahooPrimary, .yahooAlternate, .tradingViewGermany, .tradingViewUS: ""
         case .wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance: ""
         case .wallstreetOnline: "/suche/?suche=&q=ASML&sa=Suche"
         case .traderFox: "dax-bestandteile"
@@ -125,6 +130,18 @@ enum ProviderEndpointStore {
 struct ProviderEndpointChecker: Sendable {
     func check(_ value: String, for endpoint: ProviderEndpoint) async throws -> String {
         let base = try ProviderEndpointStore.validate(value, for: endpoint)
+        if endpoint == .tradingViewGermany || endpoint == .tradingViewUS {
+            var request = URLRequest(url: base)
+            request.timeoutInterval = 12
+            request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200,
+                  let html = String(data: data, encoding: .utf8) else { throw ProviderEndpointError.checkFailed }
+            let market: TradingViewVolatilitySource.Market = endpoint == .tradingViewGermany ? .germany : .unitedStates
+            let count = TradingViewVolatilitySource.parse(html, market: market).count
+            guard count > 0 else { throw ProviderEndpointError.checkFailed }
+            return "Volatility page OK · \(count) liquid shares in HTML"
+        }
         if endpoint == .yahooPrimary || endpoint == .yahooAlternate {
             let candidates = try await YahooRankingPageSource().loadCandidates(from: base)
             return "Yahoo Finance ranking page OK · \(candidates.count) symbols"
@@ -175,6 +192,7 @@ struct ProviderEndpointChecker: Sendable {
         case .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica:
             expected = "bidWithCurrencySymbol"
         case .yahooPrimary, .yahooAlternate: expected = "quotes"
+        case .tradingViewGermany, .tradingViewUS: expected = "Volatility"
         case .wallstreetOnline: expected = "ASML"
         case .wallstreetWikifolio: expected = "Käufe/Verkäufe"
         case .wallstreetPerformance: expected = "Umsatz"

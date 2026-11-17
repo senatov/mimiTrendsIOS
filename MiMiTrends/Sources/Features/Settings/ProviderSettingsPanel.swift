@@ -24,27 +24,29 @@ struct ProviderSettingsPanel: View {
             }
             if width >= 980 {
                 HStack(alignment: .top, spacing: 8) {
+                    providerGroup("TradingView", detail: "Volatile, liquid shares · page URLs for fallback",
+                                  provider: .tradingView, endpoints: [.tradingViewGermany, .tradingViewUS])
                     VStack(spacing: 6) {
-                        providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
-                                      endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
-                        providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
-                        providerGroup("boerse.de DAX", detail: "DAX and US-Tech 100 price monitoring · no volume", provider: .boerseDAX, endpoints: [])
-                    }
-                    VStack(spacing: 6) {
-                        providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
-                        providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
+                        providerGroup("Yahoo Finance", detail: "Minute candles and signal confirmation",
+                                      provider: .yahoo, endpoints: [])
+                        providerGroup("Lang & Schwarz", detail: "Separate bid/ask quotes",
+                                      provider: .langSchwarz,
                                       endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
+                        providerGroup("boerse.de DAX", detail: "Separate price monitoring",
+                                      provider: .boerseDAX, endpoints: [])
                     }
                 }
             } else {
                 VStack(spacing: 6) {
-                    providerGroup("Yahoo Finance", detail: "Most active + trending candidates · no API key", provider: .yahoo, endpoints: [.yahooPrimary, .yahooAlternate])
-                    providerGroup("wallstreetONLINE rankings", detail: "Wikifolio + trading turnover · shared pool", provider: .wallstreetOnline,
-                                  endpoints: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline], includesDiscoverySettings: true)
-                    providerGroup("Lang & Schwarz", detail: "Fresh bid/ask movement signals · Germany, Europe and America", provider: .langSchwarz,
+                    providerGroup("TradingView", detail: "Volatile, liquid shares · page URLs for fallback",
+                                  provider: .tradingView, endpoints: [.tradingViewGermany, .tradingViewUS])
+                    providerGroup("Yahoo Finance", detail: "Minute candles and signal confirmation",
+                                  provider: .yahoo, endpoints: [])
+                    providerGroup("Lang & Schwarz", detail: "Separate bid/ask quotes",
+                                  provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
-                    providerGroup("TraderFox", detail: "Supplemental market candidates", provider: .traderFox, endpoints: [.traderFox])
-                    providerGroup("boerse.de DAX", detail: "DAX and US-Tech 100 price monitoring · no volume", provider: .boerseDAX, endpoints: [])
+                    providerGroup("boerse.de DAX", detail: "Separate price monitoring",
+                                  provider: .boerseDAX, endpoints: [])
                 }
             }
             if let savingMessage {
@@ -55,7 +57,7 @@ struct ProviderSettingsPanel: View {
         }
         .onAppear {
             ProviderEndpointStore.removeUnusedLegacyValues()
-            for endpoint in ProviderEndpoint.allCases {
+            for endpoint in Self.visibleEndpoints {
                 drafts[endpoint] = ProviderEndpointStore.url(for: endpoint).absoluteString
             }
         }
@@ -65,8 +67,7 @@ struct ProviderSettingsPanel: View {
         _ title: String,
         detail: String,
         provider: MarketProvider,
-        endpoints: [ProviderEndpoint],
-        includesDiscoverySettings: Bool = false
+        endpoints: [ProviderEndpoint]
     ) -> some View {
         SettingsGroup(title: title, compact: true) {
             HStack(spacing: 6) {
@@ -104,11 +105,13 @@ struct ProviderSettingsPanel: View {
                     Text(issue).font(.caption).foregroundStyle(.secondary)
                 }
             }
-            if includesDiscoverySettings {
-                DiscoverySettingsSection()
-            }
         }
     }
+
+    private static let visibleEndpoints: [ProviderEndpoint] = [
+        .tradingViewGermany, .tradingViewUS,
+        .langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope
+    ]
 
     private var defaultStatus: String { "Not checked" }
 
@@ -129,10 +132,10 @@ struct ProviderSettingsPanel: View {
 
     private func save() {
         do {
-            for endpoint in ProviderEndpoint.allCases {
+            for endpoint in Self.visibleEndpoints {
                 _ = try ProviderEndpointStore.validate(drafts[endpoint] ?? endpoint.defaultURL, for: endpoint)
             }
-            for endpoint in ProviderEndpoint.allCases {
+            for endpoint in Self.visibleEndpoints {
                 try ProviderEndpointStore.save(drafts[endpoint] ?? endpoint.defaultURL, for: endpoint)
             }
             savingMessage = "Addresses saved. Active adapters use them on the next request."

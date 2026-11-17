@@ -160,17 +160,17 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
             nowEpochSeconds: closed, settings: RadarScanPreferences()))
     }
 
-    func testPoolFills200DeduplicatesAndExcludesClosedGermanMarket() {
-        let us = (0..<240).map { "US\($0)" }
+    func testPoolFills255DeduplicatesAndExcludesClosedGermanMarket() {
+        let us = (0..<300).map { "US\($0)" }
         let german = (0..<120).map { "DE\($0).DE" }
         let pool = RadarScanPool.symbols(baseline: ["US1", "DE1.DE"], yahoo: Array(us.prefix(100)),
             secondary: us, german: german, germanOpen: false, excluded: ["US2"])
-        XCTAssertEqual(pool.count, 200)
-        XCTAssertEqual(Set(pool).count, 200)
+        XCTAssertEqual(pool.count, 255)
+        XCTAssertEqual(Set(pool).count, 255)
         XCTAssertFalse(pool.contains("US2"))
         XCTAssertFalse(pool.contains { $0.hasSuffix(".DE") })
         let mixed = RadarScanPool.symbols(baseline: [], yahoo: us, secondary: [], german: german, germanOpen: true)
-        XCTAssertEqual(mixed.count, 200)
+        XCTAssertEqual(mixed.count, 255)
         XCTAssertTrue(mixed.contains("DE0.DE"))
         XCTAssertTrue(mixed.contains("US0"))
     }
