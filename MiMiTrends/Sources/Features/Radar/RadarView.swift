@@ -10,6 +10,7 @@ struct RadarView: View {
     let onManageWatchlist: () -> Void
     let onOpenProviderSettings: () -> Void
     @State var recentSignals: [ScanResult] = []
+    @State var germanWatchCandidates: [ScanResult] = []
     @State var verifiedEIXSymbols: Set<String> = []
     @State private var hasLoadedHistory = false
     @State var companyMetadata: [String: RadarCompanyMetadata] = [:]
@@ -109,7 +110,11 @@ struct RadarView: View {
     }
 
     var visibleSignals: [ScanResult] {
-        recentSignals.filter { verifiedEIXSymbols.contains($0.symbol) }
+        RadarSignalSelection.withGermanReserve(
+            recentSignals.filter { verifiedEIXSymbols.contains($0.symbol) },
+            watch: germanWatchCandidates.filter { verifiedEIXSymbols.contains($0.symbol) },
+            limit: min(max(maxResults, 5), 100)
+        )
     }
 
     func clearUnverifiedSelection() {
@@ -164,7 +169,7 @@ struct RadarView: View {
             errorMessage: historyError,
             emptyStateMessage: emptyRadarMessage,
             onSelect: { signal in
-                selectedSignal = signal
+                selectedSignal = signal.dataStatus == RadarGermanWatchCandidates.dataStatus ? nil : signal
                 symbol = signal.symbol
             }
         )
@@ -186,13 +191,17 @@ struct RadarView: View {
     func refreshSignals(selectNewest: Bool = false) async {
         defer { hasLoadedHistory = true }
         do {
-            let limit = min(max(maxResults, 5), 100)
             let ageHours = min(max(maxAgeHours, 1), 72)
             let cutoff = Int64(Date().timeIntervalSince1970 * 1_000) - Int64(ageHours) * 3_600_000
             let preferences = RadarScanPreferencesStore.load()
-            let loaded = try await Task.detached(priority: .userInitiated) {
+            let germanSymbols = Set((marketCycle?.candidates ?? []).map(\.symbol).filter {
+                verifiedEIXSymbols.contains($0) && MarketCandidateFilter.isGermanSymbol($0)
+            })
+            let (loaded, watch) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
-                let history = try await store.loadRecent(limit: min(limit * 10, 500))
+                let latest = try await store.loadRecent(limit: 500)
+                let german = try await store.loadRecentGerman(limit: 100, sinceEpochMillis: cutoff)
+                let history = latest + german
                 var latestBars: [String: MinuteBar] = [:]
                 if history.contains(where: { $0.signalSource == "Confirmed reversal" }),
                    let barStore = try? MarketBarStore(url: MarketBarStore.defaultURL()) {
@@ -206,14 +215,22 @@ struct RadarView: View {
                         latestBars[signal.symbol] = bars?.last
                     }
                 }
-                return RadarSignalSelection.displayHistory(
-                    history, since: cutoff, limit: limit, preferences: preferences,
+                let confirmed = RadarSignalSelection.displayHistory(
+                    history, since: cutoff, limit: 600, preferences: preferences,
                     latestBars: latestBars
                 )
+                let watch = confirmed.contains(where: { germanSymbols.contains($0.symbol) }) ? []
+                    : await RadarGermanWatchCandidates.load(symbols: germanSymbols, now: Date(),
+                                                              settings: preferences.validated)
+                return (confirmed, watch)
             }.value
             recentSignals = loaded
+            germanWatchCandidates = watch
             let visible = visibleSignals
-            AppDiagnostics.shared.record(.info, "Radar", "history-loaded", "signals=\(visible.count)")
+            let watchCount = visible.filter { $0.dataStatus == RadarGermanWatchCandidates.dataStatus }.count
+            let germanCount = visible.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }.count
+            AppDiagnostics.shared.record(.info, "Radar", "history-loaded",
+                "signals=\(visible.count - watchCount) german=\(germanCount) watch=\(watchCount)")
             historyError = nil
             if let selectedSignal, !visible.contains(where: {
                 $0.symbol == selectedSignal.symbol &&
@@ -222,7 +239,9 @@ struct RadarView: View {
             }) {
                 self.selectedSignal = nil
             }
-            if selectNewest, let latest = visible.first {
+            if selectNewest, let latest = visible.first(where: {
+                $0.dataStatus != RadarGermanWatchCandidates.dataStatus
+            }) {
                 selectedSignal = latest
                 symbol = latest.symbol
             } else if selectedSignal == nil {

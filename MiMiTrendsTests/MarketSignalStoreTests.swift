@@ -83,6 +83,30 @@ final class MarketSignalStoreTests: XCTestCase {
         XCTAssertEqual(loaded.count, 2)
     }
 
+    func testGermanHistoryRemainsAvailableBeyondGlobalResultLimit() async throws {
+        let url = temporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let store = try MarketSignalStore(url: url)
+        func signal(_ symbol: String, at time: Int64) -> ScanResult {
+            ScanResult(symbol: symbol, price: 100, anomalyScore: 0,
+                priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
+                relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: -1,
+                windowVolume: 0, sessionVolume: 0, sessionTurnover: 0,
+                signalAgeMinutes: 0, signalSource: "boerse.de price drop",
+                updatedAtMillis: time, signalWindowLabel: "5m")
+        }
+        _ = try await store.record(signal("SAP.DE", at: 1_000))
+        _ = try await store.record(signal("AAPL", at: 2_000))
+        _ = try await store.record(signal("NVDA", at: 3_000))
+
+        let global = try await store.loadRecent(limit: 1)
+        let german = try await store.loadRecentGerman(limit: 1)
+        let expired = try await store.loadRecentGerman(sinceEpochMillis: 1_001)
+        XCTAssertEqual(global.map(\.symbol), ["NVDA"])
+        XCTAssertEqual(german.map(\.symbol), ["SAP.DE"])
+        XCTAssertTrue(expired.isEmpty)
+    }
+
     private func bars(symbol: String = "RISE", start: Int64 = 12_000) -> [MinuteBar] {
         [102.0, 101, 100, 100.8, 100.4, 101.1].enumerated().map { index, close in
             MinuteBar(

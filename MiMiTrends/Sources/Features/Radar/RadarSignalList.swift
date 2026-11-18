@@ -33,6 +33,12 @@ struct RadarSignalList: View {
         0
         #endif
     }
+    private var watchCount: Int {
+        signals.filter { $0.dataStatus == RadarGermanWatchCandidates.dataStatus }.count
+    }
+    private var germanCount: Int {
+        signals.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }.count
+    }
 
     private var sortedSignals: [ScanResult] {
         signals.sorted { left, right in
@@ -74,9 +80,17 @@ struct RadarSignalList: View {
                     .font(.system(.subheadline, design: .monospaced).weight(.bold))
                     .tracking(0.7)
                     .foregroundStyle(.primary)
-                Text("\(signals.count) SIGNALS")
+                Text("\(signals.count - watchCount) SIGNALS")
                     .font(.system(.caption, design: .monospaced).weight(.medium))
                     .foregroundStyle(tableColor(.signalMutedText))
+                Text("· DE \(germanCount)")
+                    .font(.system(.caption, design: .monospaced).weight(.medium))
+                    .foregroundStyle(tableColor(.signalMutedText))
+                if watchCount > 0 {
+                    Text("· \(watchCount) WATCH")
+                        .font(.system(.caption, design: .monospaced).weight(.medium))
+                        .foregroundStyle(tableColor(.signalBodyText))
+                }
                 Text(displayCurrency)
                     .font(.system(.caption2, design: .monospaced).weight(.bold))
                     .padding(.horizontal, 7)
@@ -85,7 +99,9 @@ struct RadarSignalList: View {
                     .help(currencyRates.map { "ECB reference rates dated \($0.date)" } ?? "Waiting for ECB exchange rates")
             }
             Divider()
-            Text("Move: price change over the listed window · Signals describe recent movement.")
+            Text(watchCount > 0
+                ? "Move: price change over the listed window · Blue watch rows use a relaxed threshold."
+                : "Move: price change over the listed window · Signals describe recent movement.")
                 .font(.caption)
                 .foregroundStyle(tableColor(.signalMutedText))
                 .lineLimit(1)

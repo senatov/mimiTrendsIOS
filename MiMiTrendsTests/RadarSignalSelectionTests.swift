@@ -94,6 +94,44 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(displayed.map(\.symbol), ["NVDA"])
     }
 
+    func testGermanWatchRelaxesThresholdUntilThreeRecentCandidatesQualify() {
+        let now = ISO8601DateFormatter().date(from: "2026-11-18T14:45:00Z")!
+        let evaluation = RadarMarketDataPolicy.evaluationTime(
+            symbol: "SAP.DE", now: Int64(now.timeIntervalSince1970))
+        func bars(_ symbol: String, _ latest: Double, offset: Int64 = 60) -> [MinuteBar] {
+            [MinuteBar(symbol: symbol, minuteEpochSeconds: evaluation - 300,
+                       open: 100, high: 100, low: 100, close: 100, volume: 1_000),
+             MinuteBar(symbol: symbol, minuteEpochSeconds: evaluation - offset,
+                       open: latest, high: latest, low: latest, close: latest, volume: 1_000)]
+        }
+        let selected = RadarGermanWatchCandidates.select(barsBySymbol: [
+            "SAP.DE": bars("SAP.DE", 99.45),
+            "DBK.DE": bars("DBK.DE", 99.58),
+            "SIE.DE": bars("SIE.DE", 100.38),
+            "RHM.DE": bars("RHM.DE", 99.8),
+            "BAS.DE": bars("BAS.DE", 98.5, offset: 900)
+        ], now: now, settings: RadarScanPreferences())
+        XCTAssertEqual(selected.map(\.symbol), ["SAP.DE", "DBK.DE", "SIE.DE"])
+        XCTAssertTrue(selected.allSatisfy { $0.dataStatus == RadarGermanWatchCandidates.dataStatus })
+    }
+
+    func testGermanReserveDisappearsWhenConfirmedGermanSignalExists() {
+        let us = (0..<30).map { event("US\($0)", source: "Rapid crash", at: Int64(1_000 - $0)) }
+        let watch = (0..<5).map {
+            event("DE\($0).DE", source: RadarGermanWatchCandidates.source, at: 500,
+                  dataStatus: RadarGermanWatchCandidates.dataStatus)
+        }
+        let fallback = RadarSignalSelection.withGermanReserve(us, watch: watch, limit: 30)
+        XCTAssertEqual(fallback.count, 30)
+        XCTAssertEqual(fallback.filter { $0.dataStatus == RadarGermanWatchCandidates.dataStatus }.count, 5)
+
+        let real = event("SAP.DE", source: "Rapid crash", at: 400)
+        let confirmed = RadarSignalSelection.withGermanReserve(us + [real], watch: watch, limit: 30)
+        XCTAssertEqual(confirmed.count, 30)
+        XCTAssertTrue(confirmed.contains { $0.symbol == "SAP.DE" })
+        XCTAssertFalse(confirmed.contains { $0.dataStatus == RadarGermanWatchCandidates.dataStatus })
+    }
+
     private func event(
         _ symbol: String, source: String, at epoch: Int64,
         change: Double = 1, window: String = "1m", dataStatus: String? = nil

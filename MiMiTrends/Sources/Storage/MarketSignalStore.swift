@@ -66,7 +66,19 @@ actor MarketSignalStore {
     }
 
     func loadRecent(limit: Int = 100, sinceEpochMillis: Int64 = 0) throws -> [ScanResult] {
-        let statement = try prepare("""
+        try loadRecent(limit: limit, sinceEpochMillis: sinceEpochMillis, germanOnly: false)
+    }
+
+    func loadRecentGerman(limit: Int = 100, sinceEpochMillis: Int64 = 0) throws -> [ScanResult] {
+        try loadRecent(limit: limit, sinceEpochMillis: sinceEpochMillis, germanOnly: true)
+    }
+
+    private func loadRecent(limit: Int, sinceEpochMillis: Int64, germanOnly: Bool) throws -> [ScanResult] {
+        let statement = try prepare(germanOnly ? """
+            SELECT payload FROM signals
+            WHERE signal_epoch >= ? AND symbol LIKE '%.DE'
+            ORDER BY signal_epoch DESC, symbol, source LIMIT ?
+            """ : """
             SELECT payload FROM signals
             WHERE signal_epoch >= ?
             ORDER BY signal_epoch DESC, symbol, source LIMIT ?

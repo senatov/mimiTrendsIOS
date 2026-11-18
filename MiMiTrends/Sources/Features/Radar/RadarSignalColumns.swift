@@ -144,6 +144,9 @@ struct RadarSignalColumnWidths {
 
 enum RadarSignalPresentation {
     static func badge(for signal: ScanResult) -> String {
+        if signal.dataStatus == RadarGermanWatchCandidates.dataStatus {
+            return signal.windowChangePercent < 0 ? "↓ WATCH · LOWER THRESHOLD" : "↑ WATCH · LOWER THRESHOLD"
+        }
         let label = badge(for: signal.signalSource)
         if signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus {
             return "\(label) · Y delayed"

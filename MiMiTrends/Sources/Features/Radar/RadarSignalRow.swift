@@ -40,6 +40,7 @@ struct RadarSignalRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(companyName), \(signal.symbol)")
+        .accessibilityHint(isGermanWatch ? "Unconfirmed German watch candidate; open stock chart" : "Open stock chart")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default) { onSelect() }
         .contextMenu {
@@ -99,6 +100,7 @@ struct RadarSignalRow: View {
             .padding(.leading, 6)
             .padding(.trailing, 16)
             .frame(width: widths.event)
+            .background(isGermanWatch ? Color.blue.opacity(colorScheme == .dark ? 0.22 : 0.11) : .clear)
             movement
                 .padding(.horizontal, 6)
                 .frame(width: widths.movement, alignment: .trailing)
@@ -142,7 +144,9 @@ struct RadarSignalRow: View {
             .lineLimit(1)
             .padding(.horizontal, 5)
             .padding(.vertical, 2)
-            .background(eventColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+            .background(isGermanWatch ? Color.blue.opacity(0.14) : eventColor.opacity(0.12),
+                        in: RoundedRectangle(cornerRadius: 6))
+            .help(isGermanWatch ? "German watch candidate from a relaxed movement threshold; not a confirmed signal." : eventLabel)
     }
 
     private var movement: some View {
@@ -165,9 +169,12 @@ struct RadarSignalRow: View {
     }
 
     private var eventColor: Color {
+        if isGermanWatch { return tableColor(.signalBodyText) }
         if signal.signalSource.lowercased() == "tradable corridor" { return tableColor(.signalActionAccent) }
         return signal.windowChangePercent < 0 ? tableColor(.fall) : tableColor(.rise)
     }
+
+    private var isGermanWatch: Bool { signal.dataStatus == RadarGermanWatchCandidates.dataStatus }
 
     private var backgroundColor: Color {
         if signal.signalSource.lowercased() == "rapid crash" { return tableColor(.criticalRow) }
