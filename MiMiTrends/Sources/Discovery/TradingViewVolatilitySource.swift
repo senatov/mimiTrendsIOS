@@ -7,7 +7,7 @@ struct TradingViewVolatilityCandidate: Sendable {
 
 struct TradingViewVolatilitySource: Sendable {
     enum Market: Sendable { case germany, unitedStates }
-    enum Ranking: Sendable { case volatility, activity }
+    enum Ranking: Sendable { case volatility, activity, strongRise }
 
     private let session: URLSession
 
@@ -32,6 +32,10 @@ struct TradingViewVolatilitySource: Sendable {
         return candidates
     }
 
+    func loadStrongRisers(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
+        try await scan(market, ranking: .strongRise)
+    }
+
     private func loadPage(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
         let endpoint: ProviderEndpoint = market == .germany ? .tradingViewGermany : .tradingViewUS
         var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
@@ -52,6 +56,8 @@ struct TradingViewVolatilitySource: Sendable {
     private func scan(_ market: Market, ranking: Ranking) async throws -> [TradingViewVolatilityCandidate] {
         let region = market == .germany ? "germany" : "america"
         let exchanges = market == .germany ? ["XETR"] : ["NASDAQ", "NYSE", "AMEX"]
+        let strongTurnover = market == .germany ? 250_000 : 10_000_000
+        let strongChange = market == .germany ? 5 : 10
         var candidates: [TradingViewVolatilityCandidate] = []
         for exchange in exchanges {
             try Task.checkCancellation()
@@ -61,23 +67,29 @@ struct TradingViewVolatilitySource: Sendable {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             var filters: [[String: Any]] = [["left": "type", "operation": "equal", "right": "stock"],
                            ["left": "exchange", "operation": "equal", "right": exchange],
-                           ["left": "close", "operation": "egreater", "right": 5],
+                           ["left": "close", "operation": "egreater",
+                            "right": ranking == .strongRise ? 2 : 5],
                            ["left": "market_cap_basic", "operation": "egreater",
-                            "right": 100_000_000],
+                            "right": ranking == .strongRise ? 25_000_000 : 100_000_000],
                            ["left": "Value.Traded", "operation": "egreater",
-                            "right": market == .germany ? 500_000 : 1_000_000]]
+                            "right": ranking == .strongRise ? strongTurnover :
+                                (market == .germany ? 500_000 : 1_000_000)]]
             if ranking == .volatility {
                 filters.append(["left": "relative_volume_10d_calc", "operation": "egreater",
                                 "right": market == .germany ? 0.5 : 0.2])
+            }
+            if ranking == .strongRise {
+                filters.append(["left": "change", "operation": "egreater", "right": strongChange])
             }
             request.httpBody = try JSONSerialization.data(withJSONObject: [
                 "filter": filters,
                 "options": ["lang": "en"],
                 "columns": ["name", "description", "exchange", "close", "volume",
-                            "relative_volume_10d_calc", "market_cap_basic", "Volatility.D", "isin"],
+                            "relative_volume_10d_calc", "market_cap_basic", "Volatility.D", "isin",
+                            "change"],
                 "sort": ["sortBy": ranking == .activity ? "Value.Traded" : "Volatility.D",
                          "sortOrder": "desc"],
-                "range": [0, ranking == .activity ? 149 : 299]
+                "range": [0, ranking == .activity ? 149 : ranking == .strongRise ? 99 : 299]
             ] as [String: Any])
             let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard let response = response as? HTTPURLResponse, response.statusCode == 200,
@@ -115,13 +127,19 @@ struct TradingViewVolatilitySource: Sendable {
 
     private static func select(_ rows: [ScanRow], market: Market,
                                ranking: Ranking) -> [TradingViewVolatilityCandidate] {
+        let strongTurnover = market == .germany ? 250_000.0 : 10_000_000.0
+        let strongChange = market == .germany ? 5.0 : 10.0
         var seen = Set<String>()
         return rows.compactMap { row -> TradingViewVolatilityCandidate? in
             guard row.d.count >= 9, let name = row.d[1].text, let exchange = row.d[2].text,
                   let price = row.d[3].number, let volume = row.d[4].number,
                   let cap = row.d[6].number,
-                  cap >= 100_000_000,
-                  price * volume >= (market == .germany ? 500_000 : 1_000_000) else { return nil }
+                  cap >= (ranking == .strongRise ? 25_000_000 : 100_000_000),
+                  price * volume >= (ranking == .strongRise ? strongTurnover :
+                    (market == .germany ? 500_000 : 1_000_000)) else { return nil }
+            if ranking == .strongRise {
+                guard row.d.count >= 10, (row.d[9].number ?? 0) >= strongChange else { return nil }
+            }
             let relativeVolume = row.d[5].number ?? 0
             let volatility = row.d[7].number ?? 0
             if ranking == .volatility {
@@ -143,10 +161,12 @@ struct TradingViewVolatilitySource: Sendable {
             guard seen.insert(symbol).inserted,
                   MarketCandidateFilter.accepts(symbol: symbol, name: name, price: price,
                     exchange: market == .germany ? "XETRA" : exchange,
-                    currency: market == .germany ? "EUR" : "USD")
+                    currency: market == .germany ? "EUR" : "USD",
+                    minimumPrice: ranking == .strongRise ? 2 : 5)
             else { return nil }
             let score: Double
             if ranking == .activity { score = price * volume }
+            else if ranking == .strongRise { score = row.d[9].number ?? 0 }
             else {
                 score = min(volatility, 30) * sqrt(min(relativeVolume, 10))
                     * log10(max(10, price * volume))

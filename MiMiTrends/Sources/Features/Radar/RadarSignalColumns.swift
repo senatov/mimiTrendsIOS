@@ -161,6 +161,7 @@ enum RadarSignalPresentation {
         case "confirmed reversal": "Confirmed reversal"
         case "sustained drop": "Sustained drop"
         case "sustained rise", "smooth rise": "Smooth rise"
+        case "multi-hour rise": "Multi-hour rise"
         case "tradable corridor": "Tradable corridor"
         default: source.replacingOccurrences(of: "_", with: " ").capitalized
         }
@@ -177,6 +178,7 @@ enum RadarSignalPresentation {
         case "confirmed reversal": "↑ REVERSAL"
         case "sustained drop": "↓ SUSTAINED DROP"
         case "sustained rise", "smooth rise": "↑ SMOOTH RISE"
+        case "multi-hour rise": "↑ MULTI-HOUR RISE"
         case "tradable corridor": "▰ CORRIDOR"
         default: title(for: source).uppercased()
         }

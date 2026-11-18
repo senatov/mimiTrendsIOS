@@ -25,6 +25,13 @@ enum RadarTradingMarket {
                              second: 0, of: date)
     }
 
+    func regularOpen(at date: Date) -> Date? {
+        let current = phase(at: date)
+        guard current == .regular || current == .afterHours else { return nil }
+        return calendar.date(bySettingHour: 9, minute: self == .germany ? 0 : 30,
+                             second: 0, of: date)
+    }
+
     private func session(at date: Date) -> (phase: RadarTradingPhase, start: Int)? {
         let calendar = self.calendar
         let parts = calendar.dateComponents([.year, .month, .day, .weekday, .hour, .minute], from: date)

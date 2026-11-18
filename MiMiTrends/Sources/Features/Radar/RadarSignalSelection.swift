@@ -67,14 +67,23 @@ enum RadarSignalSelection {
                                                        signal.signalEpochMillis)
                     return nil
                 }
+                if source == MultiHourRiseDetector.source.lowercased(),
+                   newest.price < signal.signalPrice + (signal.price - signal.signalPrice) * 0.5 {
+                    invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
+                                                       signal.signalEpochMillis)
+                    return nil
+                }
             }
-            let requiresLiveTrades = ["rapid crash", "confirmed reversal", "smooth rise"].contains(source)
+            let requiresLiveTrades = ["rapid crash", "confirmed reversal", "smooth rise",
+                                      MultiHourRiseDetector.source.lowercased()].contains(source)
             let validatedYahoo = signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
                 signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
             guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return nil }
             if validatedYahoo {
                 let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
-                guard minutes <= 30 else { return nil }
+                guard minutes <= (source == MultiHourRiseDetector.source.lowercased() ? 360 : 30) else {
+                    return nil
+                }
             }
             if requiresLiveTrades && !validatedYahoo {
                 return nil

@@ -112,6 +112,21 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(shown.currentPriceSource, "boerse.de (NYSE)")
     }
 
+    func testMultiHourRiseExpiresWhenFreshPriceLosesMostOfItsGain() {
+        let signal = ScanResult(symbol: "CUE", price: 4.20, priceCurrency: "USD",
+            anomalyScore: 85, priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
+            relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: 31.25,
+            windowVolume: 1_000_000, sessionVolume: 1_000_000,
+            sessionTurnover: 4_000_000, signalAgeMinutes: 0,
+            signalSource: MultiHourRiseDetector.source, updatedAtMillis: 120_000,
+            dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus,
+            signalWindowLabel: "180m", signalPrice: 3.20, signalEpochMillis: 120_000)
+        let latest = MinuteBar(symbol: "CUE", minuteEpochSeconds: 180,
+            open: 3.60, high: 3.60, low: 3.60, close: 3.60, volume: 50_000)
+        XCTAssertTrue(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            latestBars: ["CUE": latest], nowMillis: 240_000).isEmpty)
+    }
+
     func testCurrencyMismatchAndStaleQuoteCannotOverrideYahooCandle() throws {
         let signal = event("MU", source: "Rapid crash", at: 120_000, change: -1,
                            window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)

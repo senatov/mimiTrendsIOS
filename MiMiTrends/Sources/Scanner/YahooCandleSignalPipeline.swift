@@ -24,13 +24,29 @@ enum YahooCandleSignalPipeline {
         let contextStart = usOpening ? start - 300 : start
         let completed = bars.filter {
             $0.symbol == symbol && $0.isValid && $0.minuteEpochSeconds >= contextStart
-                && $0.minuteEpochSeconds >= nowEpochSeconds - MarketBarStore.retentionSeconds
                 && $0.minuteEpochSeconds + 60 <= evaluationTime
         }.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
-        guard let last = completed.last, last.minuteEpochSeconds >= evaluationTime - 180 else { return nil }
         let status = volumeValidated
             ? (german ? delayedVolumeValidatedStatus : volumeValidatedStatus)
             : (german ? delayedStatus : currentStatus)
+        let regularStart = market.regularOpen(at: evaluationDate)
+            .map { Int64($0.timeIntervalSince1970) }
+        let multiHourBars = regularStart.map { opening in
+            bars.filter {
+                $0.symbol == symbol && $0.isValid &&
+                    $0.minuteEpochSeconds >= opening && $0.minuteEpochSeconds + 60 <= evaluationTime
+            }.sorted { $0.minuteEpochSeconds < $1.minuteEpochSeconds }
+        } ?? []
+        let multiHourSignal = regularStart.flatMap { opening in
+            hasValidatedVolume(multiHourBars, regularStart: opening, usOpening: false,
+                               required: volumeValidated)
+                ? MultiHourRiseDetector.detect(symbol: symbol, bars: multiHourBars,
+                    nowEpochSeconds: evaluationTime, dataStatus: status,
+                    observedAtEpochSeconds: nowEpochSeconds) : nil
+        }
+        guard let last = completed.last, last.minuteEpochSeconds >= evaluationTime - 180 else {
+            return multiHourSignal
+        }
         // A short drop can recover before this symbol's next scan. Inspect the
         // last few completed endpoints, retaining the original event time.
         for index in completed.indices.reversed() {
@@ -47,8 +63,9 @@ enum YahooCandleSignalPipeline {
             }
         }
         guard hasValidatedVolume(completed, regularStart: start, usOpening: usOpening,
-                                 required: volumeValidated) else { return nil }
-        return RapidRiseDetector.detect(symbol: symbol, bars: completed,
+                                 required: volumeValidated) else { return multiHourSignal }
+        return multiHourSignal
+            ?? RapidRiseDetector.detect(symbol: symbol, bars: completed,
             nowEpochSeconds: evaluationTime, settings: settings.rapidRise,
             dataStatus: status, observedAtEpochSeconds: nowEpochSeconds)
             ?? SmoothRiseDetector.detect(symbol: symbol, bars: completed,

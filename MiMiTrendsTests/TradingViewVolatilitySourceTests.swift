@@ -44,4 +44,31 @@ final class TradingViewVolatilitySourceTests: XCTestCase {
         XCTAssertEqual(result.map(\.company.isin), ["US4581401001", "US1912161007"])
         XCTAssertTrue(try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates).isEmpty)
     }
+
+    func testMostVolatileRiseLaneIncludesLiquidCueBelowOldPriceAndCapFloors() throws {
+        let data = Data(#"""
+        {"data":[
+          {"s":"NASDAQ:CUE","d":["CUE","Cue Biopharma, Inc.","NASDAQ",4.53,11780000,20.23,37830000,56.88,"US22978P2056",59.89]},
+          {"s":"NASDAQ:THIN","d":["THIN","Thin Inc.","NASDAQ",4.53,1000,20,37830000,60,"US0000000001",50]},
+          {"s":"NASDAQ:SMALL","d":["SMALL","Small Inc.","NASDAQ",4.53,11780000,20,1000000,60,"US0000000002",50]}
+        ]}
+        """#.utf8)
+        let selected = try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates,
+                                                                      ranking: .strongRise)
+        XCTAssertEqual(selected.map(\.company.symbol), ["CUE"])
+        XCTAssertEqual(selected.first?.company.isin, "US22978P2056")
+        XCTAssertTrue(try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates).isEmpty)
+    }
+
+    func testGermanMostVolatileRiseLaneUsesGermanTurnoverFloor() throws {
+        let data = Data(#"""
+        {"data":[
+          {"s":"XETR:CA1","d":["CA1","Circus SE","XETR",8.4,127770,2,223500000,17.4,"DE0000000001",13.5]},
+          {"s":"XETR:THIN","d":["THIN","Thin AG","XETR",8.4,100,2,223500000,20,"DE0000000002",15]}
+        ]}
+        """#.utf8)
+        let selected = try TradingViewVolatilitySource.parseScanJSON(data, market: .germany,
+                                                                      ranking: .strongRise)
+        XCTAssertEqual(selected.map(\.company.symbol), ["CA1.DE"])
+    }
 }

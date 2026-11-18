@@ -169,6 +169,14 @@ struct RadarSignalRow: View {
     }
 
     private var eventExplanation: String {
+        if signal.signalSource == MultiHourRiseDetector.source {
+            let anchor = signal.signalPrice.formatted(.number.precision(.fractionLength(2)))
+            let close = signal.price.formatted(.number.precision(.fractionLength(2)))
+            let recent = signal.recentTurnover.map {
+                " Last 30-minute turnover: \($0.formatted(.currency(code: signal.priceCurrency ?? "USD")))."
+            } ?? ""
+            return "Rise over \(signal.signalWindowLabel): \(signal.windowChangePercent.formatted(.number.precision(.fractionLength(2))))%. Anchor close: \(anchor); event close: \(close).\(recent) High volatility; check current liquidity."
+        }
         guard let candle = signal.eventCandle else {
             return "\(eventLabel). Original candle details were not saved for this older signal."
         }

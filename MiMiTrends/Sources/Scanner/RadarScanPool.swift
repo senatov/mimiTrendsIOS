@@ -4,6 +4,7 @@ enum RadarScanPool {
     static let maximumSymbols = 255
     private static let maximumActiveUS = 96
     private static let maximumActiveGerman = 64
+    private static let maximumStrongRisers = 24
 
     static func withRetainedSymbols(_ retained: [String], ranked: [String]) -> [String] {
         var seen = Set<String>()
@@ -17,8 +18,12 @@ enum RadarScanPool {
     }
 
     static func prioritizedSymbols(activeUS: [String], activeGerman: [String],
+                                   strongUS: [String] = [], strongGerman: [String] = [],
                                    volatileUS: [String], volatileGerman: [String],
                                    germanOpen: Bool, usOpen: Bool) -> [String] {
+        let strong = MarketRadarScanner.interleave(
+            usOpen ? strongUS : [], germanOpen ? strongGerman : [],
+            limit: maximumStrongRisers)
         let us = usOpen ? activeUS.filter(MarketCandidateFilter.supportsYahooBars) : []
         let german = germanOpen ? activeGerman.filter(MarketCandidateFilter.supportsYahooBars) : []
         let active = MarketRadarScanner.interleave(Array(us.prefix(maximumActiveUS)),
@@ -27,7 +32,7 @@ enum RadarScanPool {
         let volatility = MarketRadarScanner.interleave(
             usOpen ? volatileUS : [], germanOpen ? volatileGerman : [], limit: maximumSymbols)
         var seen = Set<String>()
-        return (active + volatility).filter {
+        return (strong + active + volatility).filter {
             MarketCandidateFilter.supportsYahooBars(symbol: $0) && seen.insert($0).inserted
         }.prefix(maximumSymbols).map { $0 }
     }

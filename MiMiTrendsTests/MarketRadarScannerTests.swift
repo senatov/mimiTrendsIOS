@@ -31,6 +31,22 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertFalse(usOnly.contains { $0.hasSuffix(".DE") })
     }
 
+    func testStrongRisersGetReservedScanSlotsAfterFirstTradingHour() {
+        let pool = RadarScanPool.prioritizedSymbols(
+            activeUS: (0..<96).map { "A\($0)" }, activeGerman: [],
+            strongUS: ["CUE"], strongGerman: ["CA1.DE"],
+            volatileUS: [], volatileGerman: [], germanOpen: true, usOpen: true)
+        XCTAssertEqual(Array(pool.prefix(2)), ["CUE", "CA1.DE"])
+        let before = ISO8601DateFormatter().date(from: "2026-11-18T15:29:00Z")!
+        let after = ISO8601DateFormatter().date(from: "2026-11-18T15:30:00Z")!
+        XCTAssertFalse(MarketRadarScanner.canScanStrongRisers(market: .unitedStates, at: before))
+        XCTAssertTrue(MarketRadarScanner.canScanStrongRisers(market: .unitedStates, at: after))
+        let germanBefore = ISO8601DateFormatter().date(from: "2026-11-18T08:59:00Z")!
+        let germanAfter = ISO8601DateFormatter().date(from: "2026-11-18T09:00:00Z")!
+        XCTAssertFalse(MarketRadarScanner.canScanStrongRisers(market: .germany, at: germanBefore))
+        XCTAssertTrue(MarketRadarScanner.canScanStrongRisers(market: .germany, at: germanAfter))
+    }
+
     func testYahooScanRotatesAcrossBoundedBatches() {
         let symbols = ["A", "B", "C", "D", "E", "F"]
         XCTAssertEqual(MarketRadarScanner.scanSlice(symbols, offset: 0, limit: 4), ["A", "B", "C", "D"])

@@ -12,9 +12,10 @@ enum MarketCandidateFilter {
 
     static func accepts(
         symbol: String, name: String, price: Double, exchange: String,
-        currency: String? = nil, volume: Double? = nil, marketCap: Double? = nil
+        currency: String? = nil, volume: Double? = nil, marketCap: Double? = nil,
+        minimumPrice: Double = 5
     ) -> Bool {
-        guard price.isFinite, price >= 5,
+        guard price.isFinite, price >= minimumPrice,
               !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               excludedName.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)) == nil else {
             return false

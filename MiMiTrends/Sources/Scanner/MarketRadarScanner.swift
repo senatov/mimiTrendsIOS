@@ -9,6 +9,8 @@ actor MarketRadarScanner {
     private var usCandidates: [RadarCompanyCandidate] = []
     private var activeGermanCandidates: [RadarCompanyCandidate] = []
     private var activeUSCandidates: [RadarCompanyCandidate] = []
+    private var strongGermanCandidates: [RadarCompanyCandidate] = []
+    private var strongUSCandidates: [RadarCompanyCandidate] = []
     private var eixISINs: Set<String> = []
     private var nextEIXRefreshAt: Date = .distantPast
     private var previousSessions: RadarTradingSessions?
@@ -34,6 +36,8 @@ actor MarketRadarScanner {
                 usCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewUS")) ?? []
                 activeGermanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewActiveDE")) ?? []
                 activeUSCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewActiveUS")) ?? []
+                strongGermanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewStrongDE")) ?? []
+                strongUSCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewStrongUS")) ?? []
                 eixISINs = (try? await candidateStore.eixSnapshot()) ?? []
             }
         }
@@ -73,6 +77,7 @@ actor MarketRadarScanner {
             let active = market == .germany ? sessions.german == .regular : sessions.us.isTrading
             guard active else { continue }
             let activeKey = market == .germany ? "tradingViewActiveDE" : "tradingViewActiveUS"
+            let strongKey = market == .germany ? "tradingViewStrongDE" : "tradingViewStrongUS"
             tradingViewTotals.operations += 1
             do {
                 let loaded = try await tradingView.loadActive(market)
@@ -92,6 +97,26 @@ actor MarketRadarScanner {
                     MarketRadarErrorDescription.message(error, provider: "TradingView")
                 AppDiagnostics.shared.record(.warning, "TradingView", "active-candidate-refresh-failed",
                     "market=\(market) error=\(String(describing: type(of: error)))")
+            }
+            let marketClock: RadarTradingMarket = market == .germany ? .germany : .unitedStates
+            if Self.canScanStrongRisers(market: marketClock, at: Date()) {
+                tradingViewTotals.operations += 1
+                do {
+                    let loaded = try await tradingView.loadStrongRisers(market)
+                    let companies = loaded.map(\.company)
+                    if market == .germany { strongGermanCandidates = companies }
+                    else { strongUSCandidates = companies }
+                    tradingViewTotals.received += loaded.count
+                    tradingViewTotals.valid += loaded.count
+                    try? await candidateStore?.saveCandidateSnapshot(companies, source: strongKey)
+                    AppDiagnostics.shared.record(.info, "TradingView", "strong-risers-loaded",
+                        "market=\(strongKey) selected=\(loaded.count) refreshMinutes=10")
+                } catch {
+                    if Task.isCancelled { return }
+                    tradingViewTotals.errors += 1
+                    AppDiagnostics.shared.record(.warning, "TradingView", "strong-risers-refresh-failed",
+                        "market=\(strongKey) error=\(String(describing: type(of: error)))")
+                }
             }
             tradingViewTotals.operations += 1
             do {
@@ -135,8 +160,14 @@ actor MarketRadarScanner {
         let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
         let activeUS = Self.eixCandidates(activeUSCandidates, availableISINs: eixISINs)
         let activeGerman = Self.eixCandidates(activeGermanCandidates, availableISINs: eixISINs)
+        let now = Date()
+        let strongUS = Self.canScanStrongRisers(market: .unitedStates, at: now)
+            ? Self.eixCandidates(strongUSCandidates, availableISINs: eixISINs) : []
+        let strongGerman = Self.canScanStrongRisers(market: .germany, at: now)
+            ? Self.eixCandidates(strongGermanCandidates, availableISINs: eixISINs) : []
         let ranked = enabled ? RadarScanPool.prioritizedSymbols(
             activeUS: activeUS.map(\.symbol), activeGerman: activeGerman.map(\.symbol),
+            strongUS: strongUS.map(\.symbol), strongGerman: strongGerman.map(\.symbol),
             volatileUS: eligibleUS.map(\.symbol), volatileGerman: eligibleGerman.map(\.symbol),
             germanOpen: sessions.german == .regular, usOpen: sessions.us.isTrading
         ) : []
@@ -146,7 +177,8 @@ actor MarketRadarScanner {
                     ? sessions.german == .regular : sessions.us.isTrading)
         }
         let pool = enabled ? RadarScanPool.withRetainedSymbols(retained, ranked: ranked) : []
-        let allCandidates = activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
+        let allCandidates = strongUSCandidates + strongGermanCandidates +
+            activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
         let names = Dictionary(allCandidates.map { ($0.symbol, $0.name) },
                                uniquingKeysWith: { first, _ in first })
         return MarketRadarCycle(
@@ -166,8 +198,16 @@ actor MarketRadarScanner {
         candidates.filter { $0.isin.map(availableISINs.contains) ?? false }
     }
 
+    static func canScanStrongRisers(market: RadarTradingMarket, at date: Date) -> Bool {
+        if market.phase(at: date) == .afterHours { return true }
+        guard market.phase(at: date) == .regular,
+              let start = market.sessionStart(at: date) else { return false }
+        return date.timeIntervalSince(start) >= 60 * 60
+    }
+
     func verifiedEIXSymbols() -> Set<String> {
-        Set(Self.eixCandidates(activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates,
+        Set(Self.eixCandidates(strongUSCandidates + strongGermanCandidates +
+            activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates,
                                availableISINs: eixISINs)
             .map(\.symbol))
     }
