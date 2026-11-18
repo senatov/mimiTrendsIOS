@@ -80,13 +80,19 @@ extension RadarView {
         while !Task.isCancelled {
             do {
                 let enabledProviders = Set(MarketProvider.allCases.filter { MarketProviderAccess.isEnabled($0) })
-                let discovered = try await marketScanner.scan(enabledProviders: enabledProviders)
+                let retained = recentSignals.filter {
+                    $0.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
+                        $0.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
+                }.map(\.symbol)
+                let discovered = try await marketScanner.scan(
+                    enabledProviders: enabledProviders, retainedSymbols: retained)
                 guard !Task.isCancelled else { return }
                 verifiedEIXSymbols = await marketScanner.verifiedEIXSymbols()
                 clearUnverifiedSelection()
                 if marketCycle == nil { marketCycle = discovered }
                 let scan = await marketScanner.scanCandles(discovered,
-                    enabled: enabledProviders.contains(.yahoo), prioritySymbol: chartSymbol)
+                    enabled: enabledProviders.contains(.yahoo), prioritySymbol: chartSymbol,
+                    retainedSymbols: retained)
                 guard !Task.isCancelled else { return }
                 marketCycle = scan.cycle
                 if scan.recordedSignal { await refreshSignals() }

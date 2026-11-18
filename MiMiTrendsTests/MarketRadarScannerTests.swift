@@ -60,6 +60,18 @@ final class MarketRadarScannerTests: XCTestCase {
         XCTAssertEqual(Set(batch).count, batch.count)
     }
 
+    func testRetainedSignalSymbolsAreRecheckedWhileRankedPoolContinues() {
+        let symbols = ["A", "B", "C", "D", "E"]
+        let now = Date(timeIntervalSince1970: 10_000)
+        let batch = MarketRadarScanner.candleBatch(symbols, processed: ["A", "B", "E"],
+            prioritySymbol: nil, retainedSymbols: ["D", "E"],
+            lastScannedAt: ["D": now.addingTimeInterval(-61),
+                            "E": now.addingTimeInterval(-20)], now: now)
+        XCTAssertEqual(batch.first, "D")
+        XCTAssertTrue(batch.contains("C"))
+        XCTAssertFalse(batch.contains("E"))
+    }
+
     func testYahooRateLimitDoesNotRetryAlternateHost() async {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [YahooRateLimitURLProtocol.self]

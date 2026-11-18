@@ -5,6 +5,17 @@ enum RadarScanPool {
     private static let maximumActiveUS = 96
     private static let maximumActiveGerman = 64
 
+    static func withRetainedSymbols(_ retained: [String], ranked: [String]) -> [String] {
+        var seen = Set<String>()
+        var protected: [String] = []
+        for symbol in retained where seen.insert(symbol).inserted {
+            protected.append(symbol)
+            if protected.count == 16 { break }
+        }
+        return Array((protected + ranked.filter { seen.insert($0).inserted })
+            .prefix(maximumSymbols))
+    }
+
     static func prioritizedSymbols(activeUS: [String], activeGerman: [String],
                                    volatileUS: [String], volatileGerman: [String],
                                    germanOpen: Bool, usOpen: Bool) -> [String] {

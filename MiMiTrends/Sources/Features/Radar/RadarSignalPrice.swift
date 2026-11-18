@@ -9,17 +9,21 @@ enum RadarSignalPrice {
 
     static func display(_ signal: ScanResult, rates: DisplayCurrencyRates?, currency: String) -> Presentation {
         let sourceCurrency = signal.priceCurrency ?? "USD"
-        let sourcePrice = signal.price.formatted(.currency(code: sourceCurrency))
-        guard let rates, let converted = rates.convert(signal.price, from: sourceCurrency, to: currency) else {
+        let displayed = signal.currentPrice ?? signal.price
+        let sourcePrice = displayed.formatted(.currency(code: sourceCurrency))
+        let eventPrice = signal.price.formatted(.currency(code: sourceCurrency))
+        let provenance = signal.currentPriceSource.map { "Latest \($0): \(sourcePrice). Event close: \(eventPrice)." }
+            ?? "Event close: \(eventPrice). No newer verified price."
+        guard let rates, let converted = rates.convert(displayed, from: sourceCurrency, to: currency) else {
             if sourceCurrency == currency {
-                return Presentation(text: sourcePrice, explanation: "Source price: \(sourcePrice).", convertedAmount: signal.price)
+                return Presentation(text: sourcePrice, explanation: provenance, convertedAmount: displayed)
             }
-            return Presentation(text: "—", explanation: "Waiting for an ECB rate to convert \(sourceCurrency) to \(currency). Source price: \(sourcePrice).", convertedAmount: nil)
+            return Presentation(text: "—", explanation: "\(provenance) Waiting for an ECB rate to convert \(sourceCurrency) to \(currency).", convertedAmount: nil)
         }
         let text = converted.formatted(.currency(code: currency).precision(.fractionLength(2)))
         return Presentation(text: text,
-                            explanation: sourceCurrency == currency ? "Source price: \(sourcePrice)." :
-                                "Approximate conversion of \(sourcePrice) using ECB reference rates dated \(rates.date).",
+                            explanation: sourceCurrency == currency ? provenance :
+                                "\(provenance) Approximate conversion using ECB reference rates dated \(rates.date).",
                             convertedAmount: converted)
     }
 

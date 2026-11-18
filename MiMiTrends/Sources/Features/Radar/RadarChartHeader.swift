@@ -5,6 +5,7 @@ struct RadarChartHeader: View {
     let companyName: String
     let metadata: RadarCompanyMetadata?
     let signal: ScanResult?
+    let eventBar: MinuteBar?
     let lastBar: MinuteBar?
     let rates: DisplayCurrencyRates?
     let currency: String
@@ -32,6 +33,21 @@ struct RadarChartHeader: View {
                 }
             }
             .padding(.vertical, 4)
+            if let event = eventBar {
+                let direction = event.close > event.open ? "↑" : event.close < event.open ? "↓" : "→"
+                let time = Date(timeIntervalSince1970: TimeInterval(event.minuteEpochSeconds))
+                    .formatted(date: .abbreviated, time: .shortened)
+                Text("Event candle \(time) \(direction) · O \(event.open.formatted(.number.precision(.fractionLength(2)))) · H \(event.high.formatted(.number.precision(.fractionLength(2)))) · L \(event.low.formatted(.number.precision(.fractionLength(2)))) · C \(event.close.formatted(.number.precision(.fractionLength(2)))) · Volume \(Int(event.volume).formatted())")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityLabel("Event candle \(time), \(direction == "↑" ? "up" : direction == "↓" ? "down" : "flat"). Open \(event.open), high \(event.high), low \(event.low), close \(event.close), volume \(Int(event.volume))")
+                if let turnover = signal?.recentTurnover {
+                    Text("30-minute turnover \(turnover.formatted(.currency(code: signal?.priceCurrency ?? "USD")))")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
             if hasTrades && outsideTradeCount > 0 && range != .trades {
                 HStack(spacing: 10) {
                     Text("\(outsideTradeCount) imported \(outsideTradeCount == 1 ? "trade" : "trades") outside \(range.title)")
@@ -146,13 +162,13 @@ struct RadarChartHeader: View {
                         .foregroundStyle(signal.windowChangePercent < 0 ? .red : .green)
                 }
                 if compact {
-                    compactStatus(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed" : "Signal",
-                                  epoch: signal.signalEpochMillis / 1_000)
+                    compactStatus(signal.currentPrice == nil ? "Event" : "Latest",
+                                  epoch: (signal.currentPriceAtMillis ?? signal.signalEpochMillis) / 1_000)
                 } else {
                     Text(RadarSignalPresentation.title(for: signal.signalSource))
                         .font(.caption).foregroundStyle(.indigo)
-                    status(["DELAYED", YahooCandleSignalPipeline.delayedStatus].contains(signal.dataStatus) ? "Delayed signal" : "Signal price",
-                           epoch: signal.signalEpochMillis / 1_000)
+                    status(signal.currentPrice == nil ? "Event price" : "Latest \(signal.currentPriceSource ?? "price")",
+                           epoch: (signal.currentPriceAtMillis ?? signal.signalEpochMillis) / 1_000)
                 }
             }
         } else if let lastBar {

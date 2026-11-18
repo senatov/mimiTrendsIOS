@@ -15,7 +15,18 @@ enum MarketSignalFactory {
         observedAtEpochSeconds: Int64? = nil
     ) -> ScanResult {
         let observedTime = observedAtEpochSeconds ?? nowEpochSeconds
-        let session = bars.filter { $0.minuteEpochSeconds >= nowEpochSeconds - 10_800 }
+        let event = bars.filter {
+            $0.minuteEpochSeconds >= start.minuteEpochSeconds &&
+                $0.minuteEpochSeconds <= end.minuteEpochSeconds
+        }
+        let session = bars.filter {
+            $0.minuteEpochSeconds >= end.minuteEpochSeconds - 10_800 &&
+                $0.minuteEpochSeconds <= end.minuteEpochSeconds
+        }
+        let recentTurnover = session.filter {
+            $0.minuteEpochSeconds >= end.minuteEpochSeconds - 1_800 &&
+                $0.volumeStatus == .reported
+        }.reduce(0) { $0 + $1.close * $1.volume }
         return ScanResult(
             symbol: symbol,
             price: displayPrice,
@@ -27,7 +38,8 @@ enum MarketSignalFactory {
             relativeVolume: nil,
             candleBodyRatio: 0,
             windowChangePercent: changePercent,
-            windowVolume: session.suffix(eventBarCount).reduce(0) { $0 + $1.volume },
+            windowVolume: (source == "Tradable corridor" ? Array(session.suffix(eventBarCount)) : event)
+                .reduce(0) { $0 + $1.volume },
             sessionVolume: session.reduce(0) { $0 + $1.volume },
             sessionTurnover: session.reduce(0) { $0 + $1.close * $1.volume },
             signalAgeMinutes: Int(max(0, observedTime - end.minuteEpochSeconds) / 60),
@@ -38,7 +50,8 @@ enum MarketSignalFactory {
             signalPrice: start.close,
             signalEpochMillis: end.minuteEpochSeconds * 1_000,
             analysisUpdatedAtMillis: end.minuteEpochSeconds * 1_000,
-            scanEvaluatedAtMillis: observedTime * 1_000
+            scanEvaluatedAtMillis: observedTime * 1_000,
+            anchorCandle: start, eventCandle: end, recentTurnover: recentTurnover
         )
     }
 }

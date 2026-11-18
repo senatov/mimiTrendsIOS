@@ -34,6 +34,12 @@ struct ScanResult: Codable, Equatable, Sendable {
     let analysisUpdatedAtMillis: Int64
     let scanEvaluatedAtMillis: Int64
     let isRetained: Bool
+    let anchorCandle: MinuteBar?
+    let eventCandle: MinuteBar?
+    let recentTurnover: Double?
+    var currentPrice: Double?
+    var currentPriceSource: String?
+    var currentPriceAtMillis: Int64?
 
     init(
         symbol: String,
@@ -70,7 +76,13 @@ struct ScanResult: Codable, Equatable, Sendable {
         entryQualityDetails: String = "Entry-quality inputs are unavailable.",
         analysisUpdatedAtMillis: Int64? = nil,
         scanEvaluatedAtMillis: Int64? = nil,
-        isRetained: Bool = false
+        isRetained: Bool = false,
+        anchorCandle: MinuteBar? = nil,
+        eventCandle: MinuteBar? = nil,
+        recentTurnover: Double? = nil,
+        currentPrice: Double? = nil,
+        currentPriceSource: String? = nil,
+        currentPriceAtMillis: Int64? = nil
     ) {
         self.symbol = symbol
         self.price = price
@@ -107,5 +119,11 @@ struct ScanResult: Codable, Equatable, Sendable {
         self.analysisUpdatedAtMillis = analysisUpdatedAtMillis ?? updatedAtMillis
         self.scanEvaluatedAtMillis = scanEvaluatedAtMillis ?? updatedAtMillis
         self.isRetained = isRetained
+        self.anchorCandle = anchorCandle
+        self.eventCandle = eventCandle
+        self.recentTurnover = recentTurnover
+        self.currentPrice = currentPrice
+        self.currentPriceSource = currentPriceSource
+        self.currentPriceAtMillis = currentPriceAtMillis
     }
 }

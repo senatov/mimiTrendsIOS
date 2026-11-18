@@ -114,7 +114,11 @@ struct RadarChartPreview: View {
         VStack(alignment: .leading, spacing: 8) {
             RadarChartHeader(
                 symbol: symbol, companyName: companyName, metadata: companyMetadata,
-                signal: chartSignal, lastBar: chartData.bars.last, rates: currencyRates,
+                signal: chartSignal,
+                eventBar: chartSignal?.eventCandle ?? allBars.first(where: {
+                    $0.minuteEpochSeconds == (chartSignal?.signalEpochMillis ?? 0) / 1_000
+                }),
+                lastBar: chartData.bars.last, rates: currencyRates,
                 currency: displayCurrency, hasTrades: !chartTrades.isEmpty,
                 outsideTradeCount: outsideTradeCount,
                 focusAvailable: focusAvailable,

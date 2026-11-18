@@ -175,6 +175,15 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertTrue(mixed.contains("US0"))
     }
 
+    func testRecentSignalRemainsInPoolAfterRankingRotation() {
+        let ranked = (0..<255).map { "US\($0)" }
+        let pool = RadarScanPool.withRetainedSymbols(["AEM", "US0", "AEM"], ranked: ranked)
+        XCTAssertEqual(pool.count, 255)
+        XCTAssertEqual(Array(pool.prefix(3)), ["AEM", "US0", "US1"])
+        XCTAssertEqual(Set(pool).count, 255)
+        XCTAssertFalse(pool.contains("US254"))
+    }
+
     func testDAXRanksFreshMoversButKeepsStaleConstituents() throws {
         let json = """
         [

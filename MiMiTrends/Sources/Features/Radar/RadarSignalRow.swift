@@ -146,7 +146,7 @@ struct RadarSignalRow: View {
             .padding(.vertical, 2)
             .background(isGermanWatch ? Color.blue.opacity(0.14) : eventColor.opacity(0.12),
                         in: RoundedRectangle(cornerRadius: 6))
-            .help(isGermanWatch ? "German watch candidate from a relaxed movement threshold; not a confirmed signal." : eventLabel)
+            .help(isGermanWatch ? "German watch candidate from a relaxed movement threshold; not a confirmed signal." : eventExplanation)
     }
 
     private var movement: some View {
@@ -166,6 +166,22 @@ struct RadarSignalRow: View {
     private var eventLabel: String {
         let label = RadarSignalPresentation.badge(for: signal)
         return signal.isRetained ? "\(label) · RECENT" : label
+    }
+
+    private var eventExplanation: String {
+        guard let candle = signal.eventCandle else {
+            return "\(eventLabel). Original candle details were not saved for this older signal."
+        }
+        let direction = candle.close > candle.open ? "up" : candle.close < candle.open ? "down" : "flat"
+        let time = Date(timeIntervalSince1970: TimeInterval(candle.minuteEpochSeconds))
+            .formatted(date: .abbreviated, time: .shortened)
+        let anchor = signal.anchorCandle.map {
+            " Anchor close \($0.close.formatted(.number.precision(.fractionLength(2))))."
+        } ?? ""
+        let turnover = signal.recentTurnover.map {
+            " 30-minute turnover \($0.formatted(.currency(code: signal.priceCurrency ?? "USD")))."
+        } ?? ""
+        return "\(eventLabel) · \(time) · \(direction) candle. Open \(candle.open), high \(candle.high), low \(candle.low), close \(candle.close), volume \(Int(candle.volume)).\(anchor)\(turnover)"
     }
 
     private var eventColor: Color {

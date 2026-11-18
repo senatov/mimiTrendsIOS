@@ -23,7 +23,8 @@ actor MarketRadarScanner {
     private var nextScanRoundAt: Date = .distantPast
     private var lastCandleScanAt: [String: Date] = [:]
 
-    func scan(enabledProviders: Set<MarketProvider> = Set(MarketProvider.allCases)) async throws -> MarketRadarCycle {
+    func scan(enabledProviders: Set<MarketProvider> = Set(MarketProvider.allCases),
+              retainedSymbols: [String] = []) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
         let sessions = RadarTradingSessions(at: Date())
         if candidateStore == nil {
@@ -61,7 +62,8 @@ actor MarketRadarScanner {
             await refreshCandidates(sessions: sessions)
         }
         previousSessions = sessions
-        return candidateCycle(sessions: sessions, enabledProviders: enabledProviders)
+        return candidateCycle(sessions: sessions, enabledProviders: enabledProviders,
+                              retainedSymbols: retainedSymbols)
     }
 
     private func refreshCandidates(sessions: RadarTradingSessions) async {
@@ -126,17 +128,24 @@ actor MarketRadarScanner {
     }
 
     private func candidateCycle(sessions: RadarTradingSessions,
-                                enabledProviders: Set<MarketProvider>) -> MarketRadarCycle {
+                                enabledProviders: Set<MarketProvider>,
+                                retainedSymbols: [String]) -> MarketRadarCycle {
         let enabled = enabledProviders.contains(.tradingView) && enabledProviders.contains(.yahoo)
         let eligibleUS = Self.eixCandidates(usCandidates, availableISINs: eixISINs)
         let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
         let activeUS = Self.eixCandidates(activeUSCandidates, availableISINs: eixISINs)
         let activeGerman = Self.eixCandidates(activeGermanCandidates, availableISINs: eixISINs)
-        let pool = enabled ? RadarScanPool.prioritizedSymbols(
+        let ranked = enabled ? RadarScanPool.prioritizedSymbols(
             activeUS: activeUS.map(\.symbol), activeGerman: activeGerman.map(\.symbol),
             volatileUS: eligibleUS.map(\.symbol), volatileGerman: eligibleGerman.map(\.symbol),
             germanOpen: sessions.german == .regular, usOpen: sessions.us.isTrading
         ) : []
+        let retained = retainedSymbols.filter {
+            MarketCandidateFilter.supportsYahooBars(symbol: $0) &&
+                (MarketCandidateFilter.isGermanSymbol($0)
+                    ? sessions.german == .regular : sessions.us.isTrading)
+        }
+        let pool = enabled ? RadarScanPool.withRetainedSymbols(retained, ranked: ranked) : []
         let allCandidates = activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
         let names = Dictionary(allCandidates.map { ($0.symbol, $0.name) },
                                uniquingKeysWith: { first, _ in first })
@@ -186,20 +195,22 @@ actor MarketRadarScanner {
     }
 
     static func candleBatch(_ symbols: [String], processed: Set<String>, prioritySymbol: String?,
+                            retainedSymbols: [String] = [],
                             lastScannedAt: [String: Date], now: Date) -> [String] {
         let selected = prioritySymbol?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        let preferred = ([selected].compactMap { $0 } + Array(symbols.prefix(3)))
+        let preferred = ([selected].compactMap { $0 } + retainedSymbols.prefix(16) + symbols.prefix(3))
             .filter { symbols.contains($0) }
         var seen = Set<String>()
         let due = preferred.filter { seen.insert($0).inserted }
             .filter { now.timeIntervalSince(lastScannedAt[$0] ?? .distantPast) >= 60 }
-        let priority = Array(due.prefix(4))
+        let priority = Array(due.prefix(8))
         let pending = symbols.filter { !processed.contains($0) && !priority.contains($0) }
         return priority + Array(pending.prefix(16 - priority.count))
     }
 
     func scanCandles(_ cycle: MarketRadarCycle, enabled: Bool,
-                     prioritySymbol: String? = nil) async -> (cycle: MarketRadarCycle, recordedSignal: Bool) {
+                     prioritySymbol: String? = nil,
+                     retainedSymbols: [String] = []) async -> (cycle: MarketRadarCycle, recordedSignal: Bool) {
         let symbols = cycle.candidates.map(\.symbol)
         candleOutcomes = candleOutcomes.filter { symbols.contains($0.key) }
         lastCandleScanAt = lastCandleScanAt.filter { symbols.contains($0.key) }
@@ -219,7 +230,7 @@ actor MarketRadarScanner {
         guard let candleStore else { return (cycle, false) }
         let skipped = await YahooSymbolResolutionStore.shared.skippedSymbols()
         let batch = Self.candleBatch(symbols, processed: Set(candleOutcomes.keys),
-                                     prioritySymbol: prioritySymbol,
+                                     prioritySymbol: prioritySymbol, retainedSymbols: retainedSymbols,
                                      lastScannedAt: lastCandleScanAt, now: Date())
         var recordedSignal = false
         if let cooldown = candleCooldownUntil, Date() >= cooldown { candleCooldownUntil = nil }

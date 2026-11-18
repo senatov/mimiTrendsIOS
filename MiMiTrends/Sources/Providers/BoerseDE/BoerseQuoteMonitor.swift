@@ -106,6 +106,9 @@ actor BoerseQuoteMonitor {
     private var tickers: [String: String] = [:]
     private var attempts: [String: Date] = [:]
     private var signalStore: MarketSignalStore?
+    private var latestPrices: [String: RadarPriceObservation] = [:]
+
+    func priceObservations() -> [String: RadarPriceObservation] { latestPrices }
 
     func accept(_ samples: [BoerseQuoteSample], settings: RadarScanPreferences) async throws -> Int {
         let now = Date()
@@ -114,6 +117,12 @@ actor BoerseQuoteMonitor {
         for sample in samples {
             try Task.checkCancellation()
             guard let ticker = sample.symbol ?? tickers[sample.isin] else { continue }
+            let observation = RadarPriceObservation(
+                price: sample.price, currency: sample.currency, atMillis: sample.timestamp,
+                source: "boerse.de (\(sample.venue))")
+            if sample.timestamp > (latestPrices[ticker]?.atMillis ?? 0) {
+                latestPrices[ticker] = observation
+            }
             if let signal = update(sample, ticker: ticker, settings: settings.validated) {
                 if signalStore == nil { signalStore = try MarketSignalStore(url: MarketSignalStore.defaultURL()) }
                 if try await signalStore?.record(signal) == true {

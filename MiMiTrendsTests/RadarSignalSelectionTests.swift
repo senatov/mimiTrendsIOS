@@ -64,8 +64,65 @@ final class RadarSignalSelectionTests: XCTestCase {
         let failedBar = MinuteBar(symbol: "MU", minuteEpochSeconds: 120,
                                   open: 100, high: 100, low: 99, close: 99, volume: 1_000)
         let selected = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
-            latestBars: ["MU": failedBar])
+            latestBars: ["MU": failedBar], nowMillis: 180_000)
         XCTAssertTrue(selected.isEmpty)
+    }
+
+    func testNewerYahooCandleRemovesRecoveredCrashAndOlderSignalForSameStock() {
+        let recent = event("MU", source: "Rapid crash", at: 120_000, change: -1,
+                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let older = event("MU", source: "Rapid crash", at: 60_000, change: -1,
+                          window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let recovered = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
+            open: 99, high: 102, low: 99, close: 101, volume: 1_000)
+        let shown = RadarSignalSelection.displayHistory([recent, older], since: 0, limit: 10,
+            latestBars: ["MU": recovered], nowMillis: 240_000)
+        XCTAssertTrue(shown.isEmpty)
+    }
+
+    func testRecoveredOlderCrashDoesNotHideNewerValidCrash() {
+        let old = event("MU", source: "Rapid crash", at: 60_000, change: -1,
+                        window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus,
+                        anchor: 90)
+        let new = ScanResult(symbol: "MU", price: 95, anomalyScore: 0,
+            priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil, relativeVolume: nil,
+            candleBodyRatio: 0, windowChangePercent: -1, windowVolume: 1_000,
+            sessionVolume: 1_000, sessionTurnover: 95_000, signalAgeMinutes: 0,
+            signalSource: "Rapid crash", updatedAtMillis: 120_000,
+            dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus,
+            signalWindowLabel: "4m", signalPrice: 100, signalEpochMillis: 120_000)
+        let latest = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
+            open: 95, high: 96, low: 94, close: 95, volume: 1_000)
+        let shown = RadarSignalSelection.displayHistory([old, new], since: 0, limit: 10,
+            latestBars: ["MU": latest], nowMillis: 240_000)
+        XCTAssertEqual(shown.map(\.signalEpochMillis), [120_000])
+    }
+
+    func testFresherIndependentQuoteUpdatesPriceWithoutChangingEventClose() throws {
+        let signal = event("MU", source: "Rapid crash", at: 120_000, change: -1,
+                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let yahoo = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
+            open: 98, high: 99, low: 97, close: 98, volume: 1_000)
+        let external = RadarPriceObservation(price: 97, currency: "USD", atMillis: 260_000,
+                                             source: "boerse.de (NYSE)")
+        let shown = try XCTUnwrap(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            latestBars: ["MU": yahoo], externalPrices: ["MU": external], nowMillis: 300_000).first)
+        XCTAssertEqual(shown.price, 100)
+        XCTAssertEqual(shown.currentPrice, 97)
+        XCTAssertEqual(shown.currentPriceSource, "boerse.de (NYSE)")
+    }
+
+    func testCurrencyMismatchAndStaleQuoteCannotOverrideYahooCandle() throws {
+        let signal = event("MU", source: "Rapid crash", at: 120_000, change: -1,
+                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let yahoo = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
+            open: 98, high: 99, low: 97, close: 98, volume: 1_000)
+        let external = RadarPriceObservation(price: 105, currency: "EUR", atMillis: 260_000,
+                                             source: "boerse.de (TRADEGATE)")
+        let shown = try XCTUnwrap(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            latestBars: ["MU": yahoo], externalPrices: ["MU": external], nowMillis: 300_000).first)
+        XCTAssertEqual(shown.currentPrice, 98)
+        XCTAssertEqual(shown.currentPriceSource, "Yahoo candle")
     }
 
     func testDisplaysOnlyVolumeValidatedYahooCandles() {
@@ -92,6 +149,15 @@ final class RadarSignalSelectionTests: XCTestCase {
                            window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
         let displayed = RadarSignalSelection.displayHistory([quote, candle], since: 0, limit: 10)
         XCTAssertEqual(displayed.map(\.symbol), ["NVDA"])
+    }
+
+    func testValidatedSignalRemainsEligibleWhenTradingViewRankingRotates() {
+        let saved = event("AEM", source: "Rapid crash", at: 500, change: -1.2,
+            window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
+        let quoteOnly = event("OTHER", source: "boerse.de price drop", at: 500,
+            dataStatus: "BOERSE_PRICE_NO_VOLUME")
+        XCTAssertTrue(RadarSignalSelection.hasVerifiedOrigin(saved, currentSymbols: []))
+        XCTAssertFalse(RadarSignalSelection.hasVerifiedOrigin(quoteOnly, currentSymbols: []))
     }
 
     func testGermanWatchRelaxesThresholdUntilThreeRecentCandidatesQualify() {
@@ -134,7 +200,8 @@ final class RadarSignalSelectionTests: XCTestCase {
 
     private func event(
         _ symbol: String, source: String, at epoch: Int64,
-        change: Double = 1, window: String = "1m", dataStatus: String? = nil
+        change: Double = 1, window: String = "1m", dataStatus: String? = nil,
+        anchor: Double = 100
     ) -> ScanResult {
         ScanResult(
             symbol: symbol, price: 100, anomalyScore: 0,
@@ -145,7 +212,7 @@ final class RadarSignalSelectionTests: XCTestCase {
             updatedAtMillis: epoch,
             dataStatus: dataStatus ?? (["Rapid crash", "Rapid rise", "Confirmed reversal"].contains(source)
                 ? YahooCandleSignalPipeline.volumeValidatedStatus : "CACHE"),
-            signalWindowLabel: window, signalEpochMillis: epoch
+            signalWindowLabel: window, signalPrice: anchor, signalEpochMillis: epoch
         )
     }
 }

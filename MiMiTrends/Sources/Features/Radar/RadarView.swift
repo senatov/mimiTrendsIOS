@@ -111,14 +111,17 @@ struct RadarView: View {
 
     var visibleSignals: [ScanResult] {
         RadarSignalSelection.withGermanReserve(
-            recentSignals.filter { verifiedEIXSymbols.contains($0.symbol) },
+            recentSignals.filter {
+                RadarSignalSelection.hasVerifiedOrigin($0, currentSymbols: verifiedEIXSymbols)
+            },
             watch: germanWatchCandidates.filter { verifiedEIXSymbols.contains($0.symbol) },
             limit: min(max(maxResults, 5), 100)
         )
     }
 
     func clearUnverifiedSelection() {
-        if let selectedSignal, !verifiedEIXSymbols.contains(selectedSignal.symbol) {
+        if let selectedSignal,
+           !RadarSignalSelection.hasVerifiedOrigin(selectedSignal, currentSymbols: verifiedEIXSymbols) {
             self.selectedSignal = nil
         }
     }
@@ -197,19 +200,19 @@ struct RadarView: View {
             let germanSymbols = Set((marketCycle?.candidates ?? []).map(\.symbol).filter {
                 verifiedEIXSymbols.contains($0) && MarketCandidateFilter.isGermanSymbol($0)
             })
+            let externalPrices = await boerseQuoteMonitor.priceObservations()
             let (loaded, watch) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let latest = try await store.loadRecent(limit: 500)
                 let german = try await store.loadRecentGerman(limit: 100, sinceEpochMillis: cutoff)
                 let history = latest + german
                 var latestBars: [String: MinuteBar] = [:]
-                if history.contains(where: { $0.signalSource == "Confirmed reversal" }),
-                   let barStore = try? MarketBarStore(url: MarketBarStore.defaultURL()) {
-                    for signal in history where signal.signalSource == "Confirmed reversal" {
+                if let barStore = try? MarketBarStore(url: MarketBarStore.defaultURL()) {
+                    for signal in history where signal.signalEpochMillis >= cutoff {
                         if latestBars[signal.symbol] != nil { continue }
                         let bars = try? await barStore.loadRecentMinuteBars(
                             symbol: signal.symbol,
-                            fromEpochSeconds: signal.signalEpochMillis / 1_000,
+                            fromEpochSeconds: max(signal.signalEpochMillis / 1_000, Int64(Date().timeIntervalSince1970) - 600),
                             throughEpochSeconds: Int64(Date().timeIntervalSince1970), limit: 1
                         )
                         latestBars[signal.symbol] = bars?.last
@@ -217,7 +220,7 @@ struct RadarView: View {
                 }
                 let confirmed = RadarSignalSelection.displayHistory(
                     history, since: cutoff, limit: 600, preferences: preferences,
-                    latestBars: latestBars
+                    latestBars: latestBars, externalPrices: externalPrices
                 )
                 let watch = confirmed.contains(where: { germanSymbols.contains($0.symbol) }) ? []
                     : await RadarGermanWatchCandidates.load(symbols: germanSymbols, now: Date(),
@@ -232,12 +235,12 @@ struct RadarView: View {
             AppDiagnostics.shared.record(.info, "Radar", "history-loaded",
                 "signals=\(visible.count - watchCount) german=\(germanCount) watch=\(watchCount)")
             historyError = nil
-            if let selectedSignal, !visible.contains(where: {
-                $0.symbol == selectedSignal.symbol &&
-                $0.signalSource == selectedSignal.signalSource &&
-                $0.signalEpochMillis == selectedSignal.signalEpochMillis
-            }) {
-                self.selectedSignal = nil
+            if let selectedSignal {
+                self.selectedSignal = visible.first(where: {
+                    $0.symbol == selectedSignal.symbol &&
+                    $0.signalSource == selectedSignal.signalSource &&
+                    $0.signalEpochMillis == selectedSignal.signalEpochMillis
+                })
             }
             if selectNewest, let latest = visible.first(where: {
                 $0.dataStatus != RadarGermanWatchCandidates.dataStatus

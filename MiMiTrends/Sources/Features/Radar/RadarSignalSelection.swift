@@ -1,6 +1,19 @@
 import Foundation
 
+struct RadarPriceObservation: Sendable {
+    let price: Double
+    let currency: String
+    let atMillis: Int64
+    let source: String
+}
+
 enum RadarSignalSelection {
+    static func hasVerifiedOrigin(_ signal: ScanResult, currentSymbols: Set<String>) -> Bool {
+        currentSymbols.contains(signal.symbol) ||
+            signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
+            signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
+    }
+
     static func withGermanReserve(_ confirmed: [ScanResult], watch: [ScanResult], limit: Int) -> [ScanResult] {
         guard limit > 0 else { return [] }
         let german = confirmed.filter { MarketCandidateFilter.isGermanSymbol($0.symbol) }
@@ -14,36 +27,68 @@ enum RadarSignalSelection {
     static func displayHistory(
         _ history: [ScanResult], since cutoff: Int64, limit: Int,
         preferences: RadarScanPreferences = RadarScanPreferences(),
-        latestBars: [String: MinuteBar] = [:]
+        latestBars: [String: MinuteBar] = [:],
+        externalPrices: [String: RadarPriceObservation] = [:],
+        nowMillis: Int64 = Int64(Date().timeIntervalSince1970 * 1_000)
     ) -> [ScanResult] {
-        let qualified = history.filter { signal in
+        var invalidatedAt: [String: Int64] = [:]
+        let qualified = history.compactMap { original -> ScanResult? in
+            var signal = original
             guard signal.dataStatus != "QUOTE_NO_VOLUME", signal.dataStatus != "FINNHUB_LIVE",
-                  !signal.symbol.hasPrefix("LS:") else { return false }
+                  !signal.symbol.hasPrefix("LS:") else { return nil }
             let source = signal.signalSource.lowercased()
-            guard source != "rapid rise", source != "sharp rebound" else { return false }
-            if source == "confirmed reversal", let latest = latestBars[signal.symbol],
-               latest.minuteEpochSeconds * 1_000 > signal.signalEpochMillis,
-               latest.close <= signal.signalPrice {
-                return false
+            guard source != "rapid rise", source != "sharp rebound" else { return nil }
+            let candle = latestBars[signal.symbol]
+            let candlePrice = candle.flatMap { latest -> RadarPriceObservation? in
+                guard latest.isValid else { return nil }
+                return RadarPriceObservation(price: latest.close,
+                    currency: signal.priceCurrency ?? "USD",
+                    atMillis: (latest.minuteEpochSeconds + 60) * 1_000, source: "Yahoo candle")
+            }
+            let external = externalPrices[signal.symbol].flatMap { observation -> RadarPriceObservation? in
+                observation.currency == (signal.priceCurrency ?? "USD") ? observation : nil
+            }
+            let newest = [candlePrice, external].compactMap { $0 }
+                .filter { $0.atMillis > signal.signalEpochMillis &&
+                    $0.atMillis <= nowMillis + 60_000 && nowMillis - $0.atMillis <= 600_000 &&
+                    $0.price.isFinite && $0.price > 0 }
+                .max { $0.atMillis < $1.atMillis }
+            if let newest {
+                signal.currentPrice = newest.price
+                signal.currentPriceSource = newest.source
+                signal.currentPriceAtMillis = newest.atMillis
+                if source == "rapid crash", newest.price >= signal.signalPrice {
+                    invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
+                                                       signal.signalEpochMillis)
+                    return nil
+                }
+                if source == "confirmed reversal", newest.price <= signal.signalPrice {
+                    invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
+                                                       signal.signalEpochMillis)
+                    return nil
+                }
             }
             let requiresLiveTrades = ["rapid crash", "confirmed reversal", "smooth rise"].contains(source)
             let validatedYahoo = signal.dataStatus == YahooCandleSignalPipeline.volumeValidatedStatus ||
                 signal.dataStatus == YahooCandleSignalPipeline.delayedVolumeValidatedStatus
-            guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return false }
+            guard !signal.dataStatus.hasPrefix("YAHOO_CANDLES") || validatedYahoo else { return nil }
             if validatedYahoo {
                 let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
-                guard minutes <= 30 else { return false }
+                guard minutes <= 30 else { return nil }
             }
             if requiresLiveTrades && !validatedYahoo {
-                return false
+                return nil
             }
-            guard source == "rapid crash" else { return true }
+            guard source == "rapid crash" else { return signal }
             let minutes = Int(signal.signalWindowLabel.prefix { $0.isNumber }) ?? Int.max
             let threshold = minutes <= preferences.crashWindowMinutes
                 ? preferences.crashPercent : preferences.sustainedCrashPercent
-            return abs(signal.windowChangePercent) >= threshold
+            return abs(signal.windowChangePercent) >= threshold ? signal : nil
         }
-        let fresh = qualified.filter { $0.signalEpochMillis >= cutoff }
+        let fresh = qualified.filter {
+            $0.signalEpochMillis >= cutoff &&
+                $0.signalEpochMillis > (invalidatedAt[$0.symbol] ?? 0)
+        }
         return latestPerSymbol(fresh, limit: limit)
     }
 
