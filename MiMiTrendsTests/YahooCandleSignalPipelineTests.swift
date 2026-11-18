@@ -196,17 +196,37 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
                        "", "", "", "", time, venue], markup: "DE0007164600"
             )
         }
-        let stale = BoerseQuoteRows.decode([row(time: "16:25:00", venue: "STU")], now: now, slot: 0)
-        XCTAssertTrue(stale.samples.isEmpty)
-        XCTAssertTrue(stale.diagnostics.contains("time=1 recent=0 accepted=0"))
-        XCTAssertTrue(stale.diagnostics.contains("youngestAgeSeconds=300 timeSample=16:25:00"))
-        XCTAssertNotNil(stale.newestQuoteMillis)
+        let delayed = BoerseQuoteRows.decode([row(time: "16:25:00", venue: "STU")], now: now, slot: 0)
+        XCTAssertEqual(delayed.samples.count, 1)
+        XCTAssertTrue(delayed.diagnostics.contains("time=1 recent=1 accepted=1"))
+        XCTAssertTrue(delayed.diagnostics.contains("youngestAgeSeconds=300 timeSample=16:25:00"))
+        XCTAssertNotNil(delayed.newestQuoteMillis)
+
+        let expired = BoerseQuoteRows.decode([row(time: "16:19:00", venue: "STU")], now: now, slot: 0)
+        XCTAssertTrue(expired.samples.isEmpty)
 
         let fresh = BoerseQuoteRows.decode([row(time: "16:29:30", venue: "STU")], now: now, slot: 0)
         XCTAssertEqual(fresh.samples.count, 1)
         XCTAssertEqual(fresh.samples.first?.symbol, "SAP.DE")
         XCTAssertTrue(fresh.diagnostics.contains("recent=1 accepted=1"))
-        XCTAssertGreaterThan(fresh.newestQuoteMillis ?? 0, stale.newestQuoteMillis ?? 0)
+        XCTAssertGreaterThan(fresh.newestQuoteMillis ?? 0, delayed.newestQuoteMillis ?? 0)
+    }
+
+    func testBoerseDetectsSparseQuoteMoveWithoutInventingMinuteBars() async {
+        let monitor = BoerseQuoteMonitor()
+        let start = Int64(ISO8601DateFormatter().date(from: "2026-11-18T13:00:00Z")!
+            .timeIntervalSince1970 * 1_000)
+        func sample(_ offsetMinutes: Int64, _ price: Double) -> BoerseQuoteSample {
+            BoerseQuoteSample(isin: "DE0007164600", symbol: "SAP.DE", currency: "EUR",
+                              venue: "STU", timestamp: start + offsetMinutes * 60_000, price: price)
+        }
+        let first = await monitor.update(sample(0, 100), ticker: "SAP.DE", settings: RadarScanPreferences())
+        XCTAssertNil(first)
+        let move = await monitor.update(sample(3, 99), ticker: "SAP.DE", settings: RadarScanPreferences())
+        XCTAssertEqual(move?.signalSource, "boerse.de price drop")
+        XCTAssertEqual(move?.signalWindowLabel, "5m")
+        XCTAssertEqual(move?.signalPrice, 100)
+        XCTAssertEqual(move?.signalEpochMillis, start + 3 * 60_000)
     }
 
     func testBoerseQuoteSelectionKeepsOnlySelectedDAXSymbols() {

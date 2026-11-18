@@ -224,7 +224,7 @@ final class BoerseQuotePages {
                 latestQuoteMillis[slot] = newest
                 lastProgressAt[slot] = now
             }
-            if result.samples.isEmpty {
+            if result.youngestAgeSeconds.map({ $0 > 90 }) ?? true {
                 retryIfNeeded(slot: slot, view: view, url: url, now: now,
                               reason: "no-fresh-rows", details: result.diagnostics,
                               youngestAgeSeconds: result.youngestAgeSeconds)

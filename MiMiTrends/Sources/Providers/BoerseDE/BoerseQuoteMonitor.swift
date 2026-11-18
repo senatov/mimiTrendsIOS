@@ -13,6 +13,8 @@ enum BoerseQuoteRetryPolicy {
 }
 
 enum BoerseQuoteRows {
+    static let maximumQuoteAgeMillis: Int64 = 600_000
+
     struct Result {
         let samples: [BoerseQuoteSample]
         let diagnostics: String
@@ -53,7 +55,7 @@ enum BoerseQuoteRows {
                 sampleTime = String(row.text[12].replacingOccurrences(of: "\n", with: " ").prefix(24))
                 sampleVenue = String(row.text[13].prefix(24))
             }
-            guard nowMillis - timestamp <= 90_000 else { continue }
+            guard nowMillis - timestamp <= maximumQuoteAgeMillis else { continue }
             recent += 1
             let venue = row.text[13].uppercased()
             let currency: String
@@ -90,10 +92,14 @@ enum BoerseQuoteSelection {
 }
 
 actor BoerseQuoteMonitor {
+    private struct Observation {
+        let timestamp: Int64
+        let price: Double
+    }
+
     private struct Series {
         var timestamp: Int64
-        var openBar: MinuteBar
-        var completed: [MinuteBar] = []
+        var observations: [Observation]
     }
 
     private var series: [String: Series] = [:]
@@ -132,47 +138,40 @@ actor BoerseQuoteMonitor {
         return stored
     }
 
-    private func update(_ sample: BoerseQuoteSample, ticker: String, settings: RadarScanPreferences) -> ScanResult? {
-        let minute = sample.timestamp / 60_000 * 60
+    func update(_ sample: BoerseQuoteSample, ticker: String, settings: RadarScanPreferences) -> ScanResult? {
         let key = "\(ticker)|\(sample.venue)|\(sample.currency)"
-        let first = MinuteBar(symbol: ticker, minuteEpochSeconds: minute, open: sample.price,
-            high: sample.price, low: sample.price, close: sample.price, volume: 0, volumeStatus: .missing)
+        let observation = Observation(timestamp: sample.timestamp, price: sample.price)
         guard var history = series[key] else {
-            series[key] = Series(timestamp: sample.timestamp, openBar: first)
+            series[key] = Series(timestamp: sample.timestamp, observations: [observation])
             return nil
         }
         guard sample.timestamp > history.timestamp else { return nil }
         history.timestamp = sample.timestamp
-        let previous = history.openBar
-        if previous.minuteEpochSeconds == minute {
-            history.openBar = MinuteBar(symbol: ticker, minuteEpochSeconds: minute, open: previous.open,
-                high: max(previous.high, sample.price), low: min(previous.low, sample.price),
-                close: sample.price, volume: 0, volumeStatus: .missing)
-            series[key] = history
-            return nil
-        }
-        if minute - previous.minuteEpochSeconds != 60 { history.completed.removeAll() }
-        else { history.completed.append(previous) }
-        history.completed = Array(history.completed.suffix(31))
-        history.openBar = first
+        history.observations.append(observation)
+        history.observations.removeAll { sample.timestamp - $0.timestamp > 30 * 60_000 }
+        history.observations = Array(history.observations.suffix(256))
         series[key] = history
-        guard let last = history.completed.last, last.close >= settings.minimumPrice else { return nil }
+        guard sample.price >= settings.minimumPrice else { return nil }
         let rules = [(settings.crashWindowMinutes, -settings.crashPercent),
                      (settings.sustainedCrashWindowMinutes, -settings.sustainedCrashPercent),
                      (settings.riseWindowMinutes, settings.risePercent)]
-        for (minutes, threshold) in rules where history.completed.count > minutes {
-            let start = history.completed[history.completed.count - minutes - 1]
-            let change = (last.close / start.close - 1) * 100
+        for (minutes, threshold) in rules {
+            let windowMillis = Int64(minutes) * 60_000
+            guard let start = history.observations.first(where: {
+                let span = sample.timestamp - $0.timestamp
+                return span >= windowMillis / 2 && span <= windowMillis
+            }), start.price > 0 else { continue }
+            let change = (sample.price / start.price - 1) * 100
             guard threshold > 0 ? change >= threshold : change <= threshold else { continue }
-            let closeTime = minute * 1_000
-            return ScanResult(symbol: ticker, price: last.close, priceCurrency: sample.currency,
+            let signalTime = sample.timestamp / 60_000 * 60_000
+            return ScanResult(symbol: ticker, price: sample.price, priceCurrency: sample.currency,
                 anomalyScore: 0, priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
                 relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: change,
                 windowVolume: 0, sessionVolume: 0, sessionTurnover: 0, signalAgeMinutes: 0,
                 signalSource: change > 0 ? "boerse.de price rise" : "boerse.de price drop",
-                updatedAtMillis: closeTime, dataStatus: "BOERSE_PRICE_NO_VOLUME",
-                signalWindowLabel: "\(minutes)m", signalPrice: start.close, signalEpochMillis: closeTime,
-                entryQualityLabel: "Price observations · volume unavailable")
+                updatedAtMillis: signalTime, dataStatus: "BOERSE_PRICE_NO_VOLUME",
+                signalWindowLabel: "\(minutes)m", signalPrice: start.price, signalEpochMillis: signalTime,
+                entryQualityLabel: "Delayed price observations · volume unavailable")
         }
         return nil
     }
