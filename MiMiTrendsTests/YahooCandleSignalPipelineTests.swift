@@ -209,6 +209,21 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertGreaterThan(fresh.newestQuoteMillis ?? 0, stale.newestQuoteMillis ?? 0)
     }
 
+    func testBoerseQuoteSelectionKeepsOnlySelectedDAXSymbols() {
+        let samples = [
+            BoerseQuoteSample(isin: "DE0007164600", symbol: "SAP.DE", currency: "EUR",
+                              venue: "STU", timestamp: 1, price: 100),
+            BoerseQuoteSample(isin: "DE0007030009", symbol: "RHM.DE", currency: "EUR",
+                              venue: "STU", timestamp: 1, price: 200),
+            BoerseQuoteSample(isin: "US0000000001", symbol: nil, currency: "USD",
+                              venue: "NASDAQ", timestamp: 1, price: 300)
+        ]
+        let selected = BoerseQuoteSelection.selected(samples, germanSymbols: ["SAP.DE"])
+        XCTAssertEqual(selected.map(\.isin), ["DE0007164600", "US0000000001"])
+        XCTAssertEqual(BoerseQuoteSelection.selected(samples, germanSymbols: []).map(\.isin),
+                       ["US0000000001"])
+    }
+
     func testBoerseRetriesLaggedOrStalledPagesWithoutReloadingEveryGap() {
         func reload(_ stale: TimeInterval, _ progress: TimeInterval, _ lastReload: TimeInterval,
                     _ quoteAge: Int?, unavailable: Bool = false) -> Bool {

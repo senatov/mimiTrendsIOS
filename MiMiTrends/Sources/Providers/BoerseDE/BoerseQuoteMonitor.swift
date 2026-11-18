@@ -80,6 +80,15 @@ struct BoerseQuoteSample: Sendable {
     let price: Double
 }
 
+enum BoerseQuoteSelection {
+    static func selected(_ samples: [BoerseQuoteSample], germanSymbols: Set<String>) -> [BoerseQuoteSample] {
+        samples.filter { sample in
+            guard let symbol = sample.symbol else { return true }
+            return germanSymbols.contains(symbol)
+        }
+    }
+}
+
 actor BoerseQuoteMonitor {
     private struct Series {
         var timestamp: Int64
