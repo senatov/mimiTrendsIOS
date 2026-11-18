@@ -91,7 +91,7 @@ actor RadarCompanyMetadataService {
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
         do {
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   !data.isEmpty, data.count <= 512_000,
                   isRenderableLogo(data) else { return nil }
@@ -103,7 +103,7 @@ actor RadarCompanyMetadataService {
         if !symbol.contains(":"), !symbol.contains("."),
            let ticker = symbol.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
            let metadataURL = URL(string: "https://api.loadlogo.com/ticker/\(ticker)"),
-           let (data, response) = try? await session.data(for: logoRequest(metadataURL)),
+           let (data, response) = try? await BrowserPageRequest.send(logoRequest(metadataURL), using: session),
            (response as? HTTPURLResponse)?.statusCode == 200,
            let result = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            (result["symbol"] as? String)?.caseInsensitiveCompare(symbol) == .orderedSame,
@@ -128,9 +128,8 @@ actor RadarCompanyMetadataService {
         guard let url = components.url else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 10
-        request.setValue("MiMiTrends/1.0", forHTTPHeaderField: "User-Agent")
         do {
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   data.count <= 1_000_000,
                   let results = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
@@ -157,7 +156,7 @@ actor RadarCompanyMetadataService {
         guard var components = URLComponents(string: "https://logoapi.sh/search") else { return nil }
         components.queryItems = [URLQueryItem(name: "q", value: name)]
         guard let url = components.url,
-              let (data, response) = try? await session.data(for: logoRequest(url)),
+              let (data, response) = try? await BrowserPageRequest.send(logoRequest(url), using: session),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let results = object["results"] as? [[String: Any]] else { return nil }

@@ -16,7 +16,7 @@ actor MiminaviInfo1Source: DiscoveryCandidateSource {
         request.timeoutInterval = 15
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard !Task.isCancelled,
               let response = response as? HTTPURLResponse,
               response.statusCode == 200,

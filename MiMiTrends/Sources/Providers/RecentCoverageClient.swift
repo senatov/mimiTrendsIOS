@@ -174,8 +174,7 @@ struct RecentCoverageClient: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = 12
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 4_000_000 else {
             throw CoverageClientError.unavailable
         }

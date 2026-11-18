@@ -32,8 +32,7 @@ struct WallstreetRankingPageSource: Sendable {
         var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
         request.timeoutInterval = 20
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               data.count <= 3_000_000, let html = String(data: data, encoding: .utf8) else {
             throw DiscoveryDataError.invalidCandidate

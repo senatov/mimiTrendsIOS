@@ -133,8 +133,7 @@ struct ProviderEndpointChecker: Sendable {
         if endpoint == .tradingViewGermany || endpoint == .tradingViewUS {
             var request = URLRequest(url: base)
             request.timeoutInterval = 12
-            request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await BrowserPageRequest.send(request)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let html = String(data: data, encoding: .utf8) else { throw ProviderEndpointError.checkFailed }
             let market: TradingViewVolatilitySource.Market = endpoint == .tradingViewGermany ? .germany : .unitedStates
@@ -150,8 +149,7 @@ struct ProviderEndpointChecker: Sendable {
         guard let url else { throw ProviderEndpointError.invalidURL }
         var request = URLRequest(url: url)
         request.timeoutInterval = 12
-        request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request)
         guard let response = response as? HTTPURLResponse, response.statusCode == 200,
               data.count < 3_000_000 else { throw ProviderEndpointError.checkFailed }
         let body = String(decoding: data, as: UTF8.self)

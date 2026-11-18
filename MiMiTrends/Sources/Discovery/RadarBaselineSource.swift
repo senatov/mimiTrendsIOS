@@ -65,7 +65,7 @@ actor RadarBaselineSource {
                                  URLQueryItem(name: "newsCount", value: "0")]
         var request = URLRequest(url: components.url!)
         request.timeoutInterval = 15
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request)
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let quotes = root["quotes"] as? [[String: Any]] else { return nil }
@@ -84,7 +84,7 @@ actor RadarBaselineSource {
                             relativeTo: URL(string: "https://www.wallstreet-online.de")!) else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               http.url?.host == "www.wallstreet-online.de", data.count <= 2_000_000,
               let html = String(data: data, encoding: .utf8) else { return nil }

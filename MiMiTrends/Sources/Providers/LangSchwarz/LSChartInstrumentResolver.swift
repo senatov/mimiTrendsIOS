@@ -43,8 +43,7 @@ actor LSChartInstrumentResolver {
     private func data(from url: URL) async throws -> Data {
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
-        request.setValue("MiMiTrends/1.0", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let http = response as? HTTPURLResponse else { throw RadarSourceError.invalidResponse }
         if http.statusCode == 429 { throw RadarSourceError.rateLimited }
         guard http.statusCode == 200, data.count <= 3_000_000 else {

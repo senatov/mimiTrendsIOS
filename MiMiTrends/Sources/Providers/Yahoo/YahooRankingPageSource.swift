@@ -11,12 +11,8 @@ struct YahooRankingPageSource: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            forHTTPHeaderField: "User-Agent"
-        )
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let response = response as? HTTPURLResponse else { throw RadarSourceError.invalidResponse }
         if response.statusCode == 429 { throw RadarSourceError.rateLimited }
         guard response.statusCode == 200 else { throw RadarSourceError.httpStatus(response.statusCode) }

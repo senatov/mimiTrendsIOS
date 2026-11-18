@@ -91,7 +91,7 @@ struct WallstreetOnlineQuoteSource: Sendable {
         request.timeoutInterval = 15
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("text/html", forHTTPHeaderField: "Accept")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
               http.url?.scheme == "https", http.url?.host == "www.wallstreet-online.de",
               expectedPath.map({ http.url?.path == $0 }) ?? true,

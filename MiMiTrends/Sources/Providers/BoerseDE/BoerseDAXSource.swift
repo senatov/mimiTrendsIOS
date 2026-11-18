@@ -49,6 +49,7 @@ actor BoerseDAXSource {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let page = WKWebView(frame: .zero, configuration: configuration)
+        page.customUserAgent = BrowserPageRequest.randomUserAgent()
         defer { page.stopLoading() }
         page.load(URLRequest(url: url))
         let deadline = ContinuousClock.now + .seconds(20)
@@ -182,6 +183,7 @@ final class BoerseQuotePages {
             guard open else { reset(slot); continue }
             if pages[slot] == nil {
                 let view = WKWebView(frame: .zero, configuration: configuration)
+                view.customUserAgent = BrowserPageRequest.randomUserAgent()
                 pages[slot] = view
                 startedAt[slot] = Date()
                 lastProgressAt[slot] = Date()

@@ -37,8 +37,7 @@ struct TradingViewVolatilitySource: Sendable {
         var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
         request.timeoutInterval = 20
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let response = response as? HTTPURLResponse else { throw RadarSourceError.invalidResponse }
         if response.statusCode == 429 { throw RadarSourceError.rateLimited }
         guard response.statusCode == 200 else { throw RadarSourceError.httpStatus(response.statusCode) }
@@ -60,7 +59,6 @@ struct TradingViewVolatilitySource: Sendable {
             request.httpMethod = "POST"
             request.timeoutInterval = 20
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.setValue("Mozilla/5.0 MiMiTrends", forHTTPHeaderField: "User-Agent")
             var filters: [[String: Any]] = [["left": "type", "operation": "equal", "right": "stock"],
                            ["left": "exchange", "operation": "equal", "right": exchange],
                            ["left": "close", "operation": "egreater", "right": 5],
@@ -81,7 +79,7 @@ struct TradingViewVolatilitySource: Sendable {
                          "sortOrder": "desc"],
                 "range": [0, ranking == .activity ? 149 : 299]
             ] as [String: Any])
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard let response = response as? HTTPURLResponse, response.statusCode == 200,
                   data.count <= 3_000_000 else { throw RadarSourceError.invalidResponse }
             candidates += try Self.parseScanJSON(data, market: market, ranking: ranking)

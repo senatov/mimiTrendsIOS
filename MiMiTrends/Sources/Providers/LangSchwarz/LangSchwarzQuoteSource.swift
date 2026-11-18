@@ -17,7 +17,7 @@ struct LangSchwarzQuoteSource: Sendable {
                         request.timeoutInterval = 15
                         request.cachePolicy = .reloadIgnoringLocalCacheData
                         request.setValue("text/html", forHTTPHeaderField: "Accept")
-                        let (data, response) = try await session.data(for: request)
+                        let (data, response) = try await BrowserPageRequest.send(request, using: session)
                         guard let http = response as? HTTPURLResponse, http.statusCode == 200,
                               http.url?.scheme == "https", http.url?.host == "www.ls-tc.de",
                               data.count <= 3_000_000, let html = String(data: data, encoding: .utf8) else {

@@ -31,7 +31,7 @@ struct EIXInstrumentSource: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = 30
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
             throw EIXSourceError.invalidResponse
         }

@@ -150,9 +150,8 @@ struct YahooRadarSource: Sendable {
         var request = URLRequest(url: url)
         request.timeoutInterval = 15
         request.cachePolicy = .reloadIgnoringLocalCacheData
-        request.setValue("MiMiTrends/1.0", forHTTPHeaderField: "User-Agent")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard let response = response as? HTTPURLResponse else {
             throw RadarSourceError.invalidResponse
         }

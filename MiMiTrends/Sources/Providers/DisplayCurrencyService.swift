@@ -50,7 +50,7 @@ actor DisplayCurrencyService {
         request.timeoutInterval = 12
         request.setValue("application/xml", forHTTPHeaderField: "Accept")
         do {
-            let (data, response) = try await session.data(for: request)
+            let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 100_000 else {
                 throw DisplayCurrencyError.invalidResponse
             }
@@ -111,7 +111,7 @@ struct IPLocationCurrencySource: Sendable {
     func detect() async throws -> (country: String, currency: String) {
         var request = URLRequest(url: URL(string: "https://ipwhois.app/json/")!)
         request.timeoutInterval = 8
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count < 30_000,
               let location = try? JSONDecoder().decode(IPLocationCurrency.self, from: data),
               location.success, let country = location.countryCode,
