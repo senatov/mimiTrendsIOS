@@ -142,7 +142,9 @@ struct RadarChartPreview: View {
                     systemImage: "chart.xyaxis.line",
                     description: Text(range == .trades
                                       ? "Recent minute history is unavailable for these imported trades."
-                                      : range.usesDailyBars ? "No daily prices are available for this symbol and period."
+                                      : range.usesDailyBars && !yahooEnabled
+                                          ? "Enable Yahoo market data to load weekly and yearly price history."
+                                          : range.usesDailyBars ? "No daily prices are available for this symbol and period."
                                       : "No minute candles are available in this period. Choose Latest to view older saved candles.")
                 )
                 .frame(maxWidth: .infinity, minHeight: 180)
@@ -266,36 +268,35 @@ struct RadarChartPreview: View {
         guard range.usesDailyBars else { return }
         let requestedSymbol = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !requestedSymbol.isEmpty else { return }
-        if dailySymbol == requestedSymbol, hasBarsInRange(dailyBars),
-           dailyProvider != "Yahoo historical" || yahooEnabled, let dailyLoadedAt,
+        if yahooEnabled, dailySymbol == requestedSymbol, hasBarsInRange(dailyBars),
+           let dailyLoadedAt,
            Date().timeIntervalSince(dailyLoadedAt) < 15 * 60 { return }
         isLoadingDaily = true
+        defer { isLoadingDaily = false }
         dailyError = nil
+        guard yahooEnabled else {
+            dailyBars = []
+            dailySymbol = requestedSymbol
+            dailyProvider = ""
+            dailyLoadedAt = nil
+            return
+        }
         do {
-            let loaded = try await RadarDailyHistoryService.shared.load(
-                symbol: requestedSymbol
-            )
+            let bars = try await YahooRadarSource().dailyBars(symbol: requestedSymbol)
             guard !Task.isCancelled else { return }
-            let fallback: [MinuteBar]
-            if yahooEnabled, !hasBarsInRange(loaded.bars) {
-                fallback = (try? await YahooRadarSource().dailyBars(symbol: requestedSymbol)) ?? []
-            } else {
-                fallback = []
-            }
-            guard !Task.isCancelled else { return }
-            dailyBars = fallback.isEmpty ? loaded.bars : fallback
-            dailyProvider = fallback.isEmpty ? loaded.provider : "Yahoo historical"
+            dailyBars = bars
+            dailyProvider = "Yahoo historical"
             dailySymbol = requestedSymbol
             dailyLoadedAt = .now
         } catch is CancellationError {
             return
         } catch {
             guard !Task.isCancelled else { return }
+            dailyBars = []
             dailyError = error.localizedDescription
             AppDiagnostics.shared.record(.warning, "RadarChart", "daily-history-failed",
                                          "symbol=\(requestedSymbol) error=\(String(describing: type(of: error)))")
         }
-        isLoadingDaily = false
     }
 
     private func loadImportedTrades() async {

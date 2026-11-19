@@ -131,4 +131,4 @@ Scanning runs only while the app is active. No account-backed trade feed or subs
 
 The chart header separates company identity, ticker, currency, price and data status. The Trades period shows the recent imported holding window with a short time margin instead of applying the rolling 1D cutoff. Other periods report imported trades outside their visible interval and offer Show trade history. Historical candle backfill includes available pre/post-market observations to cover broker execution times; the normal market scanner still requests regular-session candles.
 
-Daily chart history for 1W and 1Y summarizes saved Yahoo minute candles. Days without saved bars remain empty.
+The 1W and 1Y chart ranges fetch Yahoo daily candles (up to two years for EMA warm-up) when Yahoo market data is enabled. They do not depend on the short-lived local minute-bar cache; when Yahoo is disabled or daily history is unavailable, the chart shows an unavailable-data message instead of presenting a partial local history as a full week or year.
