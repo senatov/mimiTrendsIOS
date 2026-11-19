@@ -13,7 +13,7 @@ final class RadarCandidateStoreTests: XCTestCase {
         let reopened = RadarCandidateStore(directory: directory)
         let loaded = try await reopened.candidateSnapshot(source: source)
         XCTAssertEqual(loaded.map(\.symbol), ["AAPL"])
-        let other = try await reopened.candidateSnapshot(source: "boerseDAX")
+        let other = try await reopened.candidateSnapshot(source: "tradingViewDE")
         XCTAssertTrue(other.isEmpty)
     }
 }

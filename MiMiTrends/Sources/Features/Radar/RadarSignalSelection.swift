@@ -1,12 +1,5 @@
 import Foundation
 
-struct RadarPriceObservation: Sendable {
-    let price: Double
-    let currency: String
-    let atMillis: Int64
-    let source: String
-}
-
 enum RadarSignalSelection {
     static func hasVerifiedOrigin(_ signal: ScanResult, currentSymbols: Set<String>) -> Bool {
         currentSymbols.contains(signal.symbol) ||
@@ -28,7 +21,6 @@ enum RadarSignalSelection {
         _ history: [ScanResult], since cutoff: Int64, limit: Int,
         preferences: RadarScanPreferences = RadarScanPreferences(),
         latestBars: [String: MinuteBar] = [:],
-        externalPrices: [String: RadarPriceObservation] = [:],
         nowMillis: Int64 = Int64(Date().timeIntervalSince1970 * 1_000)
     ) -> [ScanResult] {
         var invalidatedAt: [String: Int64] = [:]
@@ -40,37 +32,27 @@ enum RadarSignalSelection {
                   !signal.symbol.hasPrefix("LS:") else { return nil }
             let source = signal.signalSource.lowercased()
             guard source != "rapid rise", source != "sharp rebound" else { return nil }
-            let candle = latestBars[signal.symbol]
-            let candlePrice = candle.flatMap { latest -> RadarPriceObservation? in
-                guard latest.isValid else { return nil }
-                return RadarPriceObservation(price: latest.close,
-                    currency: signal.priceCurrency ?? "USD",
-                    atMillis: (latest.minuteEpochSeconds + 60) * 1_000, source: "Yahoo candle")
-            }
-            let external = externalPrices[signal.symbol].flatMap { observation -> RadarPriceObservation? in
-                observation.currency == (signal.priceCurrency ?? "USD") ? observation : nil
-            }
-            let newest = [candlePrice, external].compactMap { $0 }
-                .filter { $0.atMillis > signal.signalEpochMillis &&
-                    $0.atMillis <= nowMillis + 60_000 && nowMillis - $0.atMillis <= 600_000 &&
-                    $0.price.isFinite && $0.price > 0 }
-                .max { $0.atMillis < $1.atMillis }
-            if let newest {
-                signal.currentPrice = newest.price
-                signal.currentPriceSource = newest.source
-                signal.currentPriceAtMillis = newest.atMillis
-                if source == "rapid crash", newest.price >= signal.signalPrice {
+            let latest = latestBars[signal.symbol]
+            let latestAtMillis = latest.map { ($0.minuteEpochSeconds + 60) * 1_000 }
+            if let latest, latest.isValid, let latestAtMillis,
+               latestAtMillis > signal.signalEpochMillis,
+               latestAtMillis <= nowMillis + 60_000,
+               nowMillis - latestAtMillis <= 600_000 {
+                signal.currentPrice = latest.close
+                signal.currentPriceSource = "Yahoo candle"
+                signal.currentPriceAtMillis = latestAtMillis
+                if source == "rapid crash", latest.close >= signal.signalPrice {
                     invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
                                                        signal.signalEpochMillis)
                     return nil
                 }
-                if source == "confirmed reversal", newest.price <= signal.signalPrice {
+                if source == "confirmed reversal", latest.close <= signal.signalPrice {
                     invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
                                                        signal.signalEpochMillis)
                     return nil
                 }
                 if source == MultiHourRiseDetector.source.lowercased(),
-                   newest.price < signal.signalPrice + (signal.price - signal.signalPrice) * 0.5 {
+                   latest.close < signal.signalPrice + (signal.price - signal.signalPrice) * 0.5 {
                     invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
                                                        signal.signalEpochMillis)
                     return nil

@@ -19,7 +19,7 @@ The filter uses the newest day's opening file, not every update of the delayed p
 
 ## Other market inputs
 
-The boerse.de quote monitor and Lang & Schwarz pages have separate quote paths. Their prices are not substitutes for Yahoo's completed, volume-backed candles. A signal from any stored source is subject to the visible-list EIX check. See [README.md](../README.md) for the current scan thresholds and [DataStorage.md](DataStorage.md) for cache locations.
+Lang & Schwarz quotes are stored separately from Yahoo's completed, volume-backed candles and do not confirm candle signals. A signal from any stored source is subject to the visible-list EIX check. See [README.md](../README.md) for the current scan thresholds and [DataStorage.md](DataStorage.md) for cache locations.
 
 ## Data and distribution
 

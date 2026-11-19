@@ -21,7 +21,6 @@ struct RadarView: View {
     @State var lsCandidatePool = LSCandidatePool()
     @State var lsStatus: LSCandidateStatus?
     @State var marketScanner = MarketRadarScanner()
-    @State var boerseQuoteMonitor = BoerseQuoteMonitor()
     @State var marketCycle: MarketRadarCycle?
     @State var currencyRates: DisplayCurrencyRates?
     @State var currencyService = DisplayCurrencyService()
@@ -79,7 +78,6 @@ struct RadarView: View {
                 await refreshCompanyMetadata()
             }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshLSWhileActive() }
-            .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await monitorBoerseWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await scanMarketWhileActive() }
             .task(id: "\(scenePhase)|\(providerConfigurationRevision)") { await refreshDisplayCurrency() }
             .task { await detectInitialCurrency() }
@@ -155,7 +153,7 @@ struct RadarView: View {
     }
 
     private var emptyRadarMessage: String {
-        "Waiting for fresh candle movements from Yahoo and price movements from boerse.de."
+        "Waiting for fresh candle movements from Yahoo."
     }
 
     private func signalList(compact: Bool, width: CGFloat) -> some View {
@@ -200,7 +198,6 @@ struct RadarView: View {
             let germanSymbols = Set((marketCycle?.candidates ?? []).map(\.symbol).filter {
                 verifiedEIXSymbols.contains($0) && MarketCandidateFilter.isGermanSymbol($0)
             })
-            let externalPrices = await boerseQuoteMonitor.priceObservations()
             let (loaded, watch) = try await Task.detached(priority: .userInitiated) {
                 let store = try MarketSignalStore(url: MarketSignalStore.defaultURL())
                 let latest = try await store.loadRecent(limit: 500)
@@ -220,7 +217,7 @@ struct RadarView: View {
                 }
                 let confirmed = RadarSignalSelection.displayHistory(
                     history, since: cutoff, limit: 600, preferences: preferences,
-                    latestBars: latestBars, externalPrices: externalPrices
+                    latestBars: latestBars
                 )
                 let watch = confirmed.contains(where: { germanSymbols.contains($0.symbol) }) ? []
                     : await RadarGermanWatchCandidates.load(symbols: germanSymbols, now: Date(),

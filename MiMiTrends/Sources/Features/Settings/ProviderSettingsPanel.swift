@@ -32,8 +32,6 @@ struct ProviderSettingsPanel: View {
                         providerGroup("Lang & Schwarz", detail: "Separate bid/ask quotes",
                                       provider: .langSchwarz,
                                       endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
-                        providerGroup("boerse.de DAX", detail: "Separate price monitoring",
-                                      provider: .boerseDAX, endpoints: [])
                     }
                 }
             } else {
@@ -45,8 +43,6 @@ struct ProviderSettingsPanel: View {
                     providerGroup("Lang & Schwarz", detail: "Separate bid/ask quotes",
                                   provider: .langSchwarz,
                                   endpoints: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope])
-                    providerGroup("boerse.de DAX", detail: "Separate price monitoring",
-                                  provider: .boerseDAX, endpoints: [])
                 }
             }
             if let savingMessage {
@@ -98,12 +94,6 @@ struct ProviderSettingsPanel: View {
                     status: checks[endpoint] ?? defaultStatus,
                     check: { check(endpoint) }
                 )
-            }
-            if provider == .boerseDAX, let url = provider.accountURL {
-                Link("Open DAX realtime quotes", destination: url).font(.caption)
-                if let issue = MarketProviderAccess.lastError(provider) {
-                    Text(issue).font(.caption).foregroundStyle(.secondary)
-                }
             }
         }
     }

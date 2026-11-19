@@ -1,5 +1,4 @@
 import Foundation
-import WebKit
 
 /// Adds a common desktop browser identity to outgoing provider requests.
 enum BrowserPageRequest {
@@ -54,53 +53,5 @@ enum BrowserPageRequest {
                                          "id=\(id) domain=\(failure.domain) code=\(failure.code) elapsedMs=\(elapsedMillis) target=\(target)")
             throw error
         }
-    }
-}
-
-@MainActor
-final class WebPageNavigationLogger: NSObject, WKNavigationDelegate {
-    let slot: String
-    let target: String
-    var navigationID = ""
-    private var navigationIDs: [ObjectIdentifier: String] = [:]
-
-    init(slot: String, target: String) {
-        self.slot = slot
-        self.target = target
-    }
-
-    func register(_ navigation: WKNavigation?, id: String) {
-        navigationID = id
-        if let navigation { navigationIDs[ObjectIdentifier(navigation)] = id }
-    }
-
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        AppDiagnostics.shared.record(.info, "WebPage", "navigation-finish",
-                                     "id=\(takeID(for: navigation)) slot=\(slot) target=\(BrowserPageRequest.diagnosticTarget(webView.url))")
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        logFailure(error, phase: "navigation", navigation: navigation)
-    }
-
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!,
-                 withError error: Error) {
-        logFailure(error, phase: "provisional", navigation: navigation)
-    }
-
-    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        AppDiagnostics.shared.record(.warning, "WebPage", "content-process-terminated",
-                                     "id=\(navigationID) slot=\(slot) target=\(target)")
-    }
-
-    private func takeID(for navigation: WKNavigation?) -> String {
-        guard let navigation else { return navigationID }
-        return navigationIDs.removeValue(forKey: ObjectIdentifier(navigation)) ?? navigationID
-    }
-
-    private func logFailure(_ error: Error, phase: String, navigation: WKNavigation?) {
-        let failure = error as NSError
-        AppDiagnostics.shared.record(.warning, "WebPage", "navigation-failed",
-                                     "id=\(takeID(for: navigation)) slot=\(slot) phase=\(phase) domain=\(failure.domain) code=\(failure.code) target=\(target)")
     }
 }

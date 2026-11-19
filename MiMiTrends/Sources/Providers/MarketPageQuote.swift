@@ -62,8 +62,7 @@ enum MarketPageHTML {
         return value
     }
 
-    static func quoteTime(_ timeText: String, now: Date,
-                          maximumAgeSeconds: TimeInterval = 600) -> Int64? {
+    static func quoteTime(_ timeText: String, now: Date) -> Int64? {
         let fields = timeText.split(separator: ":").compactMap { Int($0) }
         guard fields.count == 3, (0...23).contains(fields[0]),
               (0...59).contains(fields[1]), (0...59).contains(fields[2]) else { return nil }
@@ -73,7 +72,7 @@ enum MarketPageHTML {
                                             second: fields[2], of: now) else { return nil }
         if candidate.timeIntervalSince(now) > 30 { candidate = calendar.date(byAdding: .day, value: -1, to: candidate)! }
         let age = now.timeIntervalSince(candidate)
-        guard age >= -30, age <= maximumAgeSeconds else { return nil }
+        guard age >= -30, age <= 600 else { return nil }
         return Int64(candidate.timeIntervalSince1970 * 1_000)
     }
 }

@@ -98,20 +98,6 @@ final class RadarSignalSelectionTests: XCTestCase {
         XCTAssertEqual(shown.map(\.signalEpochMillis), [120_000])
     }
 
-    func testFresherIndependentQuoteUpdatesPriceWithoutChangingEventClose() throws {
-        let signal = event("MU", source: "Rapid crash", at: 120_000, change: -1,
-                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
-        let yahoo = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
-            open: 98, high: 99, low: 97, close: 98, volume: 1_000)
-        let external = RadarPriceObservation(price: 97, currency: "USD", atMillis: 260_000,
-                                             source: "boerse.de (NYSE)")
-        let shown = try XCTUnwrap(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
-            latestBars: ["MU": yahoo], externalPrices: ["MU": external], nowMillis: 300_000).first)
-        XCTAssertEqual(shown.price, 100)
-        XCTAssertEqual(shown.currentPrice, 97)
-        XCTAssertEqual(shown.currentPriceSource, "boerse.de (NYSE)")
-    }
-
     func testMultiHourRiseExpiresWhenFreshPriceLosesMostOfItsGain() {
         let signal = ScanResult(symbol: "CUE", price: 4.20, priceCurrency: "USD",
             anomalyScore: 85, priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
@@ -125,19 +111,6 @@ final class RadarSignalSelectionTests: XCTestCase {
             open: 3.60, high: 3.60, low: 3.60, close: 3.60, volume: 50_000)
         XCTAssertTrue(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
             latestBars: ["CUE": latest], nowMillis: 240_000).isEmpty)
-    }
-
-    func testCurrencyMismatchAndStaleQuoteCannotOverrideYahooCandle() throws {
-        let signal = event("MU", source: "Rapid crash", at: 120_000, change: -1,
-                           window: "4m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
-        let yahoo = MinuteBar(symbol: "MU", minuteEpochSeconds: 180,
-            open: 98, high: 99, low: 97, close: 98, volume: 1_000)
-        let external = RadarPriceObservation(price: 105, currency: "EUR", atMillis: 260_000,
-                                             source: "boerse.de (TRADEGATE)")
-        let shown = try XCTUnwrap(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
-            latestBars: ["MU": yahoo], externalPrices: ["MU": external], nowMillis: 300_000).first)
-        XCTAssertEqual(shown.currentPrice, 98)
-        XCTAssertEqual(shown.currentPriceSource, "Yahoo candle")
     }
 
     func testDisplaysOnlyVolumeValidatedYahooCandles() {

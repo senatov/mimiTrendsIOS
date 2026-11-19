@@ -1,7 +1,7 @@
 import Foundation
 
 enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
-    case yahoo, tradingView, wallstreetOnline, langSchwarz, traderFox, boerseDAX
+    case yahoo, tradingView, wallstreetOnline, langSchwarz, traderFox
 
     var id: String { rawValue }
     var enabledKey: String { "provider.enabled.\(rawValue).v1" }
@@ -15,7 +15,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: "wallstreetONLINE"
         case .langSchwarz: "Lang & Schwarz"
         case .traderFox: "TraderFox"
-        case .boerseDAX: "boerse.de DAX"
         }
     }
 
@@ -26,7 +25,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: URL(string: "https://www.wallstreet-online.de/")
         case .langSchwarz: URL(string: "https://www.ls-tc.de/")
         case .traderFox: URL(string: "https://www.traderfox.com/" )
-        case .boerseDAX: URL(string: "https://www.boerse.de/realtime-kurse/Dax-Aktien/DE0008469008")
         }
     }
 
@@ -37,7 +35,6 @@ enum MarketProvider: String, CaseIterable, Identifiable, Sendable {
         case .wallstreetOnline: [.wallstreetWikifolio, .wallstreetPerformance, .wallstreetGermanPerformance, .wallstreetOnline]
         case .langSchwarz: [.langSchwarzGermany, .langSchwarzStoxx, .langSchwarzEurope, .langSchwarzAmerica]
         case .traderFox: [.traderFox]
-        case .boerseDAX: []
         }
     }
 }
@@ -107,8 +104,6 @@ struct MarketProviderPreflight: Sendable {
                 }
             case .traderFox:
                 try await requireAll(provider.endpoints)
-            case .boerseDAX:
-                return nil // Checked by the scanner during German trading hours.
             }
             MarketProviderAccess.setHealth("Connected", for: provider)
             return nil

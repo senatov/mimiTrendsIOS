@@ -18,7 +18,7 @@ Settings includes Scanner, Rapid moves, Market data providers, Appearance, and C
 - Shared market models for provider instruments, quotes, minute bars, and scan results.
 - An XcodeGen project specification and GitHub Actions build workflow.
 
-While the app is active, Radar scans a pool of up to 255 US and German shares selected from TradingView activity and volatility rankings and observed in the public EIX pre-trade file. It uses completed Yahoo minute candles and reported volume to detect rapid drops, confirmed reversals, and sustained rises. Candidates without a matching EIX ISIN are skipped before the pool is capped, allowing the next eligible shares to take their places. The chart displays saved minute candles and daily summaries with EMA 9/21 and reported volume. The app also monitors boerse.de price movements and keeps Lang & Schwarz quotes separate from candle signals. Scalable CSV trades are stored in their own database.
+While the app is active, Radar scans a pool of up to 255 US and German shares selected from TradingView activity and volatility rankings and observed in the public EIX pre-trade file. It uses completed Yahoo minute candles and reported volume to detect rapid drops, confirmed reversals, and sustained rises. Candidates without a matching EIX ISIN are skipped before the pool is capped, allowing the next eligible shares to take their places. The chart displays saved minute candles and daily summaries with EMA 9/21 and reported volume. Lang & Schwarz quotes remain separate from candle signals. Scalable CSV trades are stored in their own database.
 
 Open Radar during market hours to scan automatically. No API key or webhook secret is required.
 
