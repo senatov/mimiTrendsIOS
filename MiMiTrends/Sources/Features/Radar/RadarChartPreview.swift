@@ -157,6 +157,7 @@ struct RadarChartPreview: View {
                     volumeHeight: 60
                 )
                 .id(displayCurrency)
+                .zIndex(10)
                 if let last = chartData.bars.last {
                     Text("\(chartData.bars.count) \(range.usesDailyBars ? "\(dailyProvider) daily" : "\(minuteProvider) minute") bars · latest \(Date(timeIntervalSince1970: TimeInterval(last.minuteEpochSeconds)).formatted(.dateTime.month().day().hour().minute())) · chart in \(chartCurrency) · trading time · closed sessions compressed")
                         .font(.subheadline.weight(.light))

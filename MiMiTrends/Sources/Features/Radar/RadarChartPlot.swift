@@ -12,6 +12,8 @@ struct RadarChartPlot: View {
     var volumeHeight: CGFloat = 90
     @State private var selectedMinute: Int64?
     @State private var selectedPrice: Double?
+    @State private var cursorLocation: CGPoint?
+    @State private var bubbleSize = CGSize(width: 360, height: 130)
     @State private var cursorPinned = false
     @State private var plotWidth: CGFloat = 800
     @State private var tradeAnchors: [String: CGPoint] = [:]
@@ -147,9 +149,9 @@ struct RadarChartPlot: View {
                         RadarChartLastPriceLabel(proxy: proxy, price: last.close, currency: displayCurrency)
                     }
                     RadarChartCursorOverlay(
-                    proxy: proxy, bars: data.bars, timeline: timeline, displayCurrency: displayCurrency, readsPrice: true,
+                    proxy: proxy, bars: data.bars, timeline: timeline, readsPrice: true,
                     selectedBar: selectedBar, selectedPrice: selectedPrice,
-                    isPinned: cursorPinned, onSelection: select(bar:price:),
+                    isPinned: cursorPinned, onSelection: select(bar:price:location:),
                     onTogglePin: toggleCursorPin, onExit: clearCursor
                 )
                     RadarTradeAnchorReader(proxy: proxy, timeline: timeline, trades: visibleTrades)
@@ -172,6 +174,8 @@ struct RadarChartPlot: View {
                 RadarTradeCardOverlay(anchors: tradeAnchors, trades: visibleTrades,
                                       currency: displayCurrency)
             }
+            .overlay(alignment: .topLeading) { cursorTooltipOverlay }
+            .zIndex(2)
 
             HStack(spacing: 14) {
                 Label("EMA 9", systemImage: "line.diagonal")
@@ -200,9 +204,9 @@ struct RadarChartPlot: View {
             .chartXAxis { timelineAxis }
                 .chartOverlay { proxy in
                     RadarChartCursorOverlay(
-                        proxy: proxy, bars: data.bars, timeline: timeline, displayCurrency: displayCurrency, readsPrice: false,
+                        proxy: proxy, bars: data.bars, timeline: timeline, readsPrice: false,
                         selectedBar: selectedBar, selectedPrice: selectedPrice,
-                        isPinned: cursorPinned, onSelection: select(bar:price:),
+                        isPinned: cursorPinned, onSelection: select(bar:price:location:),
                         onTogglePin: toggleCursorPin, onExit: clearCursor
                     )
                 }
@@ -227,6 +231,30 @@ struct RadarChartPlot: View {
         }
     }
 
+    @ViewBuilder
+    private var cursorTooltipOverlay: some View {
+        if let selectedBar, let selectedPrice, let cursorLocation {
+            GeometryReader { geometry in
+                let width = min(360, max(0, geometry.size.width - 16))
+                let railHeight = RadarTradeCardOverlay.railHeight(
+                    count: visibleTrades.count, width: geometry.size.width)
+                let cursorY = railHeight + cursorLocation.y
+                let aboveY = cursorY - bubbleSize.height / 2 - 48
+                let belowY = cursorY + bubbleSize.height / 2 + 48
+                RadarChartCursorBubble(bar: selectedBar, price: selectedPrice,
+                                       currency: displayCurrency, isPinned: cursorPinned)
+                    .frame(width: width, alignment: .leading)
+                    .onGeometryChange(for: CGSize.self) { $0.size } action: { bubbleSize = $0 }
+                    .position(
+                        x: min(max(cursorLocation.x, bubbleSize.width / 2 + 8),
+                               geometry.size.width - bubbleSize.width / 2 - 8),
+                        y: aboveY >= bubbleSize.height / 2 + 8 ? aboveY : belowY
+                    )
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
     @AxisContentBuilder
     private var timelineAxis: some AxisContent {
         AxisMarks(values: timeline.ticks) { value in
@@ -244,13 +272,15 @@ struct RadarChartPlot: View {
     private func clearCursor() {
         selectedMinute = nil
         selectedPrice = nil
+        cursorLocation = nil
         cursorPinned = false
     }
 
-    private func select(bar: MinuteBar, price: Double) {
+    private func select(bar: MinuteBar, price: Double, location: CGPoint?) {
         cursorPinned = false
         selectedMinute = bar.minuteEpochSeconds
         selectedPrice = price
+        cursorLocation = location
     }
 
     private func toggleCursorPin() {
