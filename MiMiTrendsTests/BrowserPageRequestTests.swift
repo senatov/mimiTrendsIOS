@@ -31,6 +31,12 @@ final class BrowserPageRequestTests: XCTestCase {
         XCTAssertTrue(agents.contains { $0.contains("Version/26.0 Safari/") })
     }
 
+    func testDiagnosticTargetOmitsQueryCredentialsAndFragment() {
+        let url = URL(string: "https://user:secret@example.com/quotes/AAPL?token=private#section")!
+        XCTAssertEqual(BrowserPageRequest.diagnosticTarget(url), "https://example.com/quotes/AAPL")
+        XCTAssertEqual(BrowserPageRequest.diagnosticTarget(nil), "unknown")
+    }
+
     func testSendAppliesDesktopAgentToHTTPTransaction() async throws {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [BrowserPageEchoURLProtocol.self]

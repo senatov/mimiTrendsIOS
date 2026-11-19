@@ -49,20 +49,33 @@ actor BoerseDAXSource {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         let page = WKWebView(frame: .zero, configuration: configuration)
+        let logger = WebPageNavigationLogger(slot: "dax", target: BrowserPageRequest.diagnosticTarget(url))
+        page.navigationDelegate = logger
         page.customUserAgent = BrowserPageRequest.randomUserAgent()
         defer { page.stopLoading() }
-        page.load(URLRequest(url: url))
+        let id = String(UUID().uuidString.prefix(8))
+        let target = BrowserPageRequest.diagnosticTarget(url)
+        let startedAt = Date()
+        AppDiagnostics.shared.record(.info, "WebPage", "navigation-start",
+                                     "id=\(id) slot=dax action=load target=\(target)")
+        let navigation = page.load(URLRequest(url: url))
+        logger.register(navigation, id: id)
+        AppDiagnostics.shared.record(navigation == nil ? .warning : .info, "WebPage", "navigation-issued",
+                                     "id=\(id) accepted=\(navigation != nil) target=\(target)")
         let deadline = ContinuousClock.now + .seconds(20)
         while ContinuousClock.now < deadline {
             try Task.checkCancellation()
             if page.url?.host == url.host, page.url?.path == url.path, !page.isLoading,
                let result = try? await page.evaluateJavaScript(tableScript) as? String,
                let candidates = try? decodePageRows(Data(result.utf8), now: Date()), !candidates.isEmpty {
-                AppDiagnostics.shared.record(.info, "boerse.de", "dax-page-parsed", "rows=\(candidates.count)")
+                AppDiagnostics.shared.record(.info, "WebPage", "page-read-finish",
+                                             "id=\(id) slot=dax rows=\(candidates.count) elapsedMs=\(Int(Date().timeIntervalSince(startedAt) * 1_000)) target=\(target)")
                 return candidates
             }
             try await Task.sleep(for: .milliseconds(500))
         }
+        AppDiagnostics.shared.record(.warning, "WebPage", "page-read-failed",
+                                     "id=\(id) slot=dax reason=timeout elapsedMs=\(Int(Date().timeIntervalSince(startedAt) * 1_000)) target=\(target)")
         throw RadarSourceError.invalidResponse
     }
 
@@ -161,6 +174,7 @@ final class BoerseQuotePages {
     private static let retryInterval = BoerseQuoteRetryPolicy.minimumRetrySeconds
     private let configuration: WKWebViewConfiguration
     private var pages: [Int: WKWebView] = [:]
+    private var navigationLoggers: [Int: WebPageNavigationLogger] = [:]
     private var secondPageBaseline: Set<String>?
     private var secondPageVerified = false
     private var startedAt: [Int: Date] = [:]
@@ -183,11 +197,17 @@ final class BoerseQuotePages {
             guard open else { reset(slot); continue }
             if pages[slot] == nil {
                 let view = WKWebView(frame: .zero, configuration: configuration)
+                let logger = WebPageNavigationLogger(slot: String(slot),
+                                                     target: BrowserPageRequest.diagnosticTarget(url))
+                view.navigationDelegate = logger
+                navigationLoggers[slot] = logger
                 view.customUserAgent = BrowserPageRequest.randomUserAgent()
                 pages[slot] = view
                 startedAt[slot] = Date()
                 lastProgressAt[slot] = Date()
-                view.load(URLRequest(url: url))
+                logNavigation(slot: slot, url: url, action: "load") {
+                    view.load(URLRequest(url: url))
+                }
                 continue
             }
             guard let view = pages[slot] else { continue }
@@ -196,12 +216,21 @@ final class BoerseQuotePages {
                               reason: view.isLoading ? "loading" : "wrong-host")
                 continue
             }
+            let readID = String(UUID().uuidString.prefix(8))
+            let target = BrowserPageRequest.diagnosticTarget(url)
+            let readStartedAt = Date()
+            AppDiagnostics.shared.record(.info, "WebPage", "page-read-start",
+                                         "id=\(readID) slot=\(slot) target=\(target)")
             guard let json = try? await view.evaluateJavaScript(BoerseDAXSource.tableScript) as? String,
                   let rows = try? JSONDecoder().decode([BoerseDAXSource.PageRow].self, from: Data(json.utf8))
             else {
+                AppDiagnostics.shared.record(.warning, "WebPage", "page-read-failed",
+                                             "id=\(readID) slot=\(slot) reason=script-or-decode target=\(target)")
                 retryIfNeeded(slot: slot, view: view, url: url, now: Date(), reason: "script-or-decode")
                 continue
             }
+            AppDiagnostics.shared.record(.info, "WebPage", "page-read-finish",
+                                         "id=\(readID) slot=\(slot) rows=\(rows.count) elapsedMs=\(Int(Date().timeIntervalSince(readStartedAt) * 1_000)) target=\(target)")
             let identifiers = Set(rows.compactMap { Self.isin(in: $0.markup) })
             if slot == 2 && !secondPageVerified {
                 if let baseline = secondPageBaseline, !identifiers.subtracting(baseline).isEmpty {
@@ -209,7 +238,7 @@ final class BoerseQuotePages {
                     AppDiagnostics.shared.record(.info, "boerse.de", "us-tech-second-page-loaded",
                                                  "identifiers=\(identifiers.count)")
                 } else if secondPageBaseline == nil, !identifiers.isEmpty,
-                          (try? await view.evaluateJavaScript(Self.secondPageScript) as? Bool) == true {
+                          await requestSecondPage(view, slot: slot, url: url) {
                     secondPageBaseline = identifiers
                     startedAt[slot] = Date()
                     lastProgressAt[slot] = Date()
@@ -255,6 +284,7 @@ final class BoerseQuotePages {
 
     private func reset(_ slot: Int) {
         pages.removeValue(forKey: slot)?.stopLoading()
+        navigationLoggers[slot] = nil
         startedAt[slot] = nil
         lastReloadAt[slot] = nil
         lastStaleReportAt[slot] = nil
@@ -293,12 +323,38 @@ final class BoerseQuotePages {
             secondPageVerified = false
         }
         if view.url?.host == url.host, view.url?.path == url.path {
-            view.reloadFromOrigin()
+            logNavigation(slot: slot, url: url, action: "reload-from-origin") {
+                view.reloadFromOrigin()
+            }
         } else {
             var request = URLRequest(url: url)
             request.cachePolicy = .reloadIgnoringLocalCacheData
-            view.load(request)
+            logNavigation(slot: slot, url: url, action: "load-uncached") {
+                view.load(request)
+            }
         }
+    }
+
+    private func logNavigation(slot: Int, url: URL, action: String, issue: () -> WKNavigation?) {
+        let id = String(UUID().uuidString.prefix(8))
+        let target = BrowserPageRequest.diagnosticTarget(url)
+        AppDiagnostics.shared.record(.info, "WebPage", "navigation-start",
+                                     "id=\(id) slot=\(slot) action=\(action) target=\(target)")
+        let navigation = issue()
+        navigationLoggers[slot]?.register(navigation, id: id)
+        AppDiagnostics.shared.record(navigation == nil ? .warning : .info, "WebPage", "navigation-issued",
+                                     "id=\(id) slot=\(slot) accepted=\(navigation != nil) target=\(target)")
+    }
+
+    private func requestSecondPage(_ view: WKWebView, slot: Int, url: URL) async -> Bool {
+        let id = String(UUID().uuidString.prefix(8))
+        let target = BrowserPageRequest.diagnosticTarget(url)
+        AppDiagnostics.shared.record(.info, "WebPage", "page-action-start",
+                                     "id=\(id) slot=\(slot) action=second-page target=\(target)")
+        let accepted = (try? await view.evaluateJavaScript(Self.secondPageScript) as? Bool) == true
+        AppDiagnostics.shared.record(accepted ? .info : .warning, "WebPage", "page-action-finish",
+                                     "id=\(id) slot=\(slot) action=second-page accepted=\(accepted) target=\(target)")
+        return accepted
     }
 
     private static func isin(in markup: String) -> String? {
