@@ -85,6 +85,7 @@ struct RadarChartCursorBubble: View {
     let price: Double
     let currency: String
     let isPinned: Bool
+    private let paleYellow = Color(red: 1, green: 0.97, blue: 0.82)
 
     var body: some View {
         let change = (bar.close / bar.open - 1) * 100
@@ -106,11 +107,16 @@ struct RadarChartCursorBubble: View {
         .font(.caption.monospacedDigit())
         .foregroundStyle(TrendsColors.ink)
         .padding(14)
-        .background(.yellow.opacity(0.10),
+        .background(paleYellow.opacity(0.08),
                     in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .glassEffect(.regular.tint(.yellow.opacity(0.32)),
+        .glassEffect(.regular.tint(paleYellow.opacity(0.24)),
                      in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(.white.opacity(0.38), lineWidth: 0.75)
+        }
+        .shadow(color: .black.opacity(0.14), radius: 18, y: 9)
+        .shadow(color: .black.opacity(0.07), radius: 4, y: 2)
         .allowsHitTesting(false)
         .accessibilityElement(children: .combine)
     }
