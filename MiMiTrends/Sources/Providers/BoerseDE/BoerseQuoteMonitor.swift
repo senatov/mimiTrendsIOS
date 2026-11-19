@@ -3,12 +3,17 @@ import Foundation
 enum BoerseQuoteRetryPolicy {
     static let minimumRetrySeconds: TimeInterval = 180
 
+    static func needsPageRefresh(acceptedSamples: Int, progressSeconds: TimeInterval) -> Bool {
+        acceptedSamples == 0 || progressSeconds >= minimumRetrySeconds
+    }
+
     static func shouldReload(staleSeconds: TimeInterval, progressSeconds: TimeInterval,
                              sinceReloadSeconds: TimeInterval, quoteAgeSeconds: Int?,
                              pageUnavailable: Bool) -> Bool {
         staleSeconds >= 90 && sinceReloadSeconds >= minimumRetrySeconds &&
             (progressSeconds >= minimumRetrySeconds ||
-             quoteAgeSeconds.map { $0 >= 180 } == true || pageUnavailable)
+             quoteAgeSeconds.map { $0 >= Int(BoerseQuoteRows.maximumQuoteAgeMillis / 1_000) } == true ||
+             pageUnavailable)
     }
 }
 

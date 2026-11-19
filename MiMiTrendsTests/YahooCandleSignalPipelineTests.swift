@@ -260,11 +260,15 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
                 sinceReloadSeconds: lastReload, quoteAgeSeconds: quoteAge, pageUnavailable: unavailable)
         }
         XCTAssertFalse(reload(45, 45, 1_000, 360))
-        XCTAssertTrue(reload(90, 15, 1_000, 360))
+        XCTAssertFalse(reload(90, 15, 1_000, 360))
+        XCTAssertTrue(reload(90, 15, 1_000, 610))
         XCTAssertFalse(reload(90, 15, 1_000, 100))
         XCTAssertTrue(reload(180, 180, 1_000, 100))
         XCTAssertFalse(reload(180, 180, 30, 360))
         XCTAssertTrue(reload(90, 90, 1_000, nil, unavailable: true))
+        XCTAssertFalse(BoerseQuoteRetryPolicy.needsPageRefresh(acceptedSamples: 40, progressSeconds: 90))
+        XCTAssertTrue(BoerseQuoteRetryPolicy.needsPageRefresh(acceptedSamples: 40, progressSeconds: 180))
+        XCTAssertTrue(BoerseQuoteRetryPolicy.needsPageRefresh(acceptedSamples: 0, progressSeconds: 15))
     }
 
     func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {

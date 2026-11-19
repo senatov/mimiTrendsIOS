@@ -222,17 +222,23 @@ final class BoerseQuotePages {
             }
             let now = Date()
             let result = BoerseQuoteRows.decode(rows, now: now, slot: slot)
-            if let newest = result.newestQuoteMillis, newest > (latestQuoteMillis[slot] ?? 0) {
+            let previousQuoteMillis = latestQuoteMillis[slot] ?? 0
+            if let newest = result.newestQuoteMillis, newest > previousQuoteMillis {
                 latestQuoteMillis[slot] = newest
                 lastProgressAt[slot] = now
             }
-            if result.youngestAgeSeconds.map({ $0 > 90 }) ?? true {
+            let progressAge = now.timeIntervalSince(lastProgressAt[slot] ?? startedAt[slot] ?? now)
+            if BoerseQuoteRetryPolicy.needsPageRefresh(
+                acceptedSamples: result.samples.count, progressSeconds: progressAge
+            ) {
                 retryIfNeeded(slot: slot, view: view, url: url, now: now,
-                              reason: "no-fresh-rows", details: result.diagnostics,
+                              reason: result.samples.isEmpty ? "no-usable-rows" : "no-quote-progress",
+                              details: result.diagnostics,
                               youngestAgeSeconds: result.youngestAgeSeconds)
             } else {
                 startedAt[slot] = now
-                if staleSlots.remove(slot) != nil {
+                if (result.newestQuoteMillis ?? 0) > previousQuoteMillis,
+                   staleSlots.remove(slot) != nil {
                     AppDiagnostics.shared.record(.info, "boerse.de", "quote-page-recovered",
                                                  "page=\(slot) \(result.diagnostics)")
                     lastStaleReportAt[slot] = nil
@@ -275,7 +281,7 @@ final class BoerseQuotePages {
         guard BoerseQuoteRetryPolicy.shouldReload(
             staleSeconds: staleDuration, progressSeconds: TimeInterval(progressAge),
             sinceReloadSeconds: now.timeIntervalSince(lastReloadAt[slot] ?? .distantPast),
-            quoteAgeSeconds: youngestAgeSeconds, pageUnavailable: reason != "no-fresh-rows"
+            quoteAgeSeconds: youngestAgeSeconds, pageUnavailable: reason != "no-quote-progress"
         ) else { return }
         AppDiagnostics.shared.record(.warning, "boerse.de", "quote-page-retry",
                                      "page=\(slot) reason=\(reason) progressAgeSeconds=\(progressAge) youngestAgeSeconds=\(youngestAgeSeconds ?? -1)")
@@ -286,7 +292,13 @@ final class BoerseQuotePages {
             secondPageBaseline = nil
             secondPageVerified = false
         }
-        view.load(URLRequest(url: url))
+        if view.url?.host == url.host, view.url?.path == url.path {
+            view.reloadFromOrigin()
+        } else {
+            var request = URLRequest(url: url)
+            request.cachePolicy = .reloadIgnoringLocalCacheData
+            view.load(request)
+        }
     }
 
     private static func isin(in markup: String) -> String? {
