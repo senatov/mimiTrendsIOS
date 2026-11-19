@@ -10,7 +10,6 @@ struct RadarChartPlot: View {
     let trades: [BrokerTradePosition]
     var priceHeight: CGFloat = 300
     var volumeHeight: CGFloat = 90
-    @Binding var inspection: RadarChartInspection?
     @State private var selectedMinute: Int64?
     @State private var selectedPrice: Double?
     @State private var cursorPinned = false
@@ -246,22 +245,17 @@ struct RadarChartPlot: View {
         selectedMinute = nil
         selectedPrice = nil
         cursorPinned = false
-        inspection = nil
     }
 
     private func select(bar: MinuteBar, price: Double) {
         cursorPinned = false
         selectedMinute = bar.minuteEpochSeconds
         selectedPrice = price
-        inspection = RadarChartInspection(bar: bar, price: price, isPinned: false)
     }
 
     private func toggleCursorPin() {
         guard selectedBar != nil else { return }
         cursorPinned.toggle()
-        if let selectedBar, let selectedPrice {
-            inspection = RadarChartInspection(bar: selectedBar, price: selectedPrice, isPinned: cursorPinned)
-        }
     }
 
     private var priceDomain: ClosedRange<Double> {

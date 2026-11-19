@@ -62,33 +62,45 @@ struct RadarChartCursorOverlay: View {
                 y: (readsPrice ? selectedPrice : nil).flatMap { proxy.position(forY: $0) }
             )
             if readsPrice,
-               let x = proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)),
-               let y = proxy.position(forY: selectedPrice) {
-                let point = CGPoint(x: plotFrame.minX + x, y: plotFrame.minY + y)
-                cursorBubble(date: selectedBar.chartDate, price: selectedPrice)
-                    .position(
-                        x: min(max(point.x, plotFrame.minX + 85), plotFrame.maxX - 85),
-                        y: point.y - 38 >= plotFrame.minY + 24 ? point.y - 38 : point.y + 38
-                    )
-                    .accessibilityHidden(true)
+               let x = proxy.position(forX: timeline.position(selectedBar.minuteEpochSeconds)) {
+                let cardWidth = min(max(0, plotFrame.width - 16), 360)
+                let cardX = x < plotFrame.width / 2
+                    ? plotFrame.maxX - cardWidth - 8 : plotFrame.minX + 8
+                cursorBubble(bar: selectedBar, price: selectedPrice)
+                    .frame(width: cardWidth, alignment: .leading)
+                    .offset(x: cardX, y: plotFrame.minY + 8)
             }
         }
     }
 
-    private func cursorBubble(date: Date, price: Double) -> some View {
-        VStack(spacing: 1) {
-            Text(date.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute()))
+    private func cursorBubble(bar: MinuteBar, price: Double) -> some View {
+        let change = (bar.close / bar.open - 1) * 100
+        let range = (bar.high - bar.low) / bar.open * 100
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(bar.chartDate.formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute()))
+                    .fontWeight(.semibold)
+                Spacer(minLength: 4)
+                Text(isPinned ? "PINNED" : "LIVE")
+                    .foregroundStyle(.secondary)
+            }
             Text(price.formatted(.currency(code: displayCurrency).precision(.fractionLength(2))))
-                .fontWeight(.semibold)
+                .font(.headline.monospacedDigit())
+            Text("\(change > 0 ? "UP" : change < 0 ? "DOWN" : "FLAT") \(change > 0 ? "+" : "")\(change.formatted(.number.precision(.fractionLength(2))))% · Range \(range.formatted(.number.precision(.fractionLength(2))))%")
+            Text("O \(formattedPrice(bar.open))  H \(formattedPrice(bar.high))  L \(formattedPrice(bar.low))  C \(formattedPrice(bar.close))")
+            Text("Volume \(bar.volume >= 1_000 ? (bar.volume / 1_000).formatted(.number.precision(.fractionLength(1))) + "k" : bar.volume.formatted(.number.precision(.fractionLength(0))))")
         }
             .font(.caption.monospacedDigit())
             .foregroundStyle(TrendsColors.ink)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(.blue.opacity(0.35), lineWidth: 0.8))
-            .fixedSize()
+            .padding(12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(.blue.opacity(0.35), lineWidth: 0.8))
             .allowsHitTesting(false)
+            .accessibilityElement(children: .combine)
+    }
+
+    private func formattedPrice(_ price: Double) -> String {
+        price.formatted(.currency(code: displayCurrency).precision(.fractionLength(2)))
     }
 
     private func select(at location: CGPoint, in geometry: GeometryProxy) {

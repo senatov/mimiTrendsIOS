@@ -2,7 +2,6 @@ import SwiftUI
 
 /// An isolated visual fixture: no network, imported transactions or production writes.
 struct RadarChartDiagnosticView: View {
-    @State private var inspection: RadarChartInspection?
     private let fixture = RadarChartDiagnosticData()
 
     var body: some View {
@@ -15,13 +14,9 @@ struct RadarChartDiagnosticView: View {
                     data: RadarChartData(allBars: fixture.bars, range: .threeHours,
                                         nowEpochSeconds: fixture.now),
                     symbol: "SAMPLE", displayCurrency: "EUR", signal: nil, signalEntryPrice: nil,
-                    trades: fixture.trades, priceHeight: 340, volumeHeight: 80, inspection: $inspection
+                    trades: fixture.trades, priceHeight: 340, volumeHeight: 80
                 )
                 .padding(12)
-            }
-            if let inspection {
-                Text("Selected \(inspection.bar.minuteEpochSeconds) · \(inspection.price.formatted(.currency(code: "EUR")))")
-                    .font(.caption.monospacedDigit())
             }
         }
         .padding(16)

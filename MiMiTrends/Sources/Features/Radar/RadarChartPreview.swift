@@ -26,7 +26,6 @@ struct RadarChartPreview: View {
     @AppStorage("chart.range.v1") private var rangeRaw = RadarChartRange.oneDay.rawValue
     @State private var errorMessage: String?
     @State private var isLoading = false
-    @State private var cursorInspection: RadarChartInspection?
     @State private var showingTrades = true
     @State private var showingSignalFocus = true
 
@@ -101,10 +100,8 @@ struct RadarChartPreview: View {
             if providersReady { await loadDailyBarsIfNeeded() }
         }
         .task(id: "trades|\(symbol)|\(companyName)") { await loadImportedTrades() }
-        .onChange(of: displayCurrency) { _, _ in cursorInspection = nil }
         .onChange(of: symbol) { _, _ in
             showingSignalFocus = true
-            cursorInspection = nil
             allBars = []
             minuteProvider = "Saved Yahoo"
         }
@@ -129,7 +126,6 @@ struct RadarChartPreview: View {
                 Text("Some imported trades could not be converted to \(displayCurrency).")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            cursorDetails
             if (range.usesDailyBars ? isLoadingDaily : isLoading) && chartData.bars.isEmpty {
                 ProgressView(range.usesDailyBars ? "Loading daily price history" : "Loading chart history")
                     .frame(maxWidth: .infinity, minHeight: 180)
@@ -158,8 +154,7 @@ struct RadarChartPreview: View {
                     signalEntryPrice: chartSignalEntryPrice,
                     trades: showingTrades ? chartTrades : [],
                     priceHeight: max(140, availableHeight - 180),
-                    volumeHeight: 60,
-                    inspection: $cursorInspection
+                    volumeHeight: 60
                 )
                 .id(displayCurrency)
                 if let last = chartData.bars.last {
@@ -189,48 +184,6 @@ struct RadarChartPreview: View {
 
     private var chartTrades: [BrokerTradePosition] {
         importedTrades.compactMap { RadarChartCurrency.trade($0, to: displayCurrency, rates: currencyRates) }
-    }
-
-    @ViewBuilder
-    private var cursorDetails: some View {
-        if let cursorInspection {
-            let bar = cursorInspection.bar
-            let change = (bar.close / bar.open - 1) * 100
-            let candleRange = (bar.high - bar.low) / bar.open * 100
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(Date(timeIntervalSince1970: TimeInterval(bar.minuteEpochSeconds)).formatted(.dateTime.day(.twoDigits).month(.twoDigits).year().hour().minute())) · \(direction(for: change)) \(signedPercent(change)) · Range \(candleRange.formatted(.number.precision(.fractionLength(2))))%")
-                Text("O \(formattedPrice(bar.open))  H \(formattedPrice(bar.high))  L \(formattedPrice(bar.low))  C \(formattedPrice(bar.close))  ·  Volume \(compactVolume(bar.volume))  ·  \(cursorInspection.isPinned ? "PINNED" : "LIVE")")
-            }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(TrendsColors.supportingInk)
-            .accessibilityElement(children: .combine)
-        } else {
-            #if os(macOS)
-            Label("Hover to inspect · click to pin", systemImage: "cursorarrow")
-                .font(.caption).foregroundStyle(.secondary)
-            #else
-            Label("Drag to inspect · release to pin", systemImage: "hand.draw")
-                .font(.caption).foregroundStyle(.secondary)
-            #endif
-        }
-    }
-
-    private func direction(for change: Double) -> String {
-        change > 0 ? "UP" : change < 0 ? "DOWN" : "FLAT"
-    }
-
-    private func signedPercent(_ value: Double) -> String {
-        "\(value > 0 ? "+" : "")\(value.formatted(.number.precision(.fractionLength(2))))%"
-    }
-
-    private func compactVolume(_ volume: Double) -> String {
-        volume >= 1_000
-            ? "\((volume / 1_000).formatted(.number.precision(.fractionLength(1))))k"
-            : volume.formatted(.number.precision(.fractionLength(0)))
-    }
-
-    private func formattedPrice(_ value: Double) -> String {
-        value.formatted(.currency(code: displayCurrency).precision(.fractionLength(2)))
     }
 
     private var chartCurrency: String {

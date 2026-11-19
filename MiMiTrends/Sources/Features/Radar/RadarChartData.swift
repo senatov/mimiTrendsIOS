@@ -46,12 +46,6 @@ struct RadarChartPoint: Identifiable {
     var date: Date { Date(timeIntervalSince1970: TimeInterval(minuteEpochSeconds)) }
 }
 
-struct RadarChartInspection {
-    let bar: MinuteBar
-    let price: Double
-    let isPinned: Bool
-}
-
 struct RadarChartData {
     let range: RadarChartRange
     let bars: [MinuteBar]

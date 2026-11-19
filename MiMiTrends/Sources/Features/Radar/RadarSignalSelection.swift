@@ -34,7 +34,9 @@ enum RadarSignalSelection {
         var invalidatedAt: [String: Int64] = [:]
         let qualified = history.compactMap { original -> ScanResult? in
             var signal = original
-            guard signal.dataStatus != "QUOTE_NO_VOLUME", signal.dataStatus != "FINNHUB_LIVE",
+            guard signal.dataStatus != "QUOTE_NO_VOLUME",
+                  signal.dataStatus != "BOERSE_PRICE_NO_VOLUME",
+                  signal.dataStatus != "FINNHUB_LIVE",
                   !signal.symbol.hasPrefix("LS:") else { return nil }
             let source = signal.signalSource.lowercased()
             guard source != "rapid rise", source != "sharp rebound" else { return nil }
