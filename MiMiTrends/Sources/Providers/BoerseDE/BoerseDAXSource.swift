@@ -265,7 +265,6 @@ final class BoerseQuotePages {
                               details: result.diagnostics,
                               youngestAgeSeconds: result.youngestAgeSeconds)
             } else {
-                startedAt[slot] = now
                 if (result.newestQuoteMillis ?? 0) > previousQuoteMillis,
                    staleSlots.remove(slot) != nil {
                     AppDiagnostics.shared.record(.info, "boerse.de", "quote-page-recovered",
@@ -366,7 +365,7 @@ final class BoerseQuotePages {
         const root = document.querySelector('#TableBody_0');
         const table = root?.querySelector('table');
         if (!table) return false;
-        const buttons = [...document.querySelectorAll('a, button, [role="button"]')];
+        const buttons = [...root.querySelectorAll('#TablePage_0 a, #TablePage_0 button, #TablePage_0 [role="button"]')];
         const next = buttons.find(el => {
             if (!(table.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)) return false;
             if (!el.getClientRects().length || el.getAttribute('aria-disabled') === 'true') return false;

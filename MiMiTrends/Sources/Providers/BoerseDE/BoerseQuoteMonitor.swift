@@ -1,7 +1,7 @@
 import Foundation
 
 enum BoerseQuoteRetryPolicy {
-    static let minimumRetrySeconds: TimeInterval = 180
+    static let minimumRetrySeconds: TimeInterval = 120
 
     static func needsPageRefresh(acceptedSamples: Int, progressSeconds: TimeInterval) -> Bool {
         acceptedSamples == 0 || progressSeconds >= minimumRetrySeconds
