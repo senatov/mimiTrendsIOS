@@ -3,8 +3,8 @@ import ImageIO
 
 actor RadarCompanyMetadataService {
     private let session: URLSession
-    private let cacheLifetime: Int64 = 7 * 24 * 60 * 60 * 1_000
-    private let incompleteCacheLifetime: Int64 = 15 * 60 * 1_000
+    private static let cacheLifetime: Int64 = 7 * 24 * 60 * 60 * 1_000
+    private static let incompleteCacheLifetime: Int64 = 15 * 60 * 1_000
 
     init(session: URLSession = .shared) { self.session = session }
 
@@ -22,11 +22,7 @@ actor RadarCompanyMetadataService {
             let stale = normalized.filter { symbol in
                 guard let cached = metadata[symbol] else { return true }
                 let preferred = Self.preferredName(symbol: symbol, candidate: names[symbol], cached: cached.name)
-                let lifetime = cached.logoData == nil || !Self.isRenderableLogo(cached.logoData) ||
-                    cached.countryCode == nil || cached.name == symbol
-                    ? incompleteCacheLifetime : cacheLifetime
-                return cached.name != preferred || !Self.isRenderableLogo(cached.logoData) ||
-                    now - cached.updatedAtMillis > lifetime
+                return Self.needsRefresh(cached, preferredName: preferred, nowMillis: now)
             }
             let requestSession = session
             for offset in stride(from: 0, to: stale.count, by: 4) {
@@ -84,6 +80,14 @@ actor RadarCompanyMetadataService {
             if !name.isEmpty, name.caseInsensitiveCompare(symbol) != .orderedSame { return name }
         }
         return symbol
+    }
+
+    static func needsRefresh(_ cached: RadarCompanyMetadata, preferredName: String,
+                             nowMillis: Int64) -> Bool {
+        let incomplete = !isRenderableLogo(cached.logoData) ||
+            cached.countryCode == nil || cached.name == cached.symbol
+        let lifetime = incomplete ? incompleteCacheLifetime : cacheLifetime
+        return cached.name != preferredName || nowMillis - cached.updatedAtMillis > lifetime
     }
 
     private static func loadLogo(_ url: URL?, session: URLSession) async -> Data? {

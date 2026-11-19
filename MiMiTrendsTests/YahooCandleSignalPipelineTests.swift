@@ -16,6 +16,17 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
             symbol: "CIFR", candidate: "CIFR", cached: "CIFR"), "CIFR")
     }
 
+    func testMissingLogoUsesIncompleteCacheLifetimeBeforeRetrying() {
+        let cached = RadarCompanyMetadata(symbol: "AIXA.DE", name: "AIXTRON SE",
+                                          countryCode: nil, logoData: nil, updatedAtMillis: 1_000)
+        XCTAssertFalse(RadarCompanyMetadataService.needsRefresh(
+            cached, preferredName: "AIXTRON SE", nowMillis: 1_000 + 60_000))
+        XCTAssertTrue(RadarCompanyMetadataService.needsRefresh(
+            cached, preferredName: "AIXTRON SE", nowMillis: 1_000 + 16 * 60_000))
+        XCTAssertTrue(RadarCompanyMetadataService.needsRefresh(
+            cached, preferredName: "AIXTRON AG", nowMillis: 1_000 + 60_000))
+    }
+
     func testLegacyYahooAPIHostsMigrateWithoutReplacingCustomRanking() {
         let suite = "YahooEndpoints-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -213,6 +224,8 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
 
         let expired = BoerseQuoteRows.decode([row(time: "16:19:00", venue: "STU")], now: now, slot: 0)
         XCTAssertTrue(expired.samples.isEmpty)
+        XCTAssertTrue(expired.diagnostics.contains("time=1 recent=0 accepted=0"))
+        XCTAssertTrue(expired.diagnostics.contains("youngestAgeSeconds=660"))
 
         let fresh = BoerseQuoteRows.decode([row(time: "16:29:30", venue: "STU")], now: now, slot: 0)
         XCTAssertEqual(fresh.samples.count, 1)

@@ -251,6 +251,9 @@ final class BoerseQuotePages {
             }
             let now = Date()
             let result = BoerseQuoteRows.decode(rows, now: now, slot: slot)
+            let pageState = (try? await view.evaluateJavaScript(Self.pageStateScript) as? String) ?? "unknown"
+            AppDiagnostics.shared.record(.info, "boerse.de", "quote-page-sample",
+                                         "page=\(slot) \(pageState) \(result.diagnostics)")
             let previousQuoteMillis = latestQuoteMillis[slot] ?? 0
             if let newest = result.newestQuoteMillis, newest > previousQuoteMillis {
                 latestQuoteMillis[slot] = newest
@@ -359,6 +362,16 @@ final class BoerseQuotePages {
     private static func isin(in markup: String) -> String? {
         MarketPageHTML.first(#"\b([A-Z]{2}[A-Z0-9]{9}[0-9])\b"#, in: markup)
     }
+
+    private static let pageStateScript = #"""
+    (() => {
+        const root = document.querySelector('#TableBody_0');
+        const page = root?.querySelector('#TablePage_0 b')?.textContent?.trim() || 'unknown';
+        const total = root?.innerHTML.match(/ValXXXcountx(\d+)XXX/)?.[1] || 'unknown';
+        const size = root?.querySelector('th[id]')?.id.match(/K_PAGE_SIZE=(\d+)/)?.[1] || 'unknown';
+        return `sitePage=${page} siteTotal=${total} pageSize=${size}`;
+    })()
+    """#
 
     private static let secondPageScript = #"""
     (() => {

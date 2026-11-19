@@ -51,10 +51,11 @@ enum BoerseQuoteRows {
                 sampleTime = String(row.text[12].replacingOccurrences(of: "\n", with: " ").prefix(24))
                 sampleVenue = String(row.text[13].prefix(24))
             }
-            guard let timestamp = MarketPageHTML.quoteTime(row.text[12], now: now) else { continue }
+            guard let timestamp = MarketPageHTML.quoteTime(
+                row.text[12], now: now, maximumAgeSeconds: 86_400
+            ) else { continue }
             timed += 1
             let ageSeconds = Int((nowMillis - timestamp) / 1_000)
-            newestQuoteMillis = max(newestQuoteMillis ?? timestamp, timestamp)
             if ageSeconds < youngestAgeSeconds {
                 youngestAgeSeconds = ageSeconds
                 sampleTime = String(row.text[12].replacingOccurrences(of: "\n", with: " ").prefix(24))
@@ -62,6 +63,7 @@ enum BoerseQuoteRows {
             }
             guard nowMillis - timestamp <= maximumQuoteAgeMillis else { continue }
             recent += 1
+            newestQuoteMillis = max(newestQuoteMillis ?? timestamp, timestamp)
             let venue = row.text[13].uppercased()
             let currency: String
             if ["STU", "STUTTGART", "TRADEGATE", "XETRA", "FRA"].contains(venue) { currency = "EUR" }
