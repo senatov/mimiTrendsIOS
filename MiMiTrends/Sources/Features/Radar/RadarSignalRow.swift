@@ -63,6 +63,8 @@ struct RadarSignalRow: View {
             }
             HStack(spacing: 8) {
                 eventBadge
+                RadarSignalSparkline(symbol: signal.symbol, eventMillis: signal.signalEpochMillis,
+                                     falling: signal.windowChangePercent < 0)
                 Spacer(minLength: 4)
                 movement
                 windowText
@@ -84,6 +86,9 @@ struct RadarSignalRow: View {
                 eventBadge
                     .onTapGesture(perform: onSelect)
                 Spacer(minLength: 4)
+                RadarSignalSparkline(symbol: signal.symbol, eventMillis: signal.signalEpochMillis,
+                                     falling: signal.windowChangePercent < 0)
+                    .onTapGesture(perform: onSelect)
                 Button {
                     onShowCoverage(RadarCoverageRequest(symbol: signal.symbol, companyName: companyName))
                 } label: {

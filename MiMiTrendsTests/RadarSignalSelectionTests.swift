@@ -2,6 +2,27 @@ import XCTest
 @testable import MiMiTrends
 
 final class RadarSignalSelectionTests: XCTestCase {
+    func testSparklineUsesOnlyRealMinuteClosesBeforeEvent() throws {
+        let eventSecond: Int64 = 3_600
+        let bars = [2_700, 2_760, 3_000, 3_480, 3_540, 3_600, 3_660].enumerated().map { index, minute in
+            MinuteBar(symbol: "SAP.DE", minuteEpochSeconds: Int64(minute),
+                      open: Double(100 + index), high: Double(100 + index),
+                      low: Double(100 + index), close: Double(100 + index), volume: 100)
+        }
+        let series = try XCTUnwrap(RadarSparklineSeries(bars: bars, eventMillis: eventSecond * 1_000))
+        XCTAssertEqual(series.points.map(\.minute), [2_700, 2_760, 3_000, 3_480, 3_540, 3_600])
+        XCTAssertEqual(series.highlightedFrom, 2)
+        XCTAssertEqual(series.changePercent, 5, accuracy: 0.001)
+    }
+
+    func testSparklineDoesNotInventHistoryFromTwoCandles() {
+        let bars = [MinuteBar(symbol: "SAP.DE", minuteEpochSeconds: 3_540,
+                              open: 100, high: 100, low: 100, close: 100, volume: 100),
+                    MinuteBar(symbol: "SAP.DE", minuteEpochSeconds: 3_600,
+                              open: 101, high: 101, low: 101, close: 101, volume: 100)]
+        XCTAssertNil(RadarSparklineSeries(bars: bars, eventMillis: 3_600_000))
+    }
+
     func testKeepsNewestEventForEachSymbol() {
         let signals = [
             event("AAPL", source: "Sustained rise", at: 60),

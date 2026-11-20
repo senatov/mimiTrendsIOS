@@ -24,7 +24,7 @@ enum RadarSortColumn: String, CaseIterable {
     var minimumWidth: CGFloat {
         switch self {
         case .company: 100
-        case .event: 180
+        case .event: 230
         case .movement: 80
         case .window: 90
         case .price: 88
@@ -35,7 +35,7 @@ enum RadarSortColumn: String, CaseIterable {
     var maximumWidth: CGFloat {
         switch self {
         case .company: 300
-        case .event: 280
+        case .event: 320
         case .movement: 120
         case .window: 115
         case .price: 140
@@ -115,7 +115,7 @@ struct RadarSignalColumnWidths {
     ) -> [RadarSortColumn: CGFloat] {
         [
             .company: measuredWidth(companyNames, fontSize: fontSize) + 50,
-            .event: max(205, measuredWidth(signals.map(eventLabel), fontSize: fontSize) + 108),
+            .event: max(230, measuredWidth(signals.map(eventLabel), fontSize: fontSize) + 112),
             .movement: measuredWidth(signals.map {
                 String(format: "%+.2f%%", $0.windowChangePercent)
             }, fontSize: fontSize) + 24,
