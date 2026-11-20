@@ -324,7 +324,7 @@ actor MarketRadarScanner {
             unsupported: unsupported, errors: errors,
             issues: issues, activeSymbols: [], lastUpdatedAt: Date())
         AppDiagnostics.shared.record(.info, "Radar", "candle-scan-progress",
-            "round=\(candleScanRound) checked=\(progress.processed)/\(progress.total) usable=\(successful) skipped=\(progress.skipped) errors=\(errors)")
+            "round=\(candleScanRound) checked=\(progress.processed)/\(progress.total) usable=\(successful) skipped=\(progress.skipped) noRecent=\(noRecent) noVolume=\(noVolume) unsupported=\(unsupported) errors=\(errors)")
         return (cycle.reporting(progress, cooldown: candleCooldownUntil ?? cycle.yahooCooldownUntil),
                 recordedSignal)
     }
