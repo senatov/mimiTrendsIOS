@@ -1,5 +1,8 @@
 import Foundation
 import os
+#if os(macOS)
+import Darwin
+#endif
 
 final class AppDiagnostics: @unchecked Sendable {
     static let shared = AppDiagnostics()
@@ -14,11 +17,13 @@ final class AppDiagnostics: @unchecked Sendable {
     private let console = Logger(subsystem: "org.senatov.mimitrends.apple", category: "Diagnostics")
     private let preferredURL: URL
     private var activeURL: URL?
-    private let maximumBytes = 4 * 1_024 * 1_024
+    private let maximumBytes: Int
 
-    init(preferredURL: URL? = nil) {
+    init(preferredURL: URL? = nil, maximumBytes: Int = 4 * 1_024 * 1_024) {
+        self.maximumBytes = maximumBytes
         #if os(macOS)
-        self.preferredURL = preferredURL ?? URL(fileURLWithPath: "/tmp/mimiTrendsiOS.log")
+        self.preferredURL = preferredURL ?? Self.macOSUserHomeDirectory()
+            .appendingPathComponent("mimiTrendsiOS.log")
         #else
         self.preferredURL = preferredURL ?? FileManager.default.temporaryDirectory
             .appendingPathComponent("mimiTrendsiOS.log")
@@ -42,12 +47,12 @@ final class AppDiagnostics: @unchecked Sendable {
     private func append(_ line: String) {
         guard let url = activeURL ?? prepareFile(), let bytes = (line + "\n").data(using: .utf8) else { return }
         do {
-            if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize,
-               size + bytes.count > maximumBytes {
+            if let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size]) as? NSNumber,
+               size.intValue + bytes.count > maximumBytes {
                 let previous = url.deletingPathExtension().appendingPathExtension("previous.log")
                 try? FileManager.default.removeItem(at: previous)
                 try FileManager.default.moveItem(at: url, to: previous)
-                try Data().write(to: url, options: .atomic)
+                try Self.createEmptyLog(at: url)
                 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             }
             let handle = try FileHandle(forWritingTo: url)
@@ -60,16 +65,25 @@ final class AppDiagnostics: @unchecked Sendable {
     }
 
     private func prepareFile() -> URL? {
+        #if os(macOS)
+        let containerLog = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("mimiTrendsiOS.log")
+        #endif
         let fallback = FileManager.default.temporaryDirectory.appendingPathComponent("mimiTrendsiOS.log")
-        for candidate in [preferredURL, fallback] {
+        #if os(macOS)
+        let candidates = [preferredURL, containerLog, fallback]
+        #else
+        let candidates = [preferredURL, fallback]
+        #endif
+        for candidate in candidates {
             do {
                 if !FileManager.default.fileExists(atPath: candidate.path) {
-                    try Data().write(to: candidate, options: .atomic)
+                    try Self.createEmptyLog(at: candidate)
                 }
                 try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: candidate.path)
                 activeURL = candidate
                 if candidate != preferredURL {
-                    console.warning("/tmp log unavailable; using \(candidate.path, privacy: .public)")
+                    console.warning("Preferred log unavailable; using \(candidate.path, privacy: .public)")
                 }
                 return candidate
             } catch { continue }
@@ -81,4 +95,20 @@ final class AppDiagnostics: @unchecked Sendable {
     private static func timestamp() -> String {
         Date.now.ISO8601Format()
     }
+
+    private static func createEmptyLog(at url: URL) throws {
+        guard FileManager.default.createFile(atPath: url.path, contents: Data(),
+                                             attributes: [.posixPermissions: 0o600]) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
+
+    #if os(macOS)
+    private static func macOSUserHomeDirectory() -> URL {
+        guard let user = getpwuid(getuid()), let path = user.pointee.pw_dir else {
+            return FileManager.default.homeDirectoryForCurrentUser
+        }
+        return URL(fileURLWithPath: String(cString: path), isDirectory: true)
+    }
+    #endif
 }

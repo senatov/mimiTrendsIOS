@@ -4,6 +4,7 @@ import zlib
 /// Uses the public opening pre-trade file as a conservative daily set of EIX ISINs.
 struct EIXInstrumentSource: Sendable {
     private struct FileEntry: Decodable { let fileName: String }
+    static let minimumDistinctISINs = 1_000
     private let session: URLSession
 
     init(session: URLSession = .shared) { self.session = session }
@@ -23,7 +24,13 @@ struct EIXInstrumentSource: Sendable {
                                 URLQueryItem(name: "attachmentFilename", value: "Pretrade.csv.gz")]
         let compressed = try await data(fileParts.url!)
         let isins = try Self.parseGzip(compressed)
-        guard isins.count >= 5_000 else { throw EIXSourceError.incompleteFile }
+        return try Self.validate(isins)
+    }
+
+    static func validate(_ isins: Set<String>) throws -> Set<String> {
+        guard isins.count >= minimumDistinctISINs else {
+            throw EIXSourceError.incompleteFile(count: isins.count)
+        }
         return isins
     }
 
@@ -101,4 +108,4 @@ struct EIXInstrumentSource: Sendable {
     }
 }
 
-enum EIXSourceError: Error { case missingFile, incompleteFile, invalidResponse }
+enum EIXSourceError: Error { case missingFile, incompleteFile(count: Int), invalidResponse }

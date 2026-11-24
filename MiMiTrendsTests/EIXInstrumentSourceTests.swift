@@ -24,4 +24,15 @@ final class EIXInstrumentSourceTests: XCTestCase {
         XCTAssertEqual(eligible.map(\.symbol), ["AAPL", "SAP.DE"])
         XCTAssertFalse(available.contains("US29479A1088"))
     }
+
+    func testSmallerValidPretradeSetIsAccepted() throws {
+        let observed = Set((0..<3_579).map { String(format: "US%010d", $0) })
+        XCTAssertEqual(try EIXInstrumentSource.validate(observed), observed)
+        let truncated = Set((0..<999).map { String(format: "US%010d", $0) })
+        XCTAssertThrowsError(try EIXInstrumentSource.validate(truncated)) { error in
+            guard case EIXSourceError.incompleteFile(count: 999) = error else {
+                return XCTFail("Unexpected error: \(error)")
+            }
+        }
+    }
 }

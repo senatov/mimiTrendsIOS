@@ -29,9 +29,13 @@ actor MarketRadarScanner {
               retainedSymbols: [String] = []) async throws -> MarketRadarCycle {
         try Task.checkCancellation()
         let sessions = RadarTradingSessions(at: Date())
-        if candidateStore == nil {
+        let firstScan = candidateStore == nil
+        if firstScan {
             candidateStore = try? RadarCandidateStore(directory: RadarCandidateStore.defaultDirectory())
-            if let candidateStore {
+        }
+        if let candidateStore {
+            await pruneCandidateCache(candidateStore)
+            if firstScan {
                 germanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewDE")) ?? []
                 usCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewUS")) ?? []
                 activeGermanCandidates = (try? await candidateStore.candidateSnapshot(source: "tradingViewActiveDE")) ?? []
@@ -51,7 +55,7 @@ actor MarketRadarScanner {
             } catch {
                 nextEIXRefreshAt = Date().addingTimeInterval(5 * 60)
                 AppDiagnostics.shared.record(.warning, "EIX", "instrument-refresh-failed",
-                                             "error=\(String(describing: type(of: error)))")
+                                             "error=\(String(reflecting: error)) cachedISINs=\(eixISINs.count)")
             }
         }
         let urls = ProviderEndpointStore.url(for: .tradingViewGermany).absoluteString + "|" +
@@ -68,6 +72,19 @@ actor MarketRadarScanner {
         previousSessions = sessions
         return candidateCycle(sessions: sessions, enabledProviders: enabledProviders,
                               retainedSymbols: retainedSymbols)
+    }
+
+    private func pruneCandidateCache(_ store: RadarCandidateStore) async {
+        do {
+            let removed = try await store.pruneExpiredSnapshots()
+            if removed > 0 {
+                AppDiagnostics.shared.record(.info, "Radar", "expired-candidate-snapshots-removed",
+                                             "count=\(removed)")
+            }
+        } catch {
+            AppDiagnostics.shared.record(.warning, "Radar", "candidate-cache-cleanup-failed",
+                                         "error=\(String(reflecting: error))")
+        }
     }
 
     private func refreshCandidates(sessions: RadarTradingSessions) async {

@@ -15,6 +15,7 @@ actor RadarCandidateStore {
     }
 
     private let directory: URL
+    private var lastPrunedAt: Date = .distantPast
 
     init(directory: URL) {
         self.directory = directory
@@ -46,7 +47,8 @@ actor RadarCandidateStore {
         let url = try fileURL(source: "eix-instruments")
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
         let snapshot = try JSONDecoder().decode(EIXSnapshot.self, from: Data(contentsOf: url))
-        guard Date().timeIntervalSince(snapshot.savedAt) < 48 * 3_600 else { return [] }
+        guard Date().timeIntervalSince(snapshot.savedAt) < 48 * 3_600,
+              snapshot.isins.count >= EIXInstrumentSource.minimumDistinctISINs else { return [] }
         return snapshot.isins
     }
 
@@ -56,6 +58,36 @@ actor RadarCandidateStore {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try JSONEncoder().encode(EIXSnapshot(savedAt: Date(), isins: isins))
             .write(to: url, options: .atomic)
+    }
+
+    func pruneExpiredSnapshots(now: Date = Date()) throws -> Int {
+        guard now.timeIntervalSince(lastPrunedAt) >= 3_600 else { return 0 }
+        guard FileManager.default.fileExists(atPath: directory.path) else {
+            lastPrunedAt = now
+            return 0
+        }
+        let urls = try FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil
+        )
+        let eixURL = try fileURL(source: "eix-instruments")
+        var removed = 0
+        for url in urls where url.pathExtension == "json" && url.lastPathComponent.count == 69 {
+            let valid: Bool
+            if url == eixURL {
+                valid = (try? JSONDecoder().decode(EIXSnapshot.self, from: Data(contentsOf: url)))
+                    .map { $0.savedAt <= now && now.timeIntervalSince($0.savedAt) < 48 * 3_600 &&
+                        $0.isins.count >= EIXInstrumentSource.minimumDistinctISINs } ?? false
+            } else {
+                valid = (try? JSONDecoder().decode(Snapshot.self, from: Data(contentsOf: url)))
+                    .map { $0.savedAt <= now && now.timeIntervalSince($0.savedAt) < 86_400 && !$0.candidates.isEmpty } ?? false
+            }
+            if !valid {
+                try FileManager.default.removeItem(at: url)
+                removed += 1
+            }
+        }
+        lastPrunedAt = now
+        return removed
     }
 
     private func fileURL(source: String) throws -> URL {
