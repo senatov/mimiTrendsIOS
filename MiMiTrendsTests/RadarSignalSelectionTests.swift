@@ -56,7 +56,8 @@ final class RadarSignalSelectionTests: XCTestCase {
             event("MSFT", source: "Confirmed reversal", at: 280, change: 0.8, window: "5m")
         ]
 
-        let displayed = RadarSignalSelection.displayHistory(history, since: 0, limit: 10)
+        let displayed = RadarSignalSelection.displayHistory(history, since: 0, limit: 10,
+                                                           nowMillis: 500_000)
 
         XCTAssertEqual(displayed.map(\.symbol), ["AAPL", "MSFT"])
     }
@@ -75,7 +76,8 @@ final class RadarSignalSelectionTests: XCTestCase {
                         window: "3m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
         let new = event("AAPL", source: "Confirmed reversal", at: 490, change: 1.1,
                         window: "5m", dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus)
-        XCTAssertEqual(RadarSignalSelection.displayHistory([old, new], since: 0, limit: 10)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([old, new], since: 0, limit: 10,
+                                                           nowMillis: 500_000)
             .map(\.symbol), ["AAPL"])
     }
 
@@ -87,6 +89,29 @@ final class RadarSignalSelectionTests: XCTestCase {
         let selected = RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
             latestBars: ["MU": failedBar], nowMillis: 180_000)
         XCTAssertTrue(selected.isEmpty)
+    }
+
+    func testHidesMarvellReversalWhenLaterCloseLosesBreakout() {
+        let signal = ScanResult(symbol: "MRVL", price: 129.71, priceCurrency: "USD",
+            anomalyScore: 0, priceAnomaly: nil, volumeAnomaly: nil, rangeAnomaly: nil,
+            relativeVolume: nil, candleBodyRatio: 0, windowChangePercent: 0.824,
+            windowVolume: 1_000, sessionVolume: 1_000, sessionTurnover: 129_710,
+            signalAgeMinutes: 0, signalSource: "Confirmed reversal",
+            updatedAtMillis: 1_795_536_540_000,
+            dataStatus: YahooCandleSignalPipeline.volumeValidatedStatus,
+            signalWindowLabel: "3m", signalPrice: 128.65,
+            signalEpochMillis: 1_795_536_540_000)
+        let later = MinuteBar(symbol: "MRVL", minuteEpochSeconds: 1_795_538_220,
+                              open: 128.92, high: 129.18, low: 128.66,
+                              close: 128.91, volume: 43_409)
+        let now: Int64 = 1_795_538_280_000
+
+        XCTAssertTrue(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            latestBars: ["MRVL": later], nowMillis: now).isEmpty)
+        XCTAssertTrue(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            nowMillis: now).isEmpty)
+        XCTAssertEqual(RadarSignalSelection.displayHistory([signal], since: 0, limit: 10,
+            nowMillis: signal.signalEpochMillis + 300_000).map(\.symbol), ["MRVL"])
     }
 
     func testNewerYahooCandleRemovesRecoveredCrashAndOlderSignalForSameStock() {

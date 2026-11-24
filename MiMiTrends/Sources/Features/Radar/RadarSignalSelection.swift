@@ -34,10 +34,16 @@ enum RadarSignalSelection {
             guard source != "rapid rise", source != "sharp rebound" else { return nil }
             let latest = latestBars[signal.symbol]
             let latestAtMillis = latest.map { ($0.minuteEpochSeconds + 60) * 1_000 }
-            if let latest, latest.isValid, let latestAtMillis,
-               latestAtMillis > signal.signalEpochMillis,
-               latestAtMillis <= nowMillis + 60_000,
-               nowMillis - latestAtMillis <= 600_000 {
+            let hasFreshBar: Bool = {
+                guard let latest, latest.isValid, let latestAtMillis else { return false }
+                return latestAtMillis > signal.signalEpochMillis &&
+                    latestAtMillis <= nowMillis + 60_000 &&
+                    nowMillis - latestAtMillis <= 600_000
+            }()
+            // Do not present a saved breakout as current without a recent candle.
+            if source == "confirmed reversal", !hasFreshBar,
+               nowMillis - signal.signalEpochMillis > 600_000 { return nil }
+            if let latest, hasFreshBar, let latestAtMillis {
                 signal.currentPrice = latest.close
                 signal.currentPriceSource = "Yahoo candle"
                 signal.currentPriceAtMillis = latestAtMillis
@@ -46,7 +52,8 @@ enum RadarSignalSelection {
                                                        signal.signalEpochMillis)
                     return nil
                 }
-                if source == "confirmed reversal", latest.close <= signal.signalPrice {
+                if source == "confirmed reversal", latest.minuteEpochSeconds > signal.signalEpochMillis / 1_000,
+                   latest.close < signal.price {
                     invalidatedAt[signal.symbol] = max(invalidatedAt[signal.symbol] ?? 0,
                                                        signal.signalEpochMillis)
                     return nil
