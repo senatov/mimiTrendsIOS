@@ -75,16 +75,8 @@ fi
 
 version_applied=0
 release_committed=0
-mount_point=""
-writable_dmg=""
 restore_on_failure() {
     local result=$?
-    if [[ -n "${mount_point}" && -d "${mount_point}" ]]; then
-        hdiutil detach "${mount_point}" -quiet >/dev/null 2>&1 || true
-    fi
-    if [[ -n "${writable_dmg}" && -e "${writable_dmg}" ]]; then
-        rm -f "${writable_dmg}"
-    fi
     if (( result != 0 && version_applied && !release_committed )); then
         git restore -- project.yml mimiTrends-iOS.xcodeproj/project.pbxproj
         echo "Release failed before commit; project versions were restored." >&2
@@ -118,31 +110,9 @@ if [[ "${signed_team}" != "${team_id}" ]]; then
     exit 1
 fi
 
-staging="${release_dir}/staging"
-rm -rf "${staging}"
-mkdir -p "${staging}"
-ditto "${app_path}" "${staging}/${APP_NAME}.app"
-ln -sfn /Applications "${staging}/Applications"
-mkdir -p "${staging}/.background"
-cp "${SCRIPT_DIR}/assets/InstallerBackground.png" "${staging}/.background/background.png"
-
 dmg="${release_dir}/${APP_NAME}-${next}.dmg"
 volume_name="${APP_NAME}-${next}"
-writable_dmg="${release_dir}/${APP_NAME}-${next}-writable.dmg"
-hdiutil create -quiet -volname "${volume_name}" -srcfolder "${staging}" \
-    -fs HFS+ -format UDRW -ov "${writable_dmg}"
-hdiutil attach -quiet -nobrowse -noverify -readwrite "${writable_dmg}"
-mount_point="/Volumes/${volume_name}"
-if [[ ! -d "${mount_point}" ]]; then
-    echo "Could not mount the writable installer image at ${mount_point}." >&2
-    exit 1
-fi
-osascript "${SCRIPT_DIR}/configure_installer_window.applescript" "${volume_name}"
-hdiutil detach "${mount_point}" -quiet
-mount_point=""
-hdiutil convert "${writable_dmg}" -quiet -format UDZO -ov -o "${dmg}"
-rm -f "${writable_dmg}"
-writable_dmg=""
+zsh "${SCRIPT_DIR}/build_installer_dmg.zsh" "${app_path}" "${dmg}" "${volume_name}"
 notary_result="${release_dir}/notary-result.json"
 if ! xcrun notarytool submit "${dmg}" --keychain-profile "${notary_profile}" \
     --wait --output-format json > "${notary_result}"; then
