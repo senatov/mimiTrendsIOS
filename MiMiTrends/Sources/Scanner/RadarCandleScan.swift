@@ -15,7 +15,8 @@ struct SymbolOutcome: Sendable {
 
 enum RadarCandleScan {
     static func load(symbol: String, yahoo: YahooRadarSource, barStore: MarketBarStore,
-                     nowSeconds: Int64, settings: RadarScanPreferences) async -> SymbolOutcome {
+                     nowSeconds: Int64, settings: RadarScanPreferences,
+                     logNoSignal: Bool = false) async -> SymbolOutcome {
         do {
             let history = try await yahoo.minuteHistory(symbol: symbol, includeExtendedHours: true)
             let bars = history.bars
@@ -44,6 +45,10 @@ enum RadarCandleScan {
                     AppDiagnostics.shared.record(.info, "Radar", "candle-signal-recorded",
                         "symbol=\(symbol) event=\(signal.signalSource) window=\(signal.signalWindowLabel) move=\(signal.windowChangePercent) status=\(signal.dataStatus) eventMillis=\(signal.signalEpochMillis)")
                 }
+            }
+            if logNoSignal, signal == nil {
+                AppDiagnostics.shared.record(.info, "Radar", "candle-signal-not-confirmed",
+                    "symbol=\(symbol) reason=\(usable ? "no-qualified-event" : "insufficient-reported-volume")")
             }
             RadarMarketDataPolicy.logAccepted(symbol: symbol, bars: bars, now: nowSeconds)
             return SymbolOutcome(symbol: symbol, received: bars.count, failure: nil,

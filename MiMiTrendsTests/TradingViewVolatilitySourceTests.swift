@@ -17,6 +17,22 @@ final class TradingViewVolatilitySourceTests: XCTestCase {
         XCTAssertEqual(result.map(\.company.isin), ["US0000000001", "US0000000002"])
     }
 
+    func testShortDropRankingRejectsGainsAndMissingChanges() throws {
+        let data = Data(#"""
+        {"data":[
+          {"s":"NASDAQ:LQDA","d":["LQDA","Liquidia","NASDAQ",55,300000,0.1,500000000,4,"US53635D2027",-4.2]},
+          {"s":"NYSE:MOVE","d":["MOVE","Move Corp.","NYSE",30,100000,1,600000000,6,"US0000000002",-1.2]},
+          {"s":"NYSE:GAIN","d":["GAIN","Gain Corp.","NYSE",30,100000,1,600000000,6,"US0000000003",4.5]},
+          {"s":"NYSE:NONE","d":["NONE","None Corp.","NYSE",30,100000,1,600000000,6,"US0000000004",null]}
+        ]}
+        """#.utf8)
+        for minutes in [5, 15] {
+            let result = try TradingViewVolatilitySource.parseScanJSON(data, market: .unitedStates,
+                                                                       ranking: .shortDrop(minutes))
+            XCTAssertEqual(result.map(\.company.symbol), ["LQDA", "MOVE"])
+        }
+    }
+
     func testHTMLFallbackReadsXetraRowAndRejectsThinShare() {
         func row(_ ticker: String, _ price: String, _ volume: String) -> String {
             """

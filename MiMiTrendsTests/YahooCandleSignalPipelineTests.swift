@@ -195,6 +195,32 @@ final class YahooCandleSignalPipelineTests: XCTestCase {
         XCTAssertFalse(pool.contains("US254"))
     }
 
+    func testShortDropsAndWatchlistEnterFullPoolAndReceivePriority() {
+        let ranked = (0..<255).map { "US\($0)" }
+        let pool = RadarScanPool.withRetainedSymbols(["AEM"], ranked: ranked,
+                                                    watchlist: ["SAP.DE"], drops: ["LQDA", "LQDA"])
+        XCTAssertEqual(pool.count, 255)
+        XCTAssertEqual(Array(pool.prefix(3)), ["SAP.DE", "LQDA", "AEM"])
+        let batch = MarketRadarScanner.candleBatch(pool, processed: Set(pool), prioritySymbol: nil,
+            discoveryPriority: ["SAP.DE", "LQDA"], lastScannedAt: [:], now: Date())
+        XCTAssertEqual(Array(batch.prefix(2)), ["SAP.DE", "LQDA"])
+    }
+
+    func testLiquidiaOpeningDropRemainsDetectableAfterPartialRebound() throws {
+        let opening = Int64(try XCTUnwrap(ISO8601DateFormatter().date(
+            from: "2026-11-25T14:30:00Z")).timeIntervalSince1970)
+        let closes = [57.58, 56.81, 56.96, 56.25, 56.25, 56.04, 56.00, 55.55, 54.85, 55.17]
+        let volumes = [21865.0, 3204, 519, 5823, 7218, 1689, 4321, 11592, 16637, 9090]
+        let bars = closes.enumerated().map { index, close in
+            MinuteBar(symbol: "LQDA", minuteEpochSeconds: opening + Int64(index) * 60,
+                      open: close, high: close, low: close, close: close, volume: volumes[index])
+        }
+        let signal = try XCTUnwrap(YahooCandleSignalPipeline.detect(symbol: "LQDA", bars: bars,
+            nowEpochSeconds: opening + 600, settings: RadarScanPreferences(), volumeValidated: true))
+        XCTAssertEqual(signal.signalSource, "Rapid crash")
+        XCTAssertEqual(signal.signalEpochMillis, (opening + 480) * 1_000)
+    }
+
     func testBothMarketsSwitchIndependentlyAcrossHolidaysAndDST() {
         let formatter = ISO8601DateFormatter()
         func sessions(_ utc: String) -> RadarTradingSessions {

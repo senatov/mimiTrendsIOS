@@ -7,7 +7,12 @@ struct TradingViewVolatilityCandidate: Sendable {
 
 struct TradingViewVolatilitySource: Sendable {
     enum Market: Sendable { case germany, unitedStates }
-    enum Ranking: Sendable { case volatility, activity, strongRise }
+    enum Ranking: Sendable, Equatable { case volatility, activity, strongRise, shortDrop(Int)
+
+        var dropColumn: String? {
+            if case .shortDrop(let minutes) = self { return "change|\(minutes)" }
+            return nil
+        } }
 
     private let session: URLSession
 
@@ -36,6 +41,14 @@ struct TradingViewVolatilitySource: Sendable {
         try await scan(market, ranking: .strongRise)
     }
 
+    func loadShortDrops(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
+        async let five = scan(market, ranking: .shortDrop(5))
+        async let fifteen = scan(market, ranking: .shortDrop(15))
+        return try await (five + fifteen).sorted {
+            $0.score == $1.score ? $0.company.symbol < $1.company.symbol : $0.score > $1.score
+        }
+    }
+
     private func loadPage(_ market: Market) async throws -> [TradingViewVolatilityCandidate] {
         let endpoint: ProviderEndpoint = market == .germany ? .tradingViewGermany : .tradingViewUS
         var request = URLRequest(url: ProviderEndpointStore.url(for: endpoint))
@@ -58,6 +71,7 @@ struct TradingViewVolatilitySource: Sendable {
         let exchanges = market == .germany ? ["XETR"] : ["NASDAQ", "NYSE", "AMEX"]
         let strongTurnover = market == .germany ? 250_000 : 10_000_000
         let strongChange = market == .germany ? 5 : 10
+        let dropColumn = ranking.dropColumn
         var candidates: [TradingViewVolatilityCandidate] = []
         for exchange in exchanges {
             try Task.checkCancellation()
@@ -81,15 +95,18 @@ struct TradingViewVolatilitySource: Sendable {
             if ranking == .strongRise {
                 filters.append(["left": "change", "operation": "egreater", "right": strongChange])
             }
+            if let dropColumn {
+                filters.append(["left": dropColumn, "operation": "eless", "right": -0.8])
+            }
             request.httpBody = try JSONSerialization.data(withJSONObject: [
                 "filter": filters,
                 "options": ["lang": "en"],
                 "columns": ["name", "description", "exchange", "close", "volume",
                             "relative_volume_10d_calc", "market_cap_basic", "Volatility.D", "isin",
-                            "change"],
-                "sort": ["sortBy": ranking == .activity ? "Value.Traded" : "Volatility.D",
-                         "sortOrder": "desc"],
-                "range": [0, ranking == .activity ? 149 : ranking == .strongRise ? 99 : 299]
+                            dropColumn ?? "change"],
+                "sort": ["sortBy": dropColumn ?? (ranking == .activity ? "Value.Traded" : "Volatility.D"),
+                         "sortOrder": dropColumn == nil ? "desc" : "asc"],
+                "range": [0, dropColumn != nil ? 49 : ranking == .activity ? 149 : ranking == .strongRise ? 99 : 299]
             ] as [String: Any])
             let (data, response) = try await BrowserPageRequest.send(request, using: session)
             guard let response = response as? HTTPURLResponse, response.statusCode == 200,
@@ -140,6 +157,10 @@ struct TradingViewVolatilitySource: Sendable {
             if ranking == .strongRise {
                 guard row.d.count >= 10, (row.d[9].number ?? 0) >= strongChange else { return nil }
             }
+            let change = row.d.count >= 10 ? row.d[9].number : nil
+            if ranking.dropColumn != nil {
+                guard let change, change <= -0.8 else { return nil }
+            }
             let relativeVolume = row.d[5].number ?? 0
             let volatility = row.d[7].number ?? 0
             if ranking == .volatility {
@@ -166,7 +187,8 @@ struct TradingViewVolatilitySource: Sendable {
             else { return nil }
             let score: Double
             if ranking == .activity { score = price * volume }
-            else if ranking == .strongRise { score = row.d[9].number ?? 0 }
+            else if ranking == .strongRise { score = change ?? 0 }
+            else if ranking.dropColumn != nil { score = -(change ?? 0) }
             else {
                 score = min(volatility, 30) * sqrt(min(relativeVolume, 10))
                     * log10(max(10, price * volume))

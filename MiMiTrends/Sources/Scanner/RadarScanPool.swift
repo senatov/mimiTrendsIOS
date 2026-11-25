@@ -2,19 +2,18 @@ import Foundation
 
 enum RadarScanPool {
     static let maximumSymbols = 255
+    static let maximumShortDrops = 24
     private static let maximumActiveUS = 96
     private static let maximumActiveGerman = 64
     private static let maximumStrongRisers = 24
 
-    static func withRetainedSymbols(_ retained: [String], ranked: [String]) -> [String] {
+    static func withRetainedSymbols(_ retained: [String], ranked: [String], watchlist: [String] = [], drops: [String] = []) -> [String] {
         var seen = Set<String>()
-        var protected: [String] = []
-        for symbol in retained where seen.insert(symbol).inserted {
-            protected.append(symbol)
-            if protected.count == 16 { break }
-        }
-        return Array((protected + ranked.filter { seen.insert($0).inserted })
-            .prefix(maximumSymbols))
+        let urgent = Array(drops.uniqued().prefix(maximumShortDrops))
+        let preferred = Array(watchlist.prefix(16)).appendingUnique(urgent)
+            .appendingUnique(Array(retained.uniqued().prefix(16)))
+        return Array((preferred + watchlist + ranked)
+            .filter { seen.insert($0).inserted }.prefix(maximumSymbols))
     }
 
     static func prioritizedSymbols(activeUS: [String], activeGerman: [String],
@@ -48,5 +47,12 @@ enum RadarScanPool {
         let extra = MarketRadarScanner.interleave(eligible(yahoo), eligible(secondary), limit: maximumSymbols)
         let mixed = MarketRadarScanner.interleave(extra, eligible(german), limit: maximumSymbols)
         return MarketRadarScanner.interleave(eligible(baseline), mixed, limit: maximumSymbols)
+    }
+}
+
+private extension Array where Element == String {
+    func uniqued() -> [String] {
+        var seen = Set<String>()
+        return filter { seen.insert($0).inserted }
     }
 }
