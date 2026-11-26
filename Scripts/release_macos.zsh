@@ -145,9 +145,16 @@ echo "Opening release notes in Visual Studio Code. Close the file to continue pu
 code --wait "${notes_file}"
 git push --atomic origin HEAD:main "refs/tags/${tag}"
 gh release create "${tag}" "${dmg}" --verify-tag --title "${next}" --notes-file "${notes_file}"
-echo "Published notarized ${dmg} as GitHub Release ${next}."
 release_url="$(gh release view "${tag}" --json url --jq '.url')"
 nohup "${release_ui}" \
     "${next}" "${release_url}" "${dmg}" "${notes_file}" "${app_path}" \
     "${PROJECT_DIR}/MiMiTrends/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-512.png" \
     >/dev/null 2>&1 &!
+
+printf '\n%s\n' "═══════════════════════════════════════════"
+printf '%s\n' "  ✅ NOTARIZED RELEASE COMPLETE" "═══════════════════════════════════════════"
+printf '  Version: %s\n' "${next}"
+printf '  App:     %s (%s)\n' "${app_path}" "$(du -sh "${app_path}" | cut -f1)"
+printf '  DMG:     %s (%s)\n' "${dmg}" "$(du -sh "${dmg}" | cut -f1)"
+printf '  GitHub:  %s\n\n' "${release_url}"
+printf '%s\n' "  Notarized — no xattr -cr needed! 🎉" "═══════════════════════════════════════════"
