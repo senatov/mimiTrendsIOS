@@ -89,14 +89,18 @@ actor BrokerTransactionStore {
         }
     }
 
-    func loadExecutedTransactions() throws -> [BrokerTradeExecution] {
+    func loadExecutedTransactions(since: Date? = nil, through: Date? = nil) throws -> [BrokerTradeExecution] {
         let statement = try prepare("""
             SELECT id, occurred_at, description, type, isin, shares, price, amount, fee, tax, currency
             FROM broker_transactions
             WHERE lower(trim(status))='executed' AND lower(trim(type)) IN ('buy', 'sell')
+              AND (?1 IS NULL OR (occurred_at >= ?1 AND lower(trim(asset_type)) = 'security'))
+              AND (?2 IS NULL OR occurred_at <= ?2)
             ORDER BY occurred_at, id
             """)
         defer { sqlite3_finalize(statement) }
+        if let since { sqlite3_bind_int64(statement, 1, Int64(since.timeIntervalSince1970)) }
+        if let through { sqlite3_bind_int64(statement, 2, Int64(through.timeIntervalSince1970)) }
         var transactions: [BrokerTradeExecution] = []
         while true {
             let result = sqlite3_step(statement)

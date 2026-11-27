@@ -110,16 +110,22 @@ struct RadarView: View {
     var visibleSignals: [ScanResult] {
         RadarSignalSelection.withGermanReserve(
             recentSignals.filter {
-                RadarSignalSelection.hasVerifiedOrigin($0, currentSymbols: verifiedEIXSymbols)
+                isEligibleSignal($0)
             },
             watch: germanWatchCandidates.filter { verifiedEIXSymbols.contains($0.symbol) },
             limit: min(max(maxResults, 5), 100)
         )
     }
 
+    private func isEligibleSignal(_ signal: ScanResult) -> Bool {
+        if marketCycle?.purchaseSymbols.contains(signal.symbol) == true { return true }
+        return !TradeHistoryWatchlist.excludedDiscoverySymbols.contains(signal.symbol) &&
+            RadarSignalSelection.hasVerifiedOrigin(signal, currentSymbols: verifiedEIXSymbols)
+    }
+
     func clearUnverifiedSelection() {
         if let selectedSignal,
-           !RadarSignalSelection.hasVerifiedOrigin(selectedSignal, currentSymbols: verifiedEIXSymbols) {
+           !isEligibleSignal(selectedSignal) {
             self.selectedSignal = nil
         }
     }

@@ -51,6 +51,36 @@ final class RadarListingAndTradeTests: XCTestCase {
         XCTAssertGreaterThan(railHeight, 72)
     }
 
+    func testRecentPurchasesIncludeClosedTradesAndRankRepeatedTradingAboveNewerOneOff() throws {
+        let clock = ISO8601DateFormatter()
+        let now = try XCTUnwrap(clock.date(from: "2026-11-27T12:00:00Z"))
+        func trade(_ date: String, _ type: String, _ isin: String) throws -> BrokerTradeExecution {
+            let timestamp = try XCTUnwrap(clock.date(from: date))
+            let epoch = Int64(timestamp.timeIntervalSince1970)
+            return BrokerTradeExecution(id: epoch, occurredAtEpochSeconds: epoch, description: isin,
+                type: type, isin: isin, shares: 1, price: 10, amount: 10, fee: 0, tax: 0, currency: "EUR")
+        }
+        let executions = try [
+            trade("2026-07-26T21:59:59Z", "Buy", "Expired"),
+            trade("2026-07-26T22:00:00Z", "Buy", "Regular"),
+            trade("2026-08-03T12:00:00Z", "Sell", "Regular"),
+            trade("2026-08-10T12:00:00Z", "Buy", "Regular"),
+            trade("2026-09-03T12:00:00Z", "Sell", "Regular"),
+            trade("2026-09-04T12:00:00Z", "Buy", "Regular"),
+            trade("2026-09-04T13:00:00Z", "Sell", "Regular"),
+            trade("2026-11-25T12:00:00Z", "Buy", "One-off"),
+            trade("2026-11-25T13:00:00Z", "Sell", "One-off"),
+            trade("2026-11-26T12:00:00Z", "Sell", "Sale only"),
+            trade("2026-11-27T12:00:01Z", "Buy", "Future")
+        ]
+        let entries = TradeHistoryWatchlist.entries(from: executions, symbols: ["Regular": "AAPL"], now: now)
+        XCTAssertEqual(entries.map(\.id), ["Regular", "One-off"])
+        XCTAssertEqual(entries.map(\.isPriority), [true, false])
+        XCTAssertEqual(entries.map(\.tradingDays), [5, 1])
+        XCTAssertEqual(entries.first?.radarSymbol, "AAPL")
+        XCTAssertNil(entries.last?.radarSymbol)
+    }
+
     private func execution(id: Int64, time: Int64, type: String, shares: Double, price: Double) -> BrokerTradeExecution {
         BrokerTradeExecution(id: id, occurredAtEpochSeconds: time, description: "Sample", type: type,
             isin: nil, shares: shares, price: price, amount: shares * price, fee: 0, tax: 0, currency: "EUR")

@@ -78,10 +78,12 @@ actor MarketRadarScanner {
            Date() >= nextDropRefreshAt || sessions != previousSessions {
             await refreshDrops(sessions)
         }
-        let watchlist = enabledProviders.contains(.yahoo) ? await loadWatchlist() : []
+        let watched = enabledProviders.contains(.yahoo) ? await loadWatchlist() : []
+        let purchases = enabledProviders.contains(.yahoo)
+            ? await loadRecentPurchases(candidates: discoveredCompanies) : []
         previousSessions = sessions
         return candidateCycle(sessions: sessions, enabledProviders: enabledProviders,
-                              retainedSymbols: retainedSymbols, watchlist: watchlist)
+                              retainedSymbols: retainedSymbols, watchlist: watched, purchases: purchases)
     }
 
     private func pruneCandidateCache(_ store: RadarCandidateStore) async {
@@ -181,7 +183,8 @@ actor MarketRadarScanner {
 
     private func candidateCycle(sessions: RadarTradingSessions,
                                 enabledProviders: Set<MarketProvider>,
-                                retainedSymbols: [String], watchlist: [String]) -> MarketRadarCycle {
+                                retainedSymbols: [String], watchlist: [String],
+                                purchases: [TradeHistoryWatchEntry]) -> MarketRadarCycle {
         let enabled = enabledProviders.contains(.tradingView) && enabledProviders.contains(.yahoo)
         let eligibleUS = Self.eixCandidates(usCandidates, availableISINs: eixISINs)
         let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
@@ -203,18 +206,22 @@ actor MarketRadarScanner {
                 (MarketCandidateFilter.isGermanSymbol(symbol)
                     ? sessions.german == .regular : sessions.us.isTrading)
         }
-        let retained = retainedSymbols.filter(isOpen)
+        let bought = purchases.compactMap(\.radarSymbol)
+        let priority = purchases.filter(\.isPriority).compactMap(\.radarSymbol).filter(isOpen)
+        let excluded = TradeHistoryWatchlist.excludedDiscoverySymbols
+        let retained = retainedSymbols.filter { isOpen($0) && !excluded.contains($0) }
         let drops = enabled ? Self.eixCandidates(dropCandidates, availableISINs: eixISINs)
-            .map(\.symbol).filter(isOpen) : []
-        let watched = watchlist.filter(isOpen)
-        let pool = RadarScanPool.withRetainedSymbols(enabled ? retained : [], ranked: ranked,
+            .map(\.symbol).filter { isOpen($0) && !excluded.contains($0) } : []
+        let watched = bought.filter(isOpen).appendingUnique(watchlist.filter(isOpen))
+        let pool = RadarScanPool.withRetainedSymbols(enabled ? retained : [], ranked: ranked.filter { !excluded.contains($0) },
                                                      watchlist: watched, drops: drops)
-        logPriority(watchlist: watchlist, pool: pool, drops: enabled ? dropCandidates : [],
+        logPriority(watchlist: bought.appendingUnique(watchlist), pool: pool, drops: enabled ? dropCandidates : [],
                     verified: verifiedEIXSymbols())
 
         let allCandidates = dropCandidates + strongUSCandidates + strongGermanCandidates +
             activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
-        let names = Dictionary(allCandidates.map { ($0.symbol, $0.name) },
+        let names = Dictionary(purchases.compactMap { entry in entry.radarSymbol.map { ($0, entry.name) } }
+            + allCandidates.map { ($0.symbol, $0.name) },
                                uniquingKeysWith: { first, _ in first })
         return MarketRadarCycle(
             yahoo: RadarSourceTotals(), tradingView: tradingViewTotals,
@@ -225,8 +232,9 @@ actor MarketRadarScanner {
                 issues: [tradingViewTotals.lastErrorMessage].compactMap { $0 },
                 activeSymbols: [], lastUpdatedAt: nil),
             candidates: pool.map { RadarCompanyCandidate(symbol: $0, name: names[$0] ?? $0) },
-            prioritySymbols: Array(drops.prefix(RadarScanPool.maximumShortDrops))
-                .appendingUnique(watched).filter { pool.contains($0) }
+            prioritySymbols: priority.appendingUnique(Array(drops.prefix(RadarScanPool.maximumShortDrops)))
+                .appendingUnique(watchlist).filter { pool.contains($0) },
+            purchaseSymbols: Set(bought)
         )
     }
 

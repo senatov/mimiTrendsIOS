@@ -10,6 +10,8 @@ struct WatchlistView: View {
     #endif
     @State private var store: WatchlistStore?
     @State private var entries: [WatchlistEntry] = []
+    @State private var purchases: [TradeHistoryWatchEntry] = []
+    @State private var purchaseError: String?
     @State private var newSymbol = ""
     @State private var errorMessage: String?
     @State private var isWorking = false
@@ -22,6 +24,7 @@ struct WatchlistView: View {
                 controls
                     .padding(14)
                 List {
+                    purchaseSections
                     Section("Saved symbols") {
                         if store == nil && errorMessage == nil {
                             ProgressView("Loading watchlist")
@@ -63,15 +66,77 @@ struct WatchlistView: View {
                 }
             }
             .task { await load() }
+            .task { await refreshPurchases() }
         }
         #if os(macOS)
         .frame(minWidth: 520, minHeight: 420)
         #endif
     }
 
+    @ViewBuilder
+    private var purchaseSections: some View {
+        let priority = purchases.filter(\.isPriority)
+        if !priority.isEmpty {
+            Section("Radar priority") {
+                ForEach(priority, content: purchaseRow)
+            }
+        }
+        Section("Purchases in the last four months") {
+            if let purchaseError {
+                Text(purchaseError).foregroundStyle(.secondary)
+            } else {
+                ForEach(purchases.filter { !$0.isPriority }, content: purchaseRow)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func purchaseRow(_ entry: TradeHistoryWatchEntry) -> some View {
+        let details = VStack(alignment: .leading, spacing: 3) {
+            Text(entry.name)
+            if let symbol = entry.radarSymbol {
+                Text(symbol).font(.caption).foregroundStyle(.secondary)
+            } else {
+                Text(entry.symbol ?? entry.id)
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(entry.symbol == nil ? "Ticker lookup pending" : "Live scanning unavailable for this listing")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        if let symbol = entry.radarSymbol {
+            Button { onSelect(symbol) } label: {
+                HStack {
+                    details
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Show this symbol on Radar")
+        } else {
+            details
+        }
+    }
+
+    private func refreshPurchases() async {
+        while !Task.isCancelled {
+            do {
+                purchases = try await TradeHistoryWatchlist.shared.load()
+                purchaseError = nil
+            } catch {
+                purchaseError = error.localizedDescription
+            }
+            do { try await Task.sleep(for: .seconds(5)) }
+            catch { return }
+        }
+    }
+
     private var controls: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("\(entries.count) saved symbols on this device")
+            Text("\(entries.count) saved symbols and \(purchases.count) recent purchases on this device")
                 .font(.caption).foregroundStyle(.secondary)
             controlLayout { addControls }
             Text("Selecting a symbol opens Radar. The feed starts only when you tap Start there.")

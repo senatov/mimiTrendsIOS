@@ -41,6 +41,15 @@ extension MarketRadarScanner {
         }
     }
 
+    func loadRecentPurchases(candidates: [RadarCompanyCandidate]) async -> [TradeHistoryWatchEntry] {
+        do { return try await TradeHistoryWatchlist.shared.load(candidates: candidates) }
+        catch {
+            AppDiagnostics.shared.record(.warning, "Radar", "trade-history-watchlist-load-failed",
+                                         "error=\(String(describing: error))")
+            return []
+        }
+    }
+
     func logPriority(watchlist: [String], pool: [String], drops: [RadarCompanyCandidate],
                      verified: Set<String>) {
         let watched = Set(watchlist)

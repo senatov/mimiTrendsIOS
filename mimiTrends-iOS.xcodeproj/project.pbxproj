@@ -92,6 +92,7 @@
 		70A0FFBE9200205385C33747 /* RadarTableColorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C4E73ECCAF491093F51EDB3 /* RadarTableColorStore.swift */; };
 		73A88781B5FBDCEE68CAB80D /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A1562AE82C112C8F46CFD3F /* SettingsView.swift */; };
 		764CDDB1345634F29FE0470D /* LocalAccountInstanceGuard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37E278BAC8BF8FC5AAC3E0D9 /* LocalAccountInstanceGuard.swift */; };
+		7A8F10D8330F33B7486D0E68 /* TradeHistoryWatchlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = E08F30A549D2CF40F8BB866C /* TradeHistoryWatchlist.swift */; };
 		7AB8D8CEA8AAABEEA359587D /* RadarSignalBarBackfillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80529F8ECB52D259C6515FD7 /* RadarSignalBarBackfillTests.swift */; };
 		7C0D33CE29B686B800574331 /* MinuteBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77C0F103FD5CC7F11981916F /* MinuteBar.swift */; };
 		7E233D8A837FC4D2A6227757 /* SecretEntryField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761E107AE9C658936FA63647 /* SecretEntryField.swift */; };
@@ -353,6 +354,7 @@
 		DBC337BB7F0B24B2FEEAE183 /* ProviderEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderEndpoint.swift; sourceTree = "<group>"; };
 		DD61AA5EB5B8F944EBCD8329 /* LangSchwarzQuoteSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LangSchwarzQuoteSource.swift; sourceTree = "<group>"; };
 		E04FEC3D81CA834EA0D897C8 /* RadarSelectedCandleHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarSelectedCandleHistory.swift; sourceTree = "<group>"; };
+		E08F30A549D2CF40F8BB866C /* TradeHistoryWatchlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradeHistoryWatchlist.swift; sourceTree = "<group>"; };
 		E0BCF3BE1761CED7DBCC5BAA /* TradableCorridorDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TradableCorridorDetectorTests.swift; sourceTree = "<group>"; };
 		E21C27FB4CA881C739CB8A97 /* RadarCandleScan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadarCandleScan.swift; sourceTree = "<group>"; };
 		E299093ABF5E3C6E0913488F /* TraderFoxRadarSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraderFoxRadarSource.swift; sourceTree = "<group>"; };
@@ -605,6 +607,7 @@
 				BBF387A2BA9D47DD94D78888 /* MarketSignalStore.swift */,
 				EAE59794F28A806B8BC22C56 /* RadarCandidateStore.swift */,
 				0ED63570611D9E6D70E1F74D /* RadarCompanyMetadataStore.swift */,
+				E08F30A549D2CF40F8BB866C /* TradeHistoryWatchlist.swift */,
 				5B8AA63026829A74E3A98AC7 /* WatchlistStore.swift */,
 			);
 			path = Storage;
@@ -972,6 +975,7 @@
 				29AA77D9B1BC7B34F87646FD /* SustainedMoveDetector.swift in Sources */,
 				3EBD4E26F915023843581389 /* TableColorSettingsView.swift in Sources */,
 				C94CD4C64B560EB9038ED75F /* TradableCorridorDetector.swift in Sources */,
+				7A8F10D8330F33B7486D0E68 /* TradeHistoryWatchlist.swift in Sources */,
 				670C1691E654732C7955755A /* TradeImportAction.swift in Sources */,
 				9B62722241C1317DDA920EB4 /* TradeImportCoordinator.swift in Sources */,
 				0651BEACDCB7E2DCC0C81469 /* TradeImportReportView.swift in Sources */,

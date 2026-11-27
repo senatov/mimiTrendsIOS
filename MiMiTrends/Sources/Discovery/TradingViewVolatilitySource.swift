@@ -118,6 +118,40 @@ struct TradingViewVolatilitySource: Sendable {
         }
     }
 
+    /// Download public listings without sending the broker's holdings to the provider.
+    func loadISINDirectory(_ market: Market) async throws -> [String: String] {
+        let german = market == .germany
+        let region = german ? "germany" : "america"
+        let exchanges = german ? ["XETR"] : ["NASDAQ", "NYSE", "AMEX"]
+        var request = URLRequest(url: URL(string: "https://scanner.tradingview.com/\(region)/scan")!)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "filter": [
+                ["left": "exchange", "operation": "in_range", "right": exchanges],
+                ["left": "type", "operation": "equal", "right": "stock"]
+            ],
+            "columns": ["name", "isin"],
+            "range": [0, 10_000]
+        ])
+        let (data, response) = try await BrowserPageRequest.send(request, using: session)
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 3_000_000 else {
+            throw RadarSourceError.invalidResponse
+        }
+        let rows = try JSONDecoder().decode(ScanResponse.self, from: data).data
+        var symbols: [String: String] = [:]
+        var ambiguous = Set<String>()
+        for row in rows where row.d.count == 2 {
+            guard let ticker = row.d[0].text, let isin = row.d[1].text, isin.count == 12 else { continue }
+            let symbol = german ? ticker + ".DE" : ticker
+            guard MarketCandidateFilter.supportsYahooBars(symbol: symbol) else { continue }
+            if let existing = symbols[isin], existing != symbol { ambiguous.insert(isin) }
+            symbols[isin] = symbol
+        }
+        return symbols.filter { !ambiguous.contains($0.key) }
+    }
+
     private struct ScanResponse: Decodable { let data: [ScanRow] }
 
     static func parseScanJSON(_ data: Data, market: Market,

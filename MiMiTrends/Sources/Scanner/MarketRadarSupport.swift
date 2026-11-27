@@ -19,12 +19,13 @@ struct MarketRadarCycle: Sendable {
     let progress: MarketScanProgress
     var candidates: [RadarCompanyCandidate] = []
     var prioritySymbols: [String] = []
+    var purchaseSymbols: Set<String> = []
 
     func reporting(_ scan: MarketScanProgress, cooldown: Date?) -> Self {
         Self(yahoo: yahoo, tradingView: tradingView, yahooCooldownUntil: cooldown,
              initialScanProcessed: scan.processed, initialScanTotal: scan.total,
              scannedSymbols: scan.successful, companyNames: companyNames,
-             progress: scan, candidates: candidates, prioritySymbols: prioritySymbols)
+             progress: scan, candidates: candidates, prioritySymbols: prioritySymbols, purchaseSymbols: purchaseSymbols)
     }
 }
 

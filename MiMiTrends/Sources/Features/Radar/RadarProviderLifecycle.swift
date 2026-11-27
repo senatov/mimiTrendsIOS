@@ -51,13 +51,13 @@ extension RadarView {
                     enabledProviders: enabledProviders, retainedSymbols: retained)
                 guard !Task.isCancelled else { return }
                 verifiedEIXSymbols = await marketScanner.verifiedEIXSymbols()
-                clearUnverifiedSelection()
                 if marketCycle == nil { marketCycle = discovered }
                 let scan = await marketScanner.scanCandles(discovered,
                     enabled: enabledProviders.contains(.yahoo), prioritySymbol: chartSymbol,
                     retainedSymbols: retained)
                 guard !Task.isCancelled else { return }
                 marketCycle = scan.cycle
+                clearUnverifiedSelection()
                 if scan.recordedSignal { await refreshSignals() }
                 AppDiagnostics.shared.record(
                     .info, "Radar", "candidate-pool-ready",
