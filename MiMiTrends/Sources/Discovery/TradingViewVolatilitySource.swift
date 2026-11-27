@@ -118,8 +118,13 @@ struct TradingViewVolatilitySource: Sendable {
         }
     }
 
+    struct ListingDirectory: Sendable {
+        var symbolsByISIN: [String: String] = [:]
+        var fcfYields: [String: Double] = [:]
+    }
+
     /// Download public listings without sending the broker's holdings to the provider.
-    func loadISINDirectory(_ market: Market) async throws -> [String: String] {
+    func loadISINDirectory(_ market: Market) async throws -> ListingDirectory {
         let german = market == .germany
         let region = german ? "germany" : "america"
         let exchanges = german ? ["XETR"] : ["NASDAQ", "NYSE", "AMEX"]
@@ -132,24 +137,33 @@ struct TradingViewVolatilitySource: Sendable {
                 ["left": "exchange", "operation": "in_range", "right": exchanges],
                 ["left": "type", "operation": "equal", "right": "stock"]
             ],
-            "columns": ["name", "isin"],
+            "columns": ["name", "isin", "free_cash_flow_ttm", "market_cap_basic"],
             "range": [0, 10_000]
         ])
         let (data, response) = try await BrowserPageRequest.send(request, using: session)
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 3_000_000 else {
             throw RadarSourceError.invalidResponse
         }
+        return try Self.parseListingDirectory(data, market: market)
+    }
+
+    static func parseListingDirectory(_ data: Data, market: Market) throws -> ListingDirectory {
         let rows = try JSONDecoder().decode(ScanResponse.self, from: data).data
-        var symbols: [String: String] = [:]
+        var directory = ListingDirectory()
         var ambiguous = Set<String>()
-        for row in rows where row.d.count == 2 {
-            guard let ticker = row.d[0].text, let isin = row.d[1].text, isin.count == 12 else { continue }
-            let symbol = german ? ticker + ".DE" : ticker
+        for row in rows where row.d.count == 4 {
+            guard let ticker = row.d[0].text else { continue }
+            let symbol = market == .germany ? ticker + ".DE" : ticker
             guard MarketCandidateFilter.supportsYahooBars(symbol: symbol) else { continue }
-            if let existing = symbols[isin], existing != symbol { ambiguous.insert(isin) }
-            symbols[isin] = symbol
+            if let fcf = row.d[2].number, let cap = row.d[3].number, cap > 0, (fcf / cap).isFinite {
+                directory.fcfYields[symbol] = fcf / cap
+            }
+            guard let isin = row.d[1].text, isin.count == 12 else { continue }
+            if let existing = directory.symbolsByISIN[isin], existing != symbol { ambiguous.insert(isin) }
+            directory.symbolsByISIN[isin] = symbol
         }
-        return symbols.filter { !ambiguous.contains($0.key) }
+        for isin in ambiguous { directory.symbolsByISIN.removeValue(forKey: isin) }
+        return directory
     }
 
     private struct ScanResponse: Decodable { let data: [ScanRow] }

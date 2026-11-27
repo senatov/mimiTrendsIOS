@@ -80,7 +80,8 @@ actor MarketRadarScanner {
         }
         let watched = enabledProviders.contains(.yahoo) ? await loadWatchlist() : []
         let purchases = enabledProviders.contains(.yahoo)
-            ? await loadRecentPurchases(candidates: discoveredCompanies) : []
+            ? await loadRecentPurchases(candidates: discoveredCompanies, useTradingView: enabledProviders.contains(.tradingView))
+            : TradeHistoryWatchlist.Snapshot(entries: [], fcfYields: [:])
         previousSessions = sessions
         return candidateCycle(sessions: sessions, enabledProviders: enabledProviders,
                               retainedSymbols: retainedSymbols, watchlist: watched, purchases: purchases)
@@ -184,7 +185,7 @@ actor MarketRadarScanner {
     private func candidateCycle(sessions: RadarTradingSessions,
                                 enabledProviders: Set<MarketProvider>,
                                 retainedSymbols: [String], watchlist: [String],
-                                purchases: [TradeHistoryWatchEntry]) -> MarketRadarCycle {
+                                purchases: TradeHistoryWatchlist.Snapshot) -> MarketRadarCycle {
         let enabled = enabledProviders.contains(.tradingView) && enabledProviders.contains(.yahoo)
         let eligibleUS = Self.eixCandidates(usCandidates, availableISINs: eixISINs)
         let eligibleGerman = Self.eixCandidates(germanCandidates, availableISINs: eixISINs)
@@ -206,21 +207,21 @@ actor MarketRadarScanner {
                 (MarketCandidateFilter.isGermanSymbol(symbol)
                     ? sessions.german == .regular : sessions.us.isTrading)
         }
-        let bought = purchases.compactMap(\.radarSymbol)
-        let priority = purchases.filter(\.isPriority).compactMap(\.radarSymbol).filter(isOpen)
-        let excluded = TradeHistoryWatchlist.excludedDiscoverySymbols
-        let retained = retainedSymbols.filter { isOpen($0) && !excluded.contains($0) }
+        let bought = purchases.entries.compactMap(\.radarSymbol)
+        let priority = purchases.entries.filter(\.isPriority).compactMap(\.radarSymbol).filter(isOpen)
+        let retained = retainedSymbols.filter(isOpen)
         let drops = enabled ? Self.eixCandidates(dropCandidates, availableISINs: eixISINs)
-            .map(\.symbol).filter { isOpen($0) && !excluded.contains($0) } : []
+            .map(\.symbol).filter(isOpen) : []
         let watched = bought.filter(isOpen).appendingUnique(watchlist.filter(isOpen))
-        let pool = RadarScanPool.withRetainedSymbols(enabled ? retained : [], ranked: ranked.filter { !excluded.contains($0) },
+        let discovery = TradeHistoryWatchlist.rankDiscovery(ranked, fcfYields: purchases.fcfYields)
+        let pool = RadarScanPool.withRetainedSymbols(enabled ? retained : [], ranked: discovery,
                                                      watchlist: watched, drops: drops)
         logPriority(watchlist: bought.appendingUnique(watchlist), pool: pool, drops: enabled ? dropCandidates : [],
                     verified: verifiedEIXSymbols())
 
         let allCandidates = dropCandidates + strongUSCandidates + strongGermanCandidates +
             activeUSCandidates + activeGermanCandidates + usCandidates + germanCandidates
-        let names = Dictionary(purchases.compactMap { entry in entry.radarSymbol.map { ($0, entry.name) } }
+        let names = Dictionary(purchases.entries.compactMap { entry in entry.radarSymbol.map { ($0, entry.name) } }
             + allCandidates.map { ($0.symbol, $0.name) },
                                uniquingKeysWith: { first, _ in first })
         return MarketRadarCycle(

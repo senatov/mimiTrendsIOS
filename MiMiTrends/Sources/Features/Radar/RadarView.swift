@@ -119,8 +119,7 @@ struct RadarView: View {
 
     private func isEligibleSignal(_ signal: ScanResult) -> Bool {
         if marketCycle?.purchaseSymbols.contains(signal.symbol) == true { return true }
-        return !TradeHistoryWatchlist.excludedDiscoverySymbols.contains(signal.symbol) &&
-            RadarSignalSelection.hasVerifiedOrigin(signal, currentSymbols: verifiedEIXSymbols)
+        return RadarSignalSelection.hasVerifiedOrigin(signal, currentSymbols: verifiedEIXSymbols)
     }
 
     func clearUnverifiedSelection() {

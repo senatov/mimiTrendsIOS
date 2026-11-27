@@ -81,6 +81,28 @@ final class RadarListingAndTradeTests: XCTestCase {
         XCTAssertNil(entries.last?.radarSymbol)
     }
 
+    func testFCFYieldReordersNearbyHistoryRanksWithoutChangingPriorityMembership() {
+        let entries = (0..<10).map {
+            TradeHistoryWatchEntry(id: "T\($0)", name: "Company \($0)", symbol: "T\($0)",
+                tradingDays: 8, latestTrade: .distantPast, isPriority: $0 < 9)
+        }
+        let ranked = TradeHistoryWatchlist.rank(entries, fcfYields: ["T0": -0.10, "T1": 0.10, "T9": 0.90])
+        XCTAssertEqual(ranked.first?.symbol, "T1")
+        XCTAssertEqual(ranked.last?.symbol, "T9")
+        XCTAssertEqual(ranked.first?.fcfYield, 0.10)
+        XCTAssertEqual(TradeHistoryWatchlist.rank(entries, fcfYields: [:]).map(\.id), entries.map(\.id))
+        XCTAssertEqual(TradeHistoryWatchlist.rankDiscovery(["LOSS", "UNKNOWN", "PROFIT", "ZERO"],
+            fcfYields: ["LOSS": -0.02, "PROFIT": 0.01, "ZERO": 0]), ["PROFIT", "UNKNOWN", "ZERO", "LOSS"])
+    }
+
+    func testListingDirectoryReportsSignedYieldAndHandlesMissingCapitalization() throws {
+        let data = Data(#"{"data":[{"s":"XETR:AAA","d":["AAA","DE0000000001",-40,800]},{"s":"XETR:BBB","d":["BBB","DE0000000002",10,null]}]}"#.utf8)
+        let directory = try TradingViewVolatilitySource.parseListingDirectory(data, market: .germany)
+        XCTAssertEqual(directory.symbolsByISIN["DE0000000002"], "BBB.DE")
+        XCTAssertEqual(directory.fcfYields["AAA.DE"], -0.05)
+        XCTAssertNil(directory.fcfYields["BBB.DE"])
+    }
+
     private func execution(id: Int64, time: Int64, type: String, shares: Double, price: Double) -> BrokerTradeExecution {
         BrokerTradeExecution(id: id, occurredAtEpochSeconds: time, description: "Sample", type: type,
             isin: nil, shares: shares, price: price, amount: shares * price, fee: 0, tax: 0, currency: "EUR")

@@ -95,7 +95,8 @@ struct WatchlistView: View {
         let details = VStack(alignment: .leading, spacing: 3) {
             Text(entry.name)
             if let symbol = entry.radarSymbol {
-                Text(symbol).font(.caption).foregroundStyle(.secondary)
+                let yield = entry.fcfYield?.formatted(.percent.precision(.fractionLength(1))) ?? "—"
+                Text("\(symbol) · FCF yield \(yield)").font(.caption).foregroundStyle(.secondary)
             } else {
                 Text(entry.symbol ?? entry.id)
                     .font(.caption).foregroundStyle(.secondary)
@@ -124,7 +125,8 @@ struct WatchlistView: View {
     private func refreshPurchases() async {
         while !Task.isCancelled {
             do {
-                purchases = try await TradeHistoryWatchlist.shared.load()
+                purchases = try await TradeHistoryWatchlist.shared.load(
+                    useTradingView: MarketProviderAccess.isEnabled(.tradingView)).entries
                 purchaseError = nil
             } catch {
                 purchaseError = error.localizedDescription

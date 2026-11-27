@@ -7,6 +7,7 @@ struct TradeHistoryWatchEntry: Identifiable, Sendable {
     let tradingDays: Int
     let latestTrade: Date
     let isPriority: Bool
+    var fcfYield: Double? = nil
 
     var radarSymbol: String? {
         symbol.flatMap { MarketCandidateFilter.supportsYahooBars(symbol: $0) ? $0 : nil }
@@ -15,18 +16,22 @@ struct TradeHistoryWatchEntry: Identifiable, Sendable {
 
 actor TradeHistoryWatchlist {
     static let shared = TradeHistoryWatchlist()
-    static let excludedDiscoverySymbols: Set<String> = ["METC", "METCB", "CELC", "7VR.DE", "SNDX"]
+    struct Snapshot: Sendable {
+        let entries: [TradeHistoryWatchEntry]
+        let fcfYields: [String: Double]
+    }
 
     private var store: BrokerTransactionStore?
     private var symbols: [String: String] = [:]
-    private var directory: [String: String] = [:]
+    private var germanDirectory = TradingViewVolatilitySource.ListingDirectory()
+    private var usDirectory = TradingViewVolatilitySource.ListingDirectory()
     private var didReadCache = false
     private var nextDirectoryRefresh = Date.distantPast
     private var isResolving = false
 
-    func load(candidates: [RadarCompanyCandidate] = [], now: Date = Date()) async throws -> [TradeHistoryWatchEntry] {
+    func load(candidates: [RadarCompanyCandidate] = [], useTradingView: Bool, now: Date = Date()) async throws -> Snapshot {
         if store == nil { store = try BrokerTransactionStore(url: BrokerTransactionStore.defaultURL()) }
-        guard let store else { return [] }
+        guard let store else { return Snapshot(entries: [], fcfYields: [:]) }
         let trades = try await store.loadExecutedTransactions(since: Self.cutoff(now), through: now)
         let mappingURL = try BrokerTransactionStore.defaultURL().deletingLastPathComponent()
             .appendingPathComponent("mimitrends-trade-symbols.json")
@@ -43,12 +48,14 @@ actor TradeHistoryWatchlist {
             else { continue }
             symbols[isin] = company.symbol
         }
+        let directory = germanDirectory.symbolsByISIN.merging(usDirectory.symbolsByISIN) { _, us in us }
+        let yields = useTradingView ? germanDirectory.fcfYields.merging(usDirectory.fcfYields) { _, us in us } : [:]
         let entries = Self.entries(from: trades, symbols: symbols.merging(directory) { saved, _ in saved }, now: now)
-        if !isResolving, now >= nextDirectoryRefresh, entries.contains(where: { $0.symbol == nil }) {
+        if useTradingView, !isResolving, now >= nextDirectoryRefresh {
             isResolving = true
             Task { await refreshDirectory(for: entries.map(\.id), cacheURL: mappingURL) }
         }
-        return entries
+        return Snapshot(entries: Self.rank(entries, fcfYields: yields), fcfYields: yields)
     }
 
     private func refreshDirectory(for identifiers: [String], cacheURL: URL) async {
@@ -56,13 +63,14 @@ actor TradeHistoryWatchlist {
         async let germany = try? TradingViewVolatilitySource().loadISINDirectory(.germany)
         async let unitedStates = try? TradingViewVolatilitySource().loadISINDirectory(.unitedStates)
         let (german, us) = await (germany, unitedStates)
-        directory.merge(german ?? [:]) { _, current in current }
-        directory.merge(us ?? [:]) { _, current in current }
+        if let german { germanDirectory = german }
+        if let us { usDirectory = us }
+        let directory = germanDirectory.symbolsByISIN.merging(usDirectory.symbolsByISIN) { _, us in us }
         for isin in identifiers where symbols[isin] == nil { symbols[isin] = directory[isin] }
         if let data = try? JSONEncoder().encode(symbols) {
             try? data.write(to: cacheURL, options: .atomic)
         }
-        nextDirectoryRefresh = Date().addingTimeInterval(german != nil && us != nil ? 86_400 : 300)
+        nextDirectoryRefresh = Date().addingTimeInterval(german != nil && us != nil ? 3_600 : 300)
     }
 
     static func cutoff(_ now: Date) -> Date {
@@ -92,6 +100,28 @@ actor TradeHistoryWatchlist {
             if $0.tradingDays != $1.tradingDays { return $0.tradingDays > $1.tradingDays }
             return $0.id < $1.id
         }
+    }
+
+    /// Input order is the history rank. Blend within each existing priority group.
+    static func rank(_ entries: [TradeHistoryWatchEntry], fcfYields: [String: Double]) -> [TradeHistoryWatchEntry] {
+        [entries.filter(\.isPriority), entries.filter { !$0.isPriority }].flatMap { group in
+            group.enumerated().map { index, original in
+                var entry = original
+                entry.fcfYield = entry.symbol.flatMap { fcfYields[$0] }
+                let history = 1 - Double(index) / Double(max(1, group.count - 1))
+                let financial = min(0.10, max(-0.10, entry.fcfYield ?? 0)) / 0.20 + 0.5
+                return (entry: entry, score: 0.8 * history + 0.2 * financial)
+            }.sorted { $0.score > $1.score }.map(\.entry)
+        }
+    }
+
+    static func rankDiscovery(_ symbols: [String], fcfYields: [String: Double]) -> [String] {
+        // Preserve the market ranking among candidates with the same cash-flow category.
+        func category(_ symbol: String) -> Int {
+            let yield = fcfYields[symbol] ?? 0
+            return yield > 0 ? 2 : yield < 0 ? 0 : 1
+        }
+        return symbols.sorted { category($0) > category($1) }
     }
 
     private static var calendar: Calendar {
